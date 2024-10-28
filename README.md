@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # AraldiTech - Pedidos
 ![GitHub version](https://img.shields.io/badge/version-0.3.2-blue)
 
@@ -43,4 +42,3 @@ A próxima atualização **(0.4.0)** está planejada para reformular completamen
 
 =======
 # AraldiTech - Pedidos
->>>>>>> 29e330db59b42e585e0a57b27c814e5eecc69896
