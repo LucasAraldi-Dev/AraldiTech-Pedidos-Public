@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 from passlib.hash import bcrypt
 import logging
+from starlette.middleware.base import BaseHTTPMiddleware #Para aumentar a segurança das páginas após o login - adicionado um middleware
 
 #Versão 0.3.2
 
@@ -26,26 +27,10 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 # Configuração de Logs para futuros testes
 logging.basicConfig(level=logging.INFO)
 
+#Inicialização do FastAPI
+app = FastAPI()
 
-#Autenticação em desenvolvimento , foi encontrado alguns erros
-async def get_current_user(token: str = Depends(oauth2_scheme)):
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Não foi possível validar as credenciais",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        email: str = payload.get("sub")
-        if email is None:
-            raise credentials_exception
-    except JWTError:
-        raise credentials_exception
 
-    user = await db.users.find_one({"email": email})
-    if user is None:
-        raise credentials_exception
-    return user
 
 # Modelo Pedido-Solicitação de Materias para o setor de compra
 class Pedido(BaseModel):
@@ -62,9 +47,6 @@ class Pedido(BaseModel):
         json_encoders = {
             ObjectId: str
         }
-
-#Inicialização do FastAPI
-app = FastAPI()
 
 # Configurar o diretório de arquivos estáticos - aqui terá novas modificações futuramente
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -208,3 +190,50 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(data={"sub": user.email}, expires_delta=access_token_expires)
     return {"access_token": access_token, "token_type": "bearer"}
+
+#Autenticação em desenvolvimento , foi encontrado alguns erros
+async def get_current_user(token: str = Depends(oauth2_scheme)):
+    if token is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token não fornecido",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Não foi possível validar as credenciais",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email: str = payload.get("sub")
+        if email is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+
+    user = await db.users.find_one({"email": email})
+    if user is None:
+        raise credentials_exception
+    return user
+class AuthMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        # Permitir acesso ao index e login_pedidos
+        if request.url.path in ["/static/index.html", "/static/login_pedidos.html"]:
+            return await call_next(request)
+        
+        # Bloquear acesso a outros arquivos estáticos
+        if request.url.path.startswith("/static") or request.url.path not in ["/", "/token", "/register"]:
+            token = request.cookies.get("access_token")
+            if token is None:
+                return RedirectResponse(url="/")  # Redireciona se o token não estiver presente
+            
+            try:
+                await get_current_user(token=token)
+            except HTTPException:
+                return RedirectResponse(url="/")
+
+        return await call_next(request)
+
+app.add_middleware(AuthMiddleware)

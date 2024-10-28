@@ -1,5 +1,5 @@
 # AraldiTech - Pedidos
-![GitHub version](https://img.shields.io/badge/version-0.3.2-blue)
+![GitHub version](https://img.shields.io/badge/version-0.3.3-blue)
 
 
 ## Descrição
@@ -23,9 +23,17 @@ Ele oferece funcionalidades como:
 
 ## Versão
 
-A versão atual do projeto é **0.3.2**.
+A versão atual do projeto é **0.3.3**.
 
-A próxima atualização **(0.4.0)** está planejada para reformular completamente o design da aplicação, trazendo uma interface mais intuitiva e moderna.
+### Alterações na Versão **0.3.3**
+
+- **Implementação de Autenticação de Segurança**:
+  - Adicionada middleware de autenticação que restringe o acesso às páginas do aplicativo.
+  - Permissão de acesso livre às páginas `index.html` e `login_pedidos.html` dentro do diretório `/static`.
+  - Usuários não autenticados que tentarem acessar outras páginas serão redirecionados para a página inicial (`/static/index.html`).
+  - Logs foram adicionados para registrar tentativas de acesso e outras atividades relacionadas à autenticação.
+
+A próxima grande atualização **(0.4.0)** está planejada para reformular completamente o design da aplicação, trazendo uma interface mais intuitiva e moderna.
 
 ## Funcionalidades
 
