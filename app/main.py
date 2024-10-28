@@ -187,9 +187,13 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
             detail="Email ou senha incorretos",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(data={"sub": user.email}, expires_delta=access_token_expires)
-    return {"access_token": access_token, "token_type": "bearer"}
+
+    return {"access_token": access_token, "token_type": "bearer"}  # Retorna apenas o token
+
+
 
 #Autenticação em desenvolvimento , foi encontrado alguns erros
 async def get_current_user(token: str = Depends(oauth2_scheme)):
@@ -222,18 +226,22 @@ class AuthMiddleware(BaseHTTPMiddleware):
         # Permitir acesso ao index e login_pedidos
         if request.url.path in ["/static/index.html", "/static/login_pedidos.html"]:
             return await call_next(request)
-        
-        # Bloquear acesso a outros arquivos estáticos
-        if request.url.path.startswith("/static") or request.url.path not in ["/", "/token", "/register"]:
+
+        # Bloquear acesso a outros arquivos estáticos, exceto as rotas de autenticação
+        if request.url.path.startswith("/static") and request.url.path not in ["/static/index.html", "/static/login_pedidos.html"]:
             token = request.cookies.get("access_token")
             if token is None:
                 return RedirectResponse(url="/")  # Redireciona se o token não estiver presente
             
             try:
-                await get_current_user(token=token)
+                user = await get_current_user(token=token)
+                # Se necessário, você pode adicionar logs aqui para verificar o usuário
             except HTTPException:
-                return RedirectResponse(url="/")
+                return RedirectResponse(url="/")  # Redireciona se o token não for válido
 
-        return await call_next(request)
+        # Se tudo estiver certo, continue para a próxima chamada
+        response = await call_next(request)
+        return response
+
 
 app.add_middleware(AuthMiddleware)

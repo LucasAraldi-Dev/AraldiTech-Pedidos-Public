@@ -23,15 +23,18 @@ document.getElementById("login-form").addEventListener("submit", async function(
             messageElement.textContent = "Login realizado com sucesso!";
             messageElement.style.color = "green";
 
-            // Encaminha para a página de pedidos após 3 segundos
+            // Armazena o token no localStorage
+            localStorage.setItem("access_token", data.access_token);
+
+            // Redireciona para a página de realizar pedidos após 3 segundos
             setTimeout(() => {
-                window.location.href = "./realizar_pedidos.html";
+                window.location.href = "/realizar_pedidos.html"; // Redireciona com GET
             }, 3000);
         } else {
             messageElement.textContent = data.detail || "Ocorreu um erro durante o login.";
             messageElement.style.color = "red";
 
-            // Apaga a mensagem apos X segundos caso o erro aconteça
+            // Apaga a mensagem após X segundos caso o erro aconteça
             setTimeout(() => {
                 messageElement.textContent = ""; 
             }, 3000);
