@@ -28,7 +28,7 @@ document.getElementById("login-form").addEventListener("submit", async function(
 
             // Redireciona para a página de realizar pedidos após 3 segundos
             setTimeout(() => {
-                window.location.href = "/realizar_pedidos.html"; // Redireciona com GET
+                window.location.href = "/static/realizar_pedidos.html"; // Redireciona com GET
             }, 3000);
         } else {
             messageElement.textContent = data.detail || "Ocorreu um erro durante o login.";

@@ -6,6 +6,19 @@
     <title>Pedido de Compras</title>
     <link rel="stylesheet" href="css/form-styles.css">
 </head>
+<script>
+    // Função para verificar se o usuário está autenticado
+    document.addEventListener("DOMContentLoaded", function () {
+        // Recupera o token de autenticação do localStorage
+        const token = localStorage.getItem("access_token");
+
+        // Verifica se o token está presente
+        if (!token) {
+            // Redireciona para a página de login se o token não estiver presente
+            window.location.href = "/static/login_pedidos.html";
+        }
+    });
+</script>
 <body>
     <div class="container">
         <h2>Pedido de Compras</h2>

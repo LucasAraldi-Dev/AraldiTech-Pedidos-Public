@@ -63,12 +63,39 @@ async def get_last_id():
     return last_pedido[0]["id"] + 1 if last_pedido else 1
 
 #Toda vez que carregar a página , redirecionar ao index.
+
+async def get_current_user(token: str = Depends(oauth2_scheme)):
+    if token is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token não fornecido",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Não foi possível validar as credenciais",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email: str = payload.get("sub")
+        if email is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+
+    user = await db.users.find_one({"email": email})
+    if user is None:
+        raise credentials_exception
+    return user
+
 @app.get("/")
 async def redirect_to_index():
     return RedirectResponse(url="/static/index.html")
 
 #Cria um novo pedido no BD
-@app.post("/pedidos/", response_model=Pedido)
+@app.post("/pedidos/", response_model=Pedido , dependencies=[Depends(get_current_user)])
 async def criar_pedido(pedido: Pedido):
     logging.info("Criando novo pedido")
     
@@ -85,7 +112,7 @@ async def criar_pedido(pedido: Pedido):
     return pedido
 
 #Função GET , irá listar os pedidos no BD
-@app.get("/pedidos/{pedido_id}", response_model=Pedido)
+@app.get("/pedidos/{pedido_id}", response_model=Pedido , dependencies=[Depends(get_current_user)])
 async def ler_pedido(pedido_id: int):
     pedido = await db.pedidos.find_one({"id": pedido_id})
     if not pedido:
@@ -221,27 +248,3 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
     if user is None:
         raise credentials_exception
     return user
-class AuthMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request, call_next):
-        # Permitir acesso ao index e login_pedidos
-        if request.url.path in ["/static/index.html", "/static/login_pedidos.html"]:
-            return await call_next(request)
-
-        # Bloquear acesso a outros arquivos estáticos, exceto as rotas de autenticação
-        if request.url.path.startswith("/static") and request.url.path not in ["/static/index.html", "/static/login_pedidos.html"]:
-            token = request.cookies.get("access_token")
-            if token is None:
-                return RedirectResponse(url="/")  # Redireciona se o token não estiver presente
-            
-            try:
-                user = await get_current_user(token=token)
-                # Se necessário, você pode adicionar logs aqui para verificar o usuário
-            except HTTPException:
-                return RedirectResponse(url="/")  # Redireciona se o token não for válido
-
-        # Se tudo estiver certo, continue para a próxima chamada
-        response = await call_next(request)
-        return response
-
-
-app.add_middleware(AuthMiddleware)
