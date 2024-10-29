@@ -1,5 +1,5 @@
 # AraldiTech - Pedidos
-![GitHub version](https://img.shields.io/badge/version-0.3.3-blue)
+![GitHub version](https://img.shields.io/badge/version-0.3.4-blue)
 
 
 ## Descrição
