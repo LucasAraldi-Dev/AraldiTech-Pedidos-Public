@@ -23,16 +23,22 @@ Ele oferece funcionalidades como:
 
 ## Versão
 
-A versão atual do projeto é **0.3.3**.
+A versão atual do projeto é **0.3.4**.
 
-### Alterações na Versão **0.3.3**
+### Alterações na Versão **0.3.4**
+**Estilos e Estrutura:**
+- **Atualização no Estilo do Formulário:** 
+  - Ajuste nos estilos do formulário para uma aparência mais moderna e limpa.
+  - Botão "CONSULTAR PEDIDOS" estilizado e posicionado fora do formulário para melhor usabilidade.
+  - Adicionada uma logo no topo da página, aprimorando a identidade visual.
+  
+**Correção de Autenticação de Segurança:** 
+- Removido o middleware de autenticação que restringe o acesso às páginas do aplicativo.
+- Permissão de acesso livre às páginas `index.html` e `login_pedidos.html` dentro do diretório `/static`.
+- Usuários não autenticados que tentarem acessar outras páginas serão redirecionados para a página inicial (`/static/index.html`).
+- Logs foram adicionados para registrar tentativas de acesso e outras atividades relacionadas à autenticação.
 
-- **Implementação de Autenticação de Segurança**:
-  - Adicionada middleware de autenticação que restringe o acesso às páginas do aplicativo.
-  - Permissão de acesso livre às páginas `index.html` e `login_pedidos.html` dentro do diretório `/static`.
-  - Usuários não autenticados que tentarem acessar outras páginas serão redirecionados para a página inicial (`/static/index.html`).
-  - Logs foram adicionados para registrar tentativas de acesso e outras atividades relacionadas à autenticação.
-
+**Próxima Versão:**
 A próxima grande atualização **(0.4.0)** está planejada para reformular completamente o design da aplicação, trazendo uma interface mais intuitiva e moderna.
 
 ## Funcionalidades

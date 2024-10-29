@@ -6,12 +6,12 @@ body {
 }
 
 .container {
-    max-width: 900px;
+    max-width: 1280px;
     margin: auto;
     background: white;
     padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    border-radius: 20px;
+    box-shadow: 0 0 0px rgba(0, 0, 0, 0.1);
 }
 
 h1 {
@@ -23,6 +23,7 @@ table {
     width: 100%;
     border-collapse: collapse;
     margin-top: 20px;
+    border-radius: 10px;
 }
 
 table th, table td {
@@ -157,4 +158,37 @@ button[type="submit"]:hover {
     background-color: #f4f4f4;
     padding: 10px;
     border-radius: 8px;
+}
+
+.botao-centralizado {
+    display: flex; /* Ativa o modelo flexbox */
+    justify-content: center; /* Centraliza horizontalmente */
+    margin-top: 20px; /* Espaço acima do botão */
+}
+
+.btn {
+    background-color: #6e6e6e; /* Cor do fundo */
+    color: white; /* Cor do texto */
+    padding: 10px 15px; /* Espaçamento interno */
+    border: none; /* Sem borda */
+    border-radius: 4px; /* Cantos arredondados */
+    cursor: pointer; /* Cursor em forma de mão ao passar o mouse */
+    font-size: 1em; /* Tamanho da fonte */
+    text-decoration: none; /* Remove underline */
+    display: inline-block; /* Para o botão se comportar como um bloco */
+    text-align: center; /* Centraliza o texto */
+}
+
+.btn:hover {
+    background-color: #555; /* Cor de fundo ao passar o mouse */
+}
+
+.logo {
+    margin-bottom: 20px; /* Espaço abaixo da logo */
+    text-align: center;
+}
+
+.logo-img {
+    width: 150px; /* Ajuste a largura conforme necessário */
+    height: auto; /* Mantém a proporção da imagem */
 }

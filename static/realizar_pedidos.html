@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pedido de Compras</title>
-    <link rel="stylesheet" href="css/form-styles.css">
+    <link rel="stylesheet" href="./css/form-styles.css">
 </head>
 <script>
     // Função para verificar se o usuário está autenticado
@@ -21,6 +21,7 @@
 </script>
 <body>
     <div class="container">
+        <img src="./imagens/ARALDI-TECH-VETOR-PEQ-PRETA.png" alt="Logo" class="logo">
         <h2>Pedido de Compras</h2>
         <form id="pedidoForm">
             <div class="form-group">
@@ -43,8 +44,6 @@
                 <label for="status">Status</label>
                 <select id="status" name="status" required>
                     <option value="Pendente">Pendente</option>
-                    <option value="Concluído">Concluído</option>
-                    <option value="Cancelado">Cancelado</option>
                 </select>
             </div>
             <div class="form-group">
@@ -56,12 +55,14 @@
                 <input type="text" id="responsavel_compra" name="responsavel_compra" required>
             </div>
             <button type="submit">ENVIAR PEDIDO</button>
-            <div id="message" class="message"></div>
         </form>
-        <a href="listar_pedidos.html" class="btn">Ver Pedidos</a>
+        <div class="consultar-pedidos">
+            <a href="listar_pedidos.html" class="btn">CONSULTAR PEDIDOS</a>
+        </div>
+        <div id="message" class="message"></div>
+      </div>
+    
 
-    </div>
-
-    <script src="js/scripts-form.js"></script>
+    <script src="./js/scripts-form.js"></script>
 </body>
 </html>

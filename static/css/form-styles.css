@@ -14,7 +14,8 @@ body {
     border-radius: 8px;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
     padding: 30px;
-    width: 400px;
+    max-width:  fit-content;
+    max-height: fit-content;
     transition: transform 0.3s;
 }
 
@@ -42,7 +43,7 @@ input[type="text"],
 input[type="number"],
 input[type="date"],
 select {
-    width: 100%;
+    width: 50%;
     padding: 10px;
     border: 1px solid #ccc;
     border-radius: 4px;
@@ -79,4 +80,34 @@ button:hover {
     text-align: center;
     color: green;
     font-weight: bold;
+}
+
+/* Estilos para o botão de consultar pedidos */
+.consultar-pedidos {
+    margin-top: 50px; /* Aumenta o espaço acima do botão */
+    text-align: center; /* Centraliza o botão */
+}
+
+.btn {
+    display: block;
+    background-color: #333f; /* Azul para o botão */
+    color: white;
+    padding: 12px 20px; /* Aumenta o espaçamento interno */
+    border-radius: 4px; /* Cantos arredondados */
+    text-decoration: none; /* Remove underline */
+    transition: background-color 0.3s, transform 0.3s; /* Transição suave */
+    font-size: 16px; /* Aumenta o tamanho da fonte */
+    box-shadow: 0 2px 5px rgba(84, 87, 90, 0.3); /* Sombra para efeito de profundidade */
+}
+
+.btn:hover {
+    background-color: #202020; /* Cor mais escura ao passar o mouse */
+    transform: translateY(-2px); /* Leve elevação ao passar o mouse */
+}
+
+.logo {
+    display: flex; /* Faz a imagem ser um bloco */
+    max-width: 30%; /* Limita a largura máxima da imagem ao tamanho do container */
+    height: auto; /* Mantém a proporção da imagem */
+    margin: 0 auto 20px; /* Centraliza a imagem e adiciona um espaço abaixo */
 }

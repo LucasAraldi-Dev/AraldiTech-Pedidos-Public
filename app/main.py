@@ -1,6 +1,7 @@
 from fastapi import Depends, FastAPI, HTTPException, status , Security
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse
+from fastapi import Request
 from motor.motor_asyncio import AsyncIOMotorClient
 from bson import ObjectId
 from pydantic import BaseModel, Field
@@ -13,7 +14,7 @@ from passlib.hash import bcrypt
 import logging
 from starlette.middleware.base import BaseHTTPMiddleware #Para aumentar a segurança das páginas após o login - adicionado um middleware
 
-#Versão 0.3.2
+#Versão 0.3.4
 
 # Chave Secreta e Configurações de Token
 SECRET_KEY = "09cfb7845a2dcb713c31b8f8eb5ff0a7313e3d923c6de73f4b1e6db72df73928"  
@@ -95,7 +96,7 @@ async def redirect_to_index():
     return RedirectResponse(url="/static/index.html")
 
 #Cria um novo pedido no BD
-@app.post("/pedidos/", response_model=Pedido , dependencies=[Depends(get_current_user)])
+@app.post("/pedidos/", response_model=Pedido , )
 async def criar_pedido(pedido: Pedido):
     logging.info("Criando novo pedido")
     
@@ -112,7 +113,7 @@ async def criar_pedido(pedido: Pedido):
     return pedido
 
 #Função GET , irá listar os pedidos no BD
-@app.get("/pedidos/{pedido_id}", response_model=Pedido , dependencies=[Depends(get_current_user)])
+@app.get("/pedidos/{pedido_id}", response_model=Pedido ,)
 async def ler_pedido(pedido_id: int):
     pedido = await db.pedidos.find_one({"id": pedido_id})
     if not pedido:
