@@ -54,5 +54,5 @@ A próxima grande atualização **(0.4.0)** está planejada para reformular comp
 - **Python 3.10+**
 - **MongoDB** (local ou em um servidor)
 
-=======
+
 # AraldiTech - Pedidos
