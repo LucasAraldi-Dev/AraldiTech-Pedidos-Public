@@ -1,36 +1,31 @@
 body {
     font-family: 'Arial', sans-serif;
-    background-color: #f0f0f0;
+    background-color: #222;
     color: #333;
     display: flex;
     justify-content: center;
     align-items: center;
     height: 100vh;
-    margin: 0;
+    margin: auto;
 }
 
 .container {
-    background-color: white;
+    background-color: #999;
     border-radius: 8px;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-    padding: 30px;
-    max-width:  fit-content;
+    padding: 40px;
+    max-width: fit-content;
     max-height: fit-content;
-    transition: transform 0.3s;
-}
-
-.container:hover {
-    transform: scale(1.02);
 }
 
 h2 {
     text-align: center;
     color: #444;
-    margin-bottom: 20px;
+    margin-bottom: 10px;
 }
 
 .form-group {
-    margin-bottom: 20px;
+    margin-bottom: 10px;
 }
 
 label {
@@ -46,15 +41,15 @@ select {
     width: 50%;
     padding: 10px;
     border: 1px solid #ccc;
-    border-radius: 4px;
+    border-radius: 5px;
     box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
-    transition: border 0.3s, box-shadow 0.3s;
+    transition: border 0.9s, box-shadow 0.3s;
 }
 
 input:focus,
 select:focus {
     border: 1px solid #333;
-    box-shadow: 0 0 5px rgba(51, 51, 51, 0.5);
+    box-shadow: 0 0 10px rgba(51, 51, 51, 0.5);
     outline: none;
 }
 
@@ -65,14 +60,16 @@ button {
     border: none;
     border-radius: 4px;
     cursor: pointer;
-    width: 100%;
     font-size: 16px;
     transition: background-color 0.3s, transform 0.3s;
+    position: absolute;
+    top: 88%;
+    left: 42%;
+    transform: translate(-50%, -50%);
 }
 
 button:hover {
     background-color: #555;
-    transform: translateY(-1px);
 }
 
 .message {
@@ -82,32 +79,85 @@ button:hover {
     font-weight: bold;
 }
 
-/* Estilos para o botão de consultar pedidos */
 .consultar-pedidos {
-    margin-top: 50px; /* Aumenta o espaço acima do botão */
-    text-align: center; /* Centraliza o botão */
+    margin-top: 50px;
+    text-align: center; 
 }
 
+                /*Este botão é da consulta de pedidos */
 .btn {
     display: block;
-    background-color: #333f; /* Azul para o botão */
+    background-color: #333f; 
     color: white;
-    padding: 12px 20px; /* Aumenta o espaçamento interno */
-    border-radius: 4px; /* Cantos arredondados */
-    text-decoration: none; /* Remove underline */
-    transition: background-color 0.3s, transform 0.3s; /* Transição suave */
-    font-size: 16px; /* Aumenta o tamanho da fonte */
-    box-shadow: 0 2px 5px rgba(84, 87, 90, 0.3); /* Sombra para efeito de profundidade */
+    padding: 12px 20px ; 
+    border-radius: 4px; 
+    text-decoration: none; 
+    transition: background-color 0.3s, transform 0.3s; 
+    font-size: 16px; 
+    box-shadow: 0 2px 5px rgba(84, 87, 90, 0.3); 
+    position: absolute;
+    top: 88%;
+    left: 60%;
+    transform: translate(-50%, -50%);
 }
 
 .btn:hover {
-    background-color: #202020; /* Cor mais escura ao passar o mouse */
-    transform: translateY(-2px); /* Leve elevação ao passar o mouse */
+    background-color: #555;
+    transition: background-color 0.3s, transform 0.3s; 
 }
 
 .logo {
-    display: flex; /* Faz a imagem ser um bloco */
-    max-width: 30%; /* Limita a largura máxima da imagem ao tamanho do container */
-    height: auto; /* Mantém a proporção da imagem */
-    margin: 0 auto 20px; /* Centraliza a imagem e adiciona um espaço abaixo */
+    position:relative;
+    display: flex;
+    max-width: 25%; 
+    height: auto; 
+    margin: auto;
+}
+
+input[type="file"] {
+    display: none;
+}
+
+.upload-label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 200px;   
+    height: 240px;
+    background-color: #999;
+    color: #333;
+    padding: 10px;
+    border: 2px solid #ccc;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    text-align: center;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+    position: absolute;
+    top: 40%;
+    left: 53%;
+    transition: border 0.3s, box-shadow 0.3s, transform 0.3s;
+}
+
+
+.upload-icon {
+    width: 100px; 
+    height: 100px;
+    background-image: url('../imagens/picture.png'); 
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+    margin-bottom: 10px;
+}
+
+.upload-text {
+    font-size: 14px;
+    color: #333;
+}
+
+.upload-label:hover {
+    border-color: #666; 
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); 
+    transform: translateY(2px); 
 }

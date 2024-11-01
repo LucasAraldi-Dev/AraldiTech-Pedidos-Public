@@ -25,7 +25,8 @@ document.getElementById("pedidoForm").onsubmit = async function(event) {
         }, 3000);
 
     } else {
-        messageElement.innerText = "Erro ao enviar o pedido.";
+        const errorData = await response.json(); // Tente capturar a resposta de erro
+        messageElement.innerText = errorData.message || "Erro ao enviar o pedido.";
         messageElement.style.color = "red"; // Adiciona cor de erro
 
         // Remove a mensagem de erro após 5 segundos

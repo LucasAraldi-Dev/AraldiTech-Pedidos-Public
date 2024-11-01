@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pedido de Compras</title>
+    <title>Solicitação de Pedido</title>
     <link rel="stylesheet" href="./css/form-styles.css">
 </head>
-<script>
+<!--<script>
     // Função para verificar se o usuário está autenticado
     document.addEventListener("DOMContentLoaded", function () {
         // Recupera o token de autenticação do localStorage
@@ -18,11 +18,11 @@
             window.location.href = "/static/login_pedidos.html";
         }
     });
-</script>
+</script>-->
 <body>
     <div class="container">
         <img src="./imagens/ARALDI-TECH-VETOR-PEQ-PRETA.png" alt="Logo" class="logo">
-        <h2>Pedido de Compras</h2>
+        <h2>Solicitação de Pedido</h2>
         <form id="pedidoForm">
             <div class="form-group">
                 <label for="setor">Setor</label>
@@ -56,6 +56,14 @@
             </div>
             <button type="submit">ENVIAR PEDIDO</button>
         </form>
+        <div class="form-group-upload">
+            <label for="uploadFile" class="upload-label">
+                <span class="upload-icon"></span>
+                <span class="upload-text">ANEXAR FOTO</span>
+            </label>
+            <input type="file" id="uploadFile" name="file" />
+        </div>
+    
         <div class="consultar-pedidos">
             <a href="listar_pedidos.html" class="btn">CONSULTAR PEDIDOS</a>
         </div>

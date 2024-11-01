@@ -1,17 +1,16 @@
 // Função para abrir o modal e preencher os campos com os dados do pedido
 async function editarPedido(pedidoId) {
-    console.log('Abrindo modal para editar o pedido:', pedidoId); // Adicione este log
+    console.log('Abrindo modal para editar o pedido:', pedidoId);
     try {
         const response = await fetch(`/pedidos/${pedidoId}`);
         if (!response.ok) {
             throw new Error('Erro ao buscar os dados do pedido.');
         }
         const pedido = await response.json();
-        
 
         // Preencher os campos com os dados recebidos
-        document.getElementById('pedido-id-value').innerText = pedido.id; // Atualiza o ID do pedido
-        document.getElementById('pedido-id').value = pedido.id; // Armazena o ID no campo oculto
+        document.getElementById('pedido-id-value').innerText = pedido.id;
+        document.getElementById('pedido-id').value = pedido.id;
         document.getElementById('setor').value = pedido.setor;
         document.getElementById('produto').value = pedido.produto;
         document.getElementById('quantidade').value = pedido.quantidade;
@@ -26,7 +25,6 @@ async function editarPedido(pedidoId) {
         console.error('Erro ao carregar o pedido:', error);
         document.getElementById('message').innerText = 'Erro ao carregar os dados do pedido.';
     }
-    
 }
 
 // Fechar o modal
@@ -45,8 +43,8 @@ window.onclick = function(event) {
 // Submissão do formulário de edição
 document.getElementById('editarPedidoForm').onsubmit = async function(event) {
     event.preventDefault();
-    const pedidoId = document.getElementById('pedido-id').value; // Obter ID do pedido oculto
-    console.log('ID do pedido:', pedidoId); // Adicione este log para depuração
+    const pedidoId = document.getElementById('pedido-id').value;
+    console.log('ID do pedido:', pedidoId);
     const pedidoData = {
         setor: this.setor.value,
         produto: this.produto.value,
@@ -72,7 +70,7 @@ document.getElementById('editarPedidoForm').onsubmit = async function(event) {
             carregarPedidos(); // Atualiza a tabela de pedidos
         } else {
             const errorData = await response.json();
-            alert(`Erro: ${JSON.stringify(errorData)}`); // Mostre o erro de forma legível
+            alert(`Erro: ${JSON.stringify(errorData)}`);
         }
     } catch (error) {
         console.error('Erro ao editar o pedido:', error);
