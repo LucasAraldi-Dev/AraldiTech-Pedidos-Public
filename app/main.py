@@ -19,7 +19,7 @@ from starlette.middleware.base import BaseHTTPMiddleware #Para aumentar a segura
 # Chave Secreta e Configurações de Token
 SECRET_KEY = "09cfb7845a2dcb713c31b8f8eb5ff0a7313e3d923c6de73f4b1e6db72df73928"  
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = 1
 
 # Criptografia das Senhas
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -78,13 +78,20 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         detail="Não foi possível validar as credenciais",
         headers={"WWW-Authenticate": "Bearer"},
     )
+
     try:
+        # Decodifica o token e verifica a expiração
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email: str = payload.get("sub")
         if email is None:
             raise credentials_exception
     except JWTError:
-        raise credentials_exception
+        # Levanta um erro de autenticação se o token estiver expirado ou inválido
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token expirado ou inválido. Faça login novamente.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
     user = await db.users.find_one({"email": email})
     if user is None:
