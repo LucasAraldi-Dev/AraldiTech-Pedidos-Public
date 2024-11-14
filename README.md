@@ -1,5 +1,5 @@
-# AraldiTech - Pedidos (Versão 0.4.0)
-![GitHub version](https://img.shields.io/badge/version-0.4.0-blue)
+# AraldiTech - Pedidos (Versão 0.4.1)
+![GitHub version](https://img.shields.io/badge/version-0.4.1-blue)
 
 ## Descrição
 **AraldiTech - Pedidos** é um WebApp desenvolvido para gerenciar pedidos de produtos para setores específicos, com interface moderna, intuitiva e responsiva, proporcionando uma experiência de uso otimizada.
@@ -21,17 +21,21 @@ Principais funcionalidades:
 - **OAuth2 com JWT**: Autenticação segura usando JSON Web Tokens.
 
 ## Versão
-A versão atual do projeto é **0.4.0**.
+A versão atual do projeto é **0.4.1**.
 
-### Mudanças Principais na Versão 0.4.0
-A versão 0.4.0 traz uma reformulação completa no frontend, implementando **Vue.js** para uma experiência de usuário mais rica e dinâmica, com novos layouts responsivos para dispositivos móveis, além de um novo sistema de navegação e controle da interface. 
+### Mudanças Principais na Versão 0.4.1
+A versão 0.4.1 inclui melhorias na experiência de usuário, focando no processo de criação de pedidos. As mudanças são:
+
+- **Mensagem de sucesso**: Ao criar um pedido com sucesso, a aplicação agora exibe um número de pedido e uma mensagem de confirmação.
+- **Reset de formulário**: Após a criação de um pedido com sucesso, o formulário é automaticamente limpo após alguns segundos.
+- **Interface mais dinâmica**: Melhorias na experiência de uso com feedback imediato após o envio do pedido.
 
 ## Funcionalidades
 - **Autenticação JWT**: Somente usuários autenticados têm permissão para criar, listar e editar pedidos.
 - **Registro de Usuários**: Novo registro de usuários com controle de autenticação seguro.
 - **CRUD de Pedidos**: Funcionalidades de Criação, Leitura, Atualização e Exclusão de pedidos.
 - **Interface Responsiva**: Nova interface que se adapta a dispositivos móveis, com navegação aprimorada e suporte a exibição de pedidos e criação de novos pedidos.
-  
+
 ## Instalação
 
 ### Pré-requisitos

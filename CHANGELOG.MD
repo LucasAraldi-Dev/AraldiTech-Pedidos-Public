@@ -1,6 +1,17 @@
 # Changelog
 Todas as alterações notáveis deste projeto serão documentadas neste arquivo.
 
+## [0.4.1] - 2024-11-14
+### Adicionado
+- **Mensagem de sucesso**: Exibição do número do pedido e uma mensagem de confirmação após a criação de um pedido com sucesso.
+- **Reset de formulário**: O formulário é automaticamente limpo após 3 segundos de sucesso na criação do pedido.
+- **Feedback dinâmico**: Melhorias na experiência do usuário com a exibição de uma mensagem de sucesso e atualização da interface.
+
+### Alterado
+- Melhorias no comportamento do modal de criação de pedidos, agora exibindo um feedback imediato após a criação de um pedido.
+
+---
+
 ## [0.4.0] - 2024-11-13
 ### Adicionado
 - Implementação do frontend com Vue.js, trazendo uma interface interativa e responsiva.
