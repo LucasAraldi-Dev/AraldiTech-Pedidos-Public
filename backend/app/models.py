@@ -1,11 +1,10 @@
 from datetime import datetime
-from pydantic import BaseModel, EmailStr , Field , root_validator
+from pydantic import BaseModel, EmailStr, Field, root_validator
 from passlib.context import CryptContext
 from typing import List, Optional
 from bson import ObjectId
 from pydantic import BaseModel
 from typing import Optional
-
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -15,7 +14,8 @@ class Usuario(BaseModel):
     nome: str
     email: EmailStr
     senha: str
-    setor: str = "Escritório"  
+    setor: str = "Escritório"
+    tipo_usuario: str = "comum"  # novo campo para tipo de usuário (comum ou gestor)
 
     class Config:
         arbitrary_types_allowed = True  
@@ -41,7 +41,8 @@ class Pedido(BaseModel):
     id: int = Field(default=None)
     descricao: str
     quantidade: int
-    urgencia: Optional[bool] = False
+    urgencia: Optional[str] = "Padrão"  # alterado para string com os valores "Padrão", "Urgente", "Crítico"
+    categoria: Optional[str] = Field(..., description="Categoria do produto")  # nova categoria
     observacao: Optional[str] = None
     anexo: Optional[str] = None
     status: Optional[str] = "Pendente"
@@ -49,11 +50,19 @@ class Pedido(BaseModel):
     deliveryDate: Optional[datetime] 
     sender: str
     
-    
-
     class Config:
         json_encoders = {
             ObjectId: str,
         }
-        
+
+# Setores válidos
 SETORES_VALIDOS = ["Fábrica de Ração", "Oficina", "Escritório"]
+
+# Categorias de produto válidas
+CATEGORIAS_VALIDAS = [
+    "Matérias-primas", 
+    "Equipamentos e Máquinas", 
+    "Peças de Reposição", 
+    "Serviços", 
+    "Mercadorias diversas"
+]

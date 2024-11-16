@@ -8,6 +8,7 @@ class UsuarioCreate(BaseModel):
     email: EmailStr
     senha: str
     setor: str
+    tipo_usuario: Optional[str] = "comum"  # tipo de usuário fixo como "comum" por padrão
 
     class Config:
         arbitrary_types_allowed = True  
@@ -17,6 +18,7 @@ class Usuario(BaseModel):
     nome: str
     email: EmailStr
     setor: str
+    tipo_usuario: str  # Adicionando tipo de usuário na resposta também
 
     class Config:
         arbitrary_types_allowed = True  
@@ -36,8 +38,9 @@ class Token(BaseModel):
 class PedidoCreate(BaseModel):
     descricao: str
     quantidade: int
+    categoria: str  # Adicionando categoria do produto
+    urgencia: Optional[str] = "Padrão"  # Alterado para str com valores Padrão, Urgente, Crítico
     observacao: Optional[str] = None
-    urgencia: Optional[bool] = False  
     deliveryDate: date
     sender: str
     file: Optional[str] = None  
