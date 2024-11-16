@@ -1,6 +1,6 @@
 from pydantic import BaseModel, EmailStr
 from typing import Optional
-from datetime import date
+from datetime import date, datetime
 
 # Esquema para criação de usuário
 class UsuarioCreate(BaseModel):
@@ -38,9 +38,10 @@ class PedidoCreate(BaseModel):
     quantidade: int
     observacao: Optional[str] = None
     urgencia: Optional[bool] = False  
-    orderDeliveryDate: date
+    deliveryDate: date
     sender: str
     file: Optional[str] = None  
+    status: Optional[str] = "Pendente"
 
     class Config:
         arbitrary_types_allowed = True

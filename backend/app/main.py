@@ -1,28 +1,28 @@
 from datetime import datetime
-from fastapi import FastAPI, Depends, HTTPException, File, Form, UploadFile
+from bson import ObjectId
+from fastapi import FastAPI, Depends, HTTPException, File, Form, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from . import crud, models, schemas, database, auth
 import logging
 from fastapi.security import OAuth2PasswordBearer
 from .auth import get_current_user
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
-from typing import Optional , List
+from pydantic import BaseModel, parse_obj_as
+from typing import Optional, List
 from .models import Pedido 
 from fastapi import APIRouter, Depends
-from . import auth
 
 logging.basicConfig(level=logging.DEBUG)
 
 app = FastAPI()
 
-# Lista de origens permitidas para CORS - Personalizar conforme o que o sistema te dar.
+# Lista de origens permitidas para CORS - Personalizar conforme o que o sistema te der.
 origins = [
     "http://localhost:8080",
     "http://localhost",
     "http://localhost:8000",
-    "http://192.168.1.3",
-    "http://192.168.1.3:8080",  
+    "http://192.168.1.5",
+    "http://192.168.1.5:8080",  
 ]
 
 app.add_middleware(
@@ -32,6 +32,16 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization"],
 )
+
+@app.middleware("http")
+async def log_auth_middleware(request: Request, call_next):
+    token = request.headers.get("Authorization")
+    if token:
+        logging.info(f"Token recebido: {token}")
+    else:
+        logging.warning("Nenhum token fornecido")
+    response = await call_next(request)
+    return response
 
 # Rota de criação de usuário
 @app.post("/users/", response_model=schemas.Usuario)
@@ -72,7 +82,7 @@ async def criar_pedido(pedido: models.Pedido, db=Depends(database.get_db)):
     result = await db.pedidos.insert_one(pedido_dict)
     pedido.id = str(result.inserted_id)
 
-    # Formata a data para a maneira que quiser ! 
+    # Formata a data para a maneira que quiser! 
     if pedido.deliveryDate:
         pedido.deliveryDate = pedido.deliveryDate.strftime("%d-%m-%y")
 
@@ -80,7 +90,7 @@ async def criar_pedido(pedido: models.Pedido, db=Depends(database.get_db)):
     
     return pedido
 
-# Rota para obter a lista de pedidos do sistema
+# Rota para obter a lista de pedidos do sistema (com autenticação)
 @app.get("/pedidos/", response_model=List[models.Pedido])
 async def listar_pedidos(db=Depends(database.get_db), current_user=Depends(get_current_user)):
     logging.info("Consultando pedidos para o usuário %s", current_user)
@@ -96,3 +106,26 @@ async def listar_pedidos(db=Depends(database.get_db), current_user=Depends(get_c
     logging.info("Pedidos encontrados: %s", pedidos)
 
     return pedidos
+
+@app.put("/pedidos/{pedido_id}")
+async def atualizar_pedido(pedido_id: int, pedido: dict, db=Depends(database.get_db)):
+    try:
+        # Remover o campo 'id' do pedido, se existir, para evitar conflitos com o MongoDB
+        pedido.pop("id", None)
+
+        # Obtenha a coleção
+        collection = db["pedidos"]
+
+        # Atualize o pedido e aguarde o resultado
+        atualizado = await collection.update_one(
+            {"id": pedido_id},  # Filtro
+            {"$set": pedido}    # Atualização
+        )
+
+        if atualizado.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Pedido não encontrado.")
+        
+        return {"message": "Pedido atualizado com sucesso!"}
+    except Exception as e:
+        logging.error(f"Erro ao atualizar pedido: {e}")
+        raise HTTPException(status_code=500, detail="Erro interno ao atualizar pedido.")

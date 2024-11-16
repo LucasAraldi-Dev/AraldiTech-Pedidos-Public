@@ -1,9 +1,7 @@
 <template>
-  <div v-if="isOpen" class="modal-overlay" @click="closeForm">
+  <div v-if="isOpen" class="modal-overlay" @click.self="handleOverlayClick">
     <div class="order-form" @click.stop>
       <h2>ADICIONAR PEDIDO</h2>
-
-      <p v-if="successMessage" class="success-message">{{ successMessage }}</p>
 
       <form v-show="!successMessage" @submit.prevent="handleCreateOrder">
         
@@ -12,13 +10,11 @@
           <textarea id="orderDescription" v-model="orderDescription" placeholder="DESCRIÇÃO DO PEDIDO" required></textarea>
         </div>
 
-        
         <div class="form-group">
           <label for="orderQuantity">QUANTIDADE SOLICITADA</label>
           <input id="orderQuantity" type="number" v-model="orderQuantity" required />
         </div>
 
-        
         <div class="form-group">
           <label for="orderUrgency">URGÊNCIA</label>
           <select v-model="orderUrgency" required>
@@ -27,35 +23,29 @@
           </select>
         </div>
 
-        
         <div class="form-group">
           <label for="orderDeliveryDate">DATA DE ENTREGA</label>
           <input id="orderDeliveryDate" type="date" v-model="orderDeliveryDate" required />
         </div>
 
-        
         <div class="form-group">
           <label for="orderNotes">OBSERVAÇÃO</label>
           <textarea id="orderNotes" v-model="orderNotes" placeholder="OBSERVAÇÃO"></textarea>
         </div>
 
-        
         <div class="form-group">
           <label for="orderFile">ANEXO (IMAGEM/ARQUIVO)</label>
           <input id="orderFile" type="file" @change="handleFileUpload" />
         </div>
 
-        
         <div class="form-group">
           <label for="orderSender">RESPONSÁVEL PELA COMPRA</label>
           <input id="orderSender" type="text" v-model="orderSender" required />
         </div>
 
-        
         <button type="submit">ENVIAR PEDIDO</button>
       </form>
 
-      
       <button v-show="!successMessage" class="close-btn" @click="closeForm">FECHAR</button>
     </div>
   </div>
@@ -118,16 +108,11 @@ export default {
           }
         );
 
-        
-        this.successMessage = `PEDIDO Nº ${response.data.id} foi criado com sucesso!`;
-
-        
+        // Após a criação do pedido, abre diretamente o modal de impressão
         this.$emit("create-order", response.data);
+        this.$emit("open-print-modal", response.data); // Evento para abrir o modal de impressão
 
-        
-        setTimeout(() => {
-          this.resetForm();
-        }, 2000);
+        this.resetForm();
       } catch (error) {
         console.error("Erro ao criar pedido:", error.response ? error.response.data : error);
       }
@@ -155,6 +140,9 @@ export default {
         };
         reader.readAsDataURL(file);
       }
+    },
+    handleOverlayClick(event) {
+      event.stopPropagation(); // Evita a propagação do clique para fechar o modal
     },
   },
 };

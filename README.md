@@ -1,5 +1,5 @@
-# AraldiTech - Pedidos (Versão 0.4.1)
-![GitHub version](https://img.shields.io/badge/version-0.4.1-blue)
+# AraldiTech - Pedidos (Versão 0.4.2) 
+![GitHub version](https://img.shields.io/badge/version-0.4.2-blue)
 
 ## Descrição
 **AraldiTech - Pedidos** é um WebApp desenvolvido para gerenciar pedidos de produtos para setores específicos, com interface moderna, intuitiva e responsiva, proporcionando uma experiência de uso otimizada.
@@ -11,6 +11,7 @@ Principais funcionalidades:
 - Listagem e consulta de pedidos
 - Controle de acesso por autenticação JWT
 - Interface interativa e responsiva com Vue.js
+- Modal de impressão de pedidos
 
 ## Tecnologias Utilizadas
 - **Python**: Linguagem de programação principal para a API.
@@ -21,14 +22,16 @@ Principais funcionalidades:
 - **OAuth2 com JWT**: Autenticação segura usando JSON Web Tokens.
 
 ## Versão
-A versão atual do projeto é **0.4.1**.
+A versão atual do projeto é **0.4.2**. 
 
-### Mudanças Principais na Versão 0.4.1
-A versão 0.4.1 inclui melhorias na experiência de usuário, focando no processo de criação de pedidos. As mudanças são:
+### Mudanças Principais na Versão 0.4.2 
+A versão 0.4.2 inclui diversas melhorias na interface e na funcionalidade do WebApp. As mudanças são:
 
-- **Mensagem de sucesso**: Ao criar um pedido com sucesso, a aplicação agora exibe um número de pedido e uma mensagem de confirmação.
-- **Reset de formulário**: Após a criação de um pedido com sucesso, o formulário é automaticamente limpo após alguns segundos.
-- **Interface mais dinâmica**: Melhorias na experiência de uso com feedback imediato após o envio do pedido.
+- **Fechamento de modal**: Alteração na lógica para não fechar o modal ao clicar fora da tela, melhorando a experiência do usuário.
+- **Design unificado de modais**: O design dos modais foi unificado, criando uma aparência mais consistente e intuitiva para o usuário.
+- **Modal de Impressão**: Adicionado um novo modal para impressão de pedidos.
+- **Melhoria no Layout**: Várias melhorias no layout, com pequenas alterações na disposição de elementos.
+- **Correção de erro no salvamento de pedidos**: Resolução do problema onde os pedidos não estavam sendo salvos corretamente no banco de dados.
 
 ## Funcionalidades
 - **Autenticação JWT**: Somente usuários autenticados têm permissão para criar, listar e editar pedidos.

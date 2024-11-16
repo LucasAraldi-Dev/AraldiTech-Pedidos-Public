@@ -1,9 +1,9 @@
 <template>
-  <div v-if="isOpen" class="modal-overlay" @click="closeForm">
+  <div v-if="isOpen" class="modal-overlay" >
     <div class="order-form" @click.stop>
       <h2>CONSULTAR PEDIDOS</h2>
 
-      <!-- Filtro de Status  -->
+      <!-- Filtro de Status -->
       <div class="filter">
         <label for="statusFilter">Status</label>
         <select v-model="statusFilter" id="statusFilter">
@@ -17,40 +17,35 @@
       <div class="orders-list">
         <div v-for="order in currentOrders" :key="order.id" class="order-card">
           <div class="order-header">
-            <span class="order-id">#{{ order.id }}</span> 
+            <span class="order-id">#{{ order.id }}</span>
           </div>
-
-          
           <h3 class="order-title">{{ order.descricao }}</h3>
-
-          
           <div class="order-details">
             <p><strong>Quantidade:</strong> {{ order.quantidade }}</p>
             <p><strong>Urgência:</strong> {{ order.urgencia ? "Sim" : "Não" }}</p>
             <p><strong>Observação:</strong> {{ order.observacao || "Nenhuma observação" }}</p>
             <p><strong>Usuário:</strong> {{ order.usuario_id }}</p>
           </div>
-
-         
           <button class="edit-button" @click="editOrder(order)">Editar Pedido</button>
         </div>
       </div>
 
-      
+      <!-- Paginação -->
       <div class="pagination">
         <button :disabled="currentPage === 1" @click="previousPage">Anterior</button>
         <span>Página {{ currentPage }} de {{ totalPages }}</span>
         <button :disabled="currentPage === totalPages" @click="nextPage">Próximo</button>
       </div>
 
-      
+      <!-- Botão Fechar -->
       <button class="close-btn" @click="closeForm">FECHAR</button>
     </div>
   </div>
 </template>
 
 <script>
-import axios from 'axios';
+import axios from "axios";
+import { on, off } from "@/utils/eventBus"; // Importando o EventBus
 
 export default {
   props: {
@@ -66,8 +61,13 @@ export default {
   },
   computed: {
     filteredOrders() {
-      const status = this.statusFilter.toUpperCase();
-      return this.orders.filter(order => order.status.toUpperCase() === status);
+      const normalizeAndUppercase = (str) =>
+        str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+
+      const status = normalizeAndUppercase(this.statusFilter);
+      return this.orders.filter((order) =>
+        normalizeAndUppercase(order.status) === status
+      );
     },
     totalPages() {
       const ordersPerPage = this.getOrdersPerPage();
@@ -76,7 +76,7 @@ export default {
     currentOrders() {
       const startIndex = (this.currentPage - 1) * this.getOrdersPerPage();
       return this.filteredOrders.slice(startIndex, startIndex + this.getOrdersPerPage());
-    }
+    },
   },
   methods: {
     fetchOrders() {
@@ -94,10 +94,10 @@ export default {
         });
     },
     closeForm() {
-      this.$emit('close');
+      this.$emit("close");
     },
     editOrder(order) {
-      this.$emit('edit-order', order); 
+      this.$emit("edit-order", order);
     },
     nextPage() {
       if (this.currentPage < this.totalPages) {
@@ -110,15 +110,31 @@ export default {
       }
     },
     getOrdersPerPage() {
-      // Retorna 2 card para telas móveis e 6 para telas maiores
+      // Retorna 2 cards para telas móveis e 6 para telas maiores
       return window.innerWidth <= 768 ? 2 : 6;
-    }
+    },
+    handleOrderEdited() {
+      // Atualiza os pedidos após a edição
+      this.fetchOrders();
+    },
   },
   created() {
     this.fetchOrders();
   },
+  mounted() {
+    // Registra o evento no EventBus
+    on("order-edited", this.handleOrderEdited);
+  },
+  beforeUnmount() {
+    // Remove o evento do EventBus
+    off("order-edited", this.handleOrderEdited);
+  },
 };
 </script>
+
+
+
+
 
 <style scoped>
 /* Modal Overlay */

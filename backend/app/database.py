@@ -3,7 +3,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from bson import ObjectId
 
 # Obtém a URI do MongoDB da variável de ambiente
-mongodb_uri = os.getenv("MONGODB_URI", "mongodb://localhost:27017")  
+mongodb_uri = os.getenv("MONGODB_URI", "mongodb://192.168.1.5:27017")  
 
 # Conectar ao MongoDB
 client = AsyncIOMotorClient(mongodb_uri)

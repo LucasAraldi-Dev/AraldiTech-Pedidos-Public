@@ -20,21 +20,21 @@
       <button class="menu-btn logout-btn" @click="logout">Sair</button>
     </div>
 
-    <div class="main-content">
-    </div>
+    <div class="main-content"></div>
 
+    <!-- Modal de Criação de Pedido -->
     <section v-if="isCreateOrderSectionOpen" class="order-section">
       <ModalCriarPedido
         :isOpen="isCreateOrderSectionOpen"
         @close="closeCreateOrderSection"
-        @open-menu="toggleMenu" 
-        @create-order="handleCreateOrder" 
+        @create-order="handleCreateOrder"
       />
     </section>
 
     <!-- Modal de Consulta de Pedidos -->
     <section v-if="isConsultOrdersSectionOpen" class="order-section">
       <ModalConsultaPedidos
+        ref="consultModal"
         :isOpen="isConsultOrdersSectionOpen"
         @close="closeConsultOrdersSection"
         @edit-order="openEditOrderSection"
@@ -43,12 +43,15 @@
 
     <!-- Modal de Edição de Pedido -->
     <ModalEditarPedido
+      ref="editModal"
       v-if="isEditOrderOpen"
       :isOpen="isEditOrderOpen"
       :order="selectedOrder"
       @close="closeEditOrderSection"
+      @save="handleEditOrder"
     />
-    <!-- Modal de Edição de Impressão de Pedidos - Verificar depois se quer img ou outro form -->
+
+    <!-- Modal de Impressão de Pedido -->
     <ModalImprimirPedido
       v-if="isPrintModalOpen"
       :isOpen="isPrintModalOpen"
@@ -63,6 +66,7 @@ import ModalCriarPedido from "@/components/ModalCriarPedido.vue";
 import ModalConsultaPedidos from "@/components/ModalConsultaPedidos.vue";
 import ModalEditarPedido from "@/components/ModalEditarPedido.vue";
 import ModalImprimirPedido from "@/components/ModalImprimirPedido.vue";
+import axios from 'axios';
 
 export default {
   components: {
@@ -76,9 +80,9 @@ export default {
       isCreateOrderSectionOpen: false,
       isConsultOrdersSectionOpen: false,
       isPrintModalOpen: false,
-      isEditOrderOpen: false,  
-      selectedOrder: null, 
-      pedidoCriado: null,
+      isEditOrderOpen: false,
+      selectedOrder: null,
+      pedidoCriado: null, // Armazenar o pedido criado
       orders: [],
       isMobile: false,
       isMenuOpen: false,
@@ -107,17 +111,37 @@ export default {
       this.isConsultOrdersSectionOpen = false;
     },
     openEditOrderSection(order) {
-      this.selectedOrder = order;  
-      this.isEditOrderOpen = true;  
+      this.selectedOrder = { ...order };
+      this.isEditOrderOpen = true;
     },
     closeEditOrderSection() {
-      this.isEditOrderOpen = false;  
+      this.isEditOrderOpen = false;
+      this.fetchOrders();
     },
-    handleCreateOrder(order) {
-      this.orders.push(order);
-      this.pedidoCriado = order;
-      this.isPrintModalOpen = true;
-      this.closeCreateOrderSection();
+    async handleEditOrder(order) {
+      try {
+        const payload = {
+          id: order.id,
+          descricao: order.descricao,
+          quantidade: order.quantidade,
+          observacao: order.observacao,
+          urgencia: order.urgencia,
+          deliveryDate: order.deliveryDate,
+          sender: order.sender,
+          status: order.status,
+          anexo: order.anexo || null,
+        };
+
+        await axios.put(`/pedidos/${order.id}`, payload);
+
+        const index = this.orders.findIndex(o => o.id === order.id);
+        if (index !== -1) this.orders.splice(index, 1, order);
+
+        this.$refs.consultModal.handleOrderEdited();
+        this.closeEditOrderSection();
+      } catch (error) {
+        console.error("Erro ao editar o pedido:", error);
+      }
     },
     closePrintModal() {
       this.isPrintModalOpen = false;
@@ -135,9 +159,31 @@ export default {
         this.isMenuOpen = false;
       }
     },
+    async fetchOrders() {
+      try {
+        const response = await axios.get('/pedidos');
+        this.orders = response.data;
+      } catch (error) {
+        console.error("Erro ao carregar pedidos:", error);
+      }
+    },
+
+    // Função para lidar com a criação do pedido e abrir o modal de impressão
+    handleCreateOrder(pedidoCriado) {
+      // Armazenar o pedido criado
+      this.pedidoCriado = pedidoCriado;
+
+      // Abrir o modal de impressão
+      this.isPrintModalOpen = true;
+
+      // Fechar o modal de criação de pedido
+      this.isCreateOrderSectionOpen = false;
+    },
   },
 };
 </script>
+
+
 
 
 <style scoped>

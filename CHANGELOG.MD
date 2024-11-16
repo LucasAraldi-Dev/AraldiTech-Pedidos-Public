@@ -1,6 +1,19 @@
 # Changelog
 Todas as alterações notáveis deste projeto serão documentadas neste arquivo.
 
+## [0.4.2] - 2024-11-16
+### Adicionado
+- **Modal de Impressão**: Novo modal adicionado para imprimir pedidos diretamente da interface.
+- **Fechamento de Modal**: Alteração na lógica para impedir que o modal seja fechado ao clicar fora da tela.
+- **Design Unificado de Modais**: Todos os modais agora possuem um design consistente e melhor alinhado visualmente.
+
+### Alterado
+- **Layout Melhorado**: Pequenas melhorias de layout para proporcionar uma melhor experiência ao usuário, incluindo ajustes de espaçamento e exibição de elementos.
+- **Erro no Salvamento de Pedidos**: Correção do erro onde os pedidos não estavam sendo salvos corretamente no banco de dados.
+- **Feedback Imediato**: Melhorias no feedback fornecido após a criação de pedidos, agora com uma resposta mais dinâmica.
+
+--- 
+
 ## [0.4.1] - 2024-11-14
 ### Adicionado
 - **Mensagem de sucesso**: Exibição do número do pedido e uma mensagem de confirmação após a criação de um pedido com sucesso.
