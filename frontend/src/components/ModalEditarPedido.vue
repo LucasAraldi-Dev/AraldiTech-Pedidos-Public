@@ -86,7 +86,7 @@ export default {
         descricao: this.order?.descricao || "",
         quantidade: this.order?.quantidade || 0,
         observacao: this.order?.observacao || "",
-        urgencia: this.order?.urgencia ?? false, // Booleano padrão
+        urgencia: this.order?.urgencia ?? false, 
         deliveryDate: this.formatToDDMMYYYY(this.order?.deliveryDate) || "",
         sender: this.order?.sender || "",
         status: this.order?.status || "Pendente",

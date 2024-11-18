@@ -1,6 +1,18 @@
 # Changelog
 Todas as alterações notáveis deste projeto serão documentadas neste arquivo.
 
+## [0.4.3] - 2024-11-17
+### Adicionado
+- **Hierarquia de Usuários**: Diferenciação entre usuários **Comuns** e **Gestores**, criando uma base para permissões específicas.
+- **Painel de Controle do Usuário Comum**: Ajustes na interface e funcionalidades para melhorar a experiência do usuário.
+- **Preparação para o Painel do Gestor**: Rotas no back-end ajustadas para futura implementação de funcionalidades específicas para gestores.
+
+### Alterado
+- **Layout Geral**: Reformulação visual em diversos componentes para maior consistência e modernização.
+- **Responsividade**: Melhorias no comportamento da interface para dispositivos móveis (ainda em fase de teste).
+
+---
+
 ## [0.4.2] - 2024-11-16
 ### Adicionado
 - **Modal de Impressão**: Novo modal adicionado para imprimir pedidos diretamente da interface.
@@ -12,13 +24,13 @@ Todas as alterações notáveis deste projeto serão documentadas neste arquivo.
 - **Erro no Salvamento de Pedidos**: Correção do erro onde os pedidos não estavam sendo salvos corretamente no banco de dados.
 - **Feedback Imediato**: Melhorias no feedback fornecido após a criação de pedidos, agora com uma resposta mais dinâmica.
 
---- 
+---
 
 ## [0.4.1] - 2024-11-14
 ### Adicionado
-- **Mensagem de sucesso**: Exibição do número do pedido e uma mensagem de confirmação após a criação de um pedido com sucesso.
-- **Reset de formulário**: O formulário é automaticamente limpo após 3 segundos de sucesso na criação do pedido.
-- **Feedback dinâmico**: Melhorias na experiência do usuário com a exibição de uma mensagem de sucesso e atualização da interface.
+- **Mensagem de Sucesso**: Exibição do número do pedido e uma mensagem de confirmação após a criação de um pedido com sucesso.
+- **Reset de Formulário**: O formulário é automaticamente limpo após 3 segundos de sucesso na criação do pedido.
+- **Feedback Dinâmico**: Melhorias na experiência do usuário com a exibição de uma mensagem de sucesso e atualização da interface.
 
 ### Alterado
 - Melhorias no comportamento do modal de criação de pedidos, agora exibindo um feedback imediato após a criação de um pedido.
@@ -63,7 +75,7 @@ Todas as alterações notáveis deste projeto serão documentadas neste arquivo.
 - Melhorias na posição do botão "CONSULTAR PEDIDOS" no formulário.
 
 ### Corrigido
-- Autenticação: removido middleware que restringia acesso às páginas `index.html` e `login_pedidos.html`.
+- Autenticação: Removido middleware que restringia acesso às páginas `index.html` e `login_pedidos.html`.
 - Redirecionamento de usuários não autenticados para a página inicial.
 - Logs de atividades relacionadas à autenticação adicionados para monitoramento.
 

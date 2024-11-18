@@ -1,5 +1,5 @@
-# AraldiTech - Pedidos (Versão 0.4.2) 
-![GitHub version](https://img.shields.io/badge/version-0.4.2-blue)
+# AraldiTech - Pedidos (Versão 0.4.3) 
+![GitHub version](https://img.shields.io/badge/version-0.4.3-blue)
 
 ## Descrição
 **AraldiTech - Pedidos** é um WebApp desenvolvido para gerenciar pedidos de produtos para setores específicos, com interface moderna, intuitiva e responsiva, proporcionando uma experiência de uso otimizada.
@@ -12,6 +12,7 @@ Principais funcionalidades:
 - Controle de acesso por autenticação JWT
 - Interface interativa e responsiva com Vue.js
 - Modal de impressão de pedidos
+- Hierarquia de usuários: **Comum** e **Gestor**
 
 ## Tecnologias Utilizadas
 - **Python**: Linguagem de programação principal para a API.
@@ -22,22 +23,25 @@ Principais funcionalidades:
 - **OAuth2 com JWT**: Autenticação segura usando JSON Web Tokens.
 
 ## Versão
-A versão atual do projeto é **0.4.2**. 
+A versão atual do projeto é **0.4.3**. 
 
-### Mudanças Principais na Versão 0.4.2 
-A versão 0.4.2 inclui diversas melhorias na interface e na funcionalidade do WebApp. As mudanças são:
+### Mudanças Principais na Versão 0.4.3 
+A versão 0.4.3 introduz melhorias importantes e ajustes no projeto, incluindo:
 
-- **Fechamento de modal**: Alteração na lógica para não fechar o modal ao clicar fora da tela, melhorando a experiência do usuário.
-- **Design unificado de modais**: O design dos modais foi unificado, criando uma aparência mais consistente e intuitiva para o usuário.
-- **Modal de Impressão**: Adicionado um novo modal para impressão de pedidos.
-- **Melhoria no Layout**: Várias melhorias no layout, com pequenas alterações na disposição de elementos.
-- **Correção de erro no salvamento de pedidos**: Resolução do problema onde os pedidos não estavam sendo salvos corretamente no banco de dados.
+- **Hierarquia de Usuários**: Adicionada funcionalidade para diferenciação entre usuários **comuns** e **gestores**, criando uma base para personalização de funcionalidades.
+- **Ajustes no Painel do Usuário Comum**: Melhorias na interface e na experiência de navegação no painel, deixando mais intuitivo e funcional.
+- **Preparação para o Painel de Controle do Gestor**: Back-end já preparado para integrar futuramente o painel do gestor com permissões específicas.
+- **Layout Geral Reformulado**: Adaptação visual de diversos elementos para maior consistência e modernização da interface.
+- **Melhorias de Responsividade**: Ajustes para que a interface se comporte bem em dispositivos móveis e telas menores (em fase de teste).
 
 ## Funcionalidades
 - **Autenticação JWT**: Somente usuários autenticados têm permissão para criar, listar e editar pedidos.
-- **Registro de Usuários**: Novo registro de usuários com controle de autenticação seguro.
+- **Hierarquia de Usuários**:
+  - **Comum**: Acesso limitado às funcionalidades de pedidos e consulta.
+  - **Gestor**: Planejado para funcionalidades avançadas de gerenciamento.
 - **CRUD de Pedidos**: Funcionalidades de Criação, Leitura, Atualização e Exclusão de pedidos.
-- **Interface Responsiva**: Nova interface que se adapta a dispositivos móveis, com navegação aprimorada e suporte a exibição de pedidos e criação de novos pedidos.
+- **Interface Responsiva**: Suporte melhorado para dispositivos móveis com ajustes visuais e de navegação.
+- **Modal de Impressão**: Modal interativo para facilitar a impressão de pedidos.
 
 ## Instalação
 
@@ -49,7 +53,7 @@ A versão 0.4.2 inclui diversas melhorias na interface e na funcionalidade do We
 ### Configuração
 1. Clone este repositório:
     ```bash
-    git clone https://github.com/seu-usuario/AraldiTech-Pedidos.git
+    git clone https://github.com/LucasAraldi-Dev/AraldiTech-Pedidos.git
     cd AraldiTech-Pedidos
     ```
 

@@ -126,26 +126,33 @@ form {
   transform: translateY(-3px);
 }
 
-@media (max-width: 768px) {
+@media (max-width: 390px) {
   .contact {
-    padding: 30px 15px;
+    padding: 20px 10px;
   }
 
   .contact h1 {
-    font-size: 28px;
+    font-size: 20px;
+    margin-bottom: 10px;
   }
 
   .contact p {
-    font-size: 16px;
+    font-size: 12px;
+    margin-bottom: 15px;
+  }
+
+  form {
+    padding: 15px;
   }
 
   .form-group input,
   .form-group textarea {
-    font-size: 14px;
+    font-size: 12px;
   }
 
   .btn-submit {
-    padding: 12px 25px;
+    padding: 8px 15px;
+    font-size: 12px;
   }
 }
 </style>

@@ -38,6 +38,7 @@
         :isOpen="isConsultOrdersSectionOpen"
         @close="closeConsultOrdersSection"
         @edit-order="openEditOrderSection"
+        @open-order="handlePrintModal"
       />
     </section>
 
@@ -82,7 +83,7 @@ export default {
       isPrintModalOpen: false,
       isEditOrderOpen: false,
       selectedOrder: null,
-      pedidoCriado: null, // Armazenar o pedido criado
+      pedidoCriado: null, 
       orders: [],
       isMobile: false,
       isMenuOpen: false,
@@ -118,6 +119,12 @@ export default {
       this.isEditOrderOpen = false;
       this.fetchOrders();
     },
+
+    handlePrintModal(pedido) {
+      console.log("Evento recebido com o pedido:", pedido);
+    this.pedidoCriado = pedido; 
+    this.isPrintModalOpen = true; 
+  },
     async handleEditOrder(order) {
       try {
         const payload = {
@@ -147,6 +154,9 @@ export default {
       this.isPrintModalOpen = false;
     },
     logout() {
+      localStorage.removeItem('user_name');
+      localStorage.removeItem('user');
+      localStorage.removeItem('token_type');
       localStorage.removeItem('access_token');
       this.$router.push({ name: 'Login' });
     },
@@ -166,17 +176,14 @@ export default {
       } catch (error) {
         console.error("Erro ao carregar pedidos:", error);
       }
+      
     },
 
     // Função para lidar com a criação do pedido e abrir o modal de impressão
     handleCreateOrder(pedidoCriado) {
-      // Armazenar o pedido criado
+      
       this.pedidoCriado = pedidoCriado;
-
-      // Abrir o modal de impressão
       this.isPrintModalOpen = true;
-
-      // Fechar o modal de criação de pedido
       this.isCreateOrderSectionOpen = false;
     },
   },

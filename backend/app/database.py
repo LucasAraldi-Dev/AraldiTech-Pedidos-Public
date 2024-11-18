@@ -19,7 +19,10 @@ async def get_db():
 
 # Funções auxiliares para acessar as coleções (CRUD)
 async def get_user_by_id(user_id: str):
-    return await users_collection.find_one({"_id": ObjectId(user_id)})
+    user = await users_collection.find_one({"_id": ObjectId(user_id)})
+    if user:
+        user["_id"] = str(user["_id"])
+    return user
 
 async def create_user(user_data: dict):
     result = await users_collection.insert_one(user_data)

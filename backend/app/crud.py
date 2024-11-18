@@ -1,7 +1,22 @@
+from typing import Optional
 from bson import ObjectId
 from . import database, models, schemas
 from passlib.context import CryptContext
 import logging
+
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+
+def parse_obj_id(pedido):
+    """
+    Função para ajustar o formato do objeto retornado pelo MongoDB,
+    convertendo '_id' para uma string e renomeando se necessário.
+    """
+    if '_id' in pedido:
+        pedido['id'] = str(pedido.pop('_id'))
+    return pedido
+
 
 # Função para converter ObjectId para string
 def parse_obj_id(doc):
@@ -12,14 +27,17 @@ def parse_obj_id(doc):
 # Função para criar um usuário no banco de dados
 async def create_user(db, user: schemas.UsuarioCreate):
     # Criptografando a senha antes de salvar
-    hashed_password = pwd_context.hash(user.senha)  
+    hashed_password = pwd_context.hash(user.senha)
     user_dict = user.dict()
-    user_dict["senha"] = hashed_password  
-    
+    user_dict["senha"] = hashed_password
+    user_dict["tipo_usuario"] = "comum"  # Define sempre como comum por padrão
+
     # Inserindo o usuário no banco
     result = await db["users"].insert_one(user_dict)
-    
-    return parse_obj_id(user_dict)  
+
+    # Adicionando ID ao dicionário retornado
+    user_dict["_id"] = str(result.inserted_id)
+    return user_dict 
 
 # Função para obter um usuário pelo e-mail
 async def get_user_by_email(db, email: str):
@@ -29,25 +47,23 @@ async def get_user_by_email(db, email: str):
     return None
 
 # Função para criar o pedido no banco de dados
-async def create_pedido(db, pedido: schemas.PedidoCreate, usuario_id: str):
+async def create_pedido(db, pedido: schemas.PedidoCreate, usuario_nome: str):
     pedido_dict = pedido.dict(exclude_unset=True)
-    pedido_dict['usuario_id'] = usuario_id  
+    pedido_dict["usuario_nome"] = usuario_nome
 
-    # Atribuindo os valores padrões para categoria e urgência, se não informados
-    if 'categoria' not in pedido_dict:
-        pedido_dict['categoria'] = "Matérias-primas"  # Valor padrão
-    if 'urgencia' not in pedido_dict:
-        pedido_dict['urgencia'] = "Padrão"  # Valor padrão
+    # Atribui valores padrão
+    pedido_dict.setdefault("categoria", "Matérias-primas")
+    pedido_dict.setdefault("urgencia", "Padrão")
 
-    # Insere o pedido no banco de dados
+    # Renomeia `file` para `anexo`
+    if pedido_dict.get("file"):
+        pedido_dict["anexo"] = pedido_dict.pop("file")
+
+    # Insere o pedido
     result = await db.pedidos.insert_one(pedido_dict)
+    pedido_dict["_id"] = result.inserted_id
 
-    # Atribui o '_id' gerado pelo MongoDB
-    pedido_dict['_id'] = result.inserted_id  
-
-    logging.debug(f"Pedido inserido com _id: {pedido_dict['_id']}")
-
-    return parse_obj_id(pedido_dict)  
+    return parse_obj_id(pedido_dict)
 
 # Função para obter um pedido pelo ID
 async def get_pedido_by_id(db, pedido_id: str):

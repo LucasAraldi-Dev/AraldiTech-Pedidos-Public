@@ -38,18 +38,18 @@ class Usuario(BaseModel):
 
 # Modelo de pedido para o MongoDB
 class Pedido(BaseModel):
-    id: int = Field(default=None)
+    id: Optional[int] = None  # Pode ser None até ser gerado
     descricao: str
     quantidade: int
-    urgencia: Optional[str] = "Padrão"  # alterado para string com os valores "Padrão", "Urgente", "Crítico"
-    categoria: Optional[str] = Field(..., description="Categoria do produto")  # nova categoria
+    urgencia: Optional[str] = "Padrão"  # Padrão, Urgente ou Crítico
+    categoria: Optional[str] = "Matérias-primas"
     observacao: Optional[str] = None
     anexo: Optional[str] = None
     status: Optional[str] = "Pendente"
-    usuario_id: str
-    deliveryDate: Optional[datetime] 
+    usuario_nome: str
+    deliveryDate: Optional[datetime]
     sender: str
-    
+
     class Config:
         json_encoders = {
             ObjectId: str,

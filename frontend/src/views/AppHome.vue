@@ -2,7 +2,7 @@
   <main>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     <section class="intro">
-      <h1>Bem-vindo ao WebApp da AraldiTech</h1>
+      <h1>AraldiTech  Pedidos</h1>
       <p>Faça login para acessar seu painel de controle.</p>
       <router-link to="/login" class="btn-login" id="loginbtn">Entrar</router-link>
     </section>
@@ -158,5 +158,7 @@ footer p {
 .footer-links li a:hover {
   color: #ccc;
 }
+
+
 
 </style>

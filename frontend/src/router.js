@@ -47,12 +47,16 @@ const routes = [
       },
     ],
     beforeEnter: async (to, from, next) => {
-      const token = localStorage.getItem('access_token');
-      if (!token || !(await isTokenValid())) {
-        next({ name: 'Login' });
-      } else {
-        
+    const token = localStorage.getItem('access_token');
+    if (!token || !(await isTokenValid())) {
+      next({ name: 'Login' });
+    } else {
+      const user = JSON.parse(localStorage.getItem('user'));
+      if (user && user.tipo_usuario === 'comum') { // Verifique se o `user` existe
         next();
+      } else {
+        next({ name: 'Login' }); // Redirecione para login se o usuário não for válido
+      }
       }
     },
   },

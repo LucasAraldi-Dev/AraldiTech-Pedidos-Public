@@ -3,21 +3,28 @@
     <section class="login">
       <h1>Login</h1>
       <form @submit.prevent="handleLogin">
-        <input type="email" placeholder="E-mail" v-model="email" required />
-        <input type="password" placeholder="Senha" v-model="password" required />
+        <input
+          type="email"
+          placeholder="E-mail"
+          v-model="email"
+          required
+        />
+        <input
+          type="password"
+          placeholder="Senha"
+          v-model="password"
+          required
+        />
         <button type="submit">Entrar</button>
       </form>
 
       <p>Não tem conta? <span @click="openModal" class="register-link">Cadastre-se</span></p>
-      <div v-if="successMessage" class="success-message">
-        {{ successMessage }}
-      </div>
-      <div v-if="errorMessage" class="error-message">
-        {{ errorMessage }}
-      </div>
+
+      <div v-if="successMessage" class="success-message">{{ successMessage }}</div>
+      <div v-if="errorMessage" class="error-message">{{ errorMessage }}</div>
     </section>
 
-    <!-- Componente de modal de cadastro -->
+    <!-- Modal de Cadastro -->
     <RegisterModal
       :isModalOpen="isModalOpen"
       @signup="handleSignup"
@@ -27,73 +34,89 @@
 </template>
 
 <script>
-import axios from 'axios';
-import RegisterModal from '../components/RegisterModal.vue';
+import axios from "axios";
+import RegisterModal from "../components/RegisterModal.vue";
 
 export default {
-  name: 'AppLogin',
+  name: "AppLogin",
   components: {
     RegisterModal,
   },
   data() {
     return {
-      email: '',
-      password: '',
+      email: "",
+      password: "",
       isModalOpen: false,
-      successMessage: '',
-      errorMessage: '',
+      successMessage: "",
+      errorMessage: "",
     };
   },
   methods: {
     async handleLogin() {
-      try {
-        const response = await axios.post(`${process.env.VUE_APP_API_URL}/token`, {
-          email: this.email,
-          senha: this.password,
-        });
-
-        const { access_token, nome } = response.data;
-
-        if (access_token) {
-        localStorage.setItem('access_token', access_token);
-        localStorage.setItem('user_name', nome);
-        
-        // Exibe a mensagem de sucesso e redireciona
-        this.successMessage = 'Login bem-sucedido!';
-        setTimeout(() => {
-          this.successMessage = ''; // Limpa a mensagem após 3 segundos
-          this.$router.push('/menu');
-        }, 3000);
-      } else {
-        this.errorMessage = 'Erro ao salvar o token. Tente novamente.';
+  this.clearMessages();
+  try {
+    const response = await axios.post(
+      `${process.env.VUE_APP_API_URL}/token`,
+      {
+        email: this.email,
+        senha: this.password,
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
       }
-    } catch (error) {
-      console.error(error);
+    );
 
-      if (error.response && error.response.status === 401) {
-        this.errorMessage = 'Credenciais inválidas! Por favor, verifique seu e-mail e senha.';
-      } else {
-        this.errorMessage = 'Ocorreu um erro ao tentar fazer login. Tente novamente mais tarde.';
-      }
+    const { access_token, token_type, nome , email} = response.data;
+
+    if (access_token) {
+      localStorage.setItem("access_token", access_token);
+      localStorage.setItem("token_type", token_type);
+      localStorage.setItem('user_name', nome);
+      localStorage.setItem('user_email', email)
+      const user = { nome, tipo_usuario: "comum" };
+      localStorage.setItem("user", JSON.stringify(user));
+
+      this.successMessage = "Login bem-sucedido! Redirecionando...";
+      setTimeout(() => {
+        this.$router.push("/menu");
+      }, 2000);
     }
-  },
-    handleSignup(userData) {
-      axios
-        .post(`${process.env.VUE_APP_API_URL}/users/`, userData)
-        .then(() => {
-          this.closeModal();
-          this.$router.push('/menu');
-        })
-        .catch((error) => {
-          console.error(error);
-          this.errorMessage = 'Erro ao criar o usuário. Por favor, tente novamente.';
+  } catch (error) {
+    console.error(error);
+
+    if (error.response?.status === 401) {
+      this.errorMessage = "Credenciais inválidas! Verifique seu e-mail e senha.";
+    } else {
+      this.errorMessage = "Erro ao tentar fazer login. Tente novamente mais tarde.";
+    }
+  }
+},
+    async handleSignup(userData) {
+      this.clearMessages();
+      try {
+        await axios.post(`${process.env.VUE_APP_API_URL}/usuarios/`, {
+          ...userData,
+          tipo_usuario: "comum", 
         });
+
+        this.successMessage = "Usuário cadastrado com sucesso! Faça login.";
+        this.closeModal();
+      } catch (error) {
+        console.error(error);
+        this.errorMessage = "Erro ao cadastrar usuário. Por favor, tente novamente.";
+      }
     },
     openModal() {
       this.isModalOpen = true;
     },
     closeModal() {
       this.isModalOpen = false;
+    },
+    clearMessages() {
+      this.successMessage = "";
+      this.errorMessage = "";
     },
   },
 };

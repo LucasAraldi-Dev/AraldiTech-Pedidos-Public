@@ -1,5 +1,5 @@
 <template>
-  <div v-if="isOpen" class="modal-overlay" >
+  <div v-if="isOpen" class="modal-overlay">
     <div class="order-form" @click.stop>
       <h2>CONSULTAR PEDIDOS</h2>
 
@@ -22,11 +22,13 @@
           <h3 class="order-title">{{ order.descricao }}</h3>
           <div class="order-details">
             <p><strong>Quantidade:</strong> {{ order.quantidade }}</p>
-            <p><strong>Urgência:</strong> {{ order.urgencia ? "Sim" : "Não" }}</p>
+            <p><strong>Categoria:</strong> {{ order.categoria }}</p>
+            <p><strong>Urgência:</strong> {{ order.urgencia }}</p>
+            <p><strong>Entrega:</strong> {{ formatDate(order.deliveryDate) }}</p>
             <p><strong>Observação:</strong> {{ order.observacao || "Nenhuma observação" }}</p>
-            <p><strong>Usuário:</strong> {{ order.usuario_id }}</p>
+            <p><strong>Usuário:</strong> {{ order.usuario_nome }}</p>
           </div>
-          <button class="edit-button" @click="editOrder(order)">Editar Pedido</button>
+          <button class="open-button" @click="openOrder(order)">ABRIR</button>
         </div>
       </div>
 
@@ -45,7 +47,6 @@
 
 <script>
 import axios from "axios";
-import { on, off } from "@/utils/eventBus"; // Importando o EventBus
 
 export default {
   props: {
@@ -61,13 +62,7 @@ export default {
   },
   computed: {
     filteredOrders() {
-      const normalizeAndUppercase = (str) =>
-        str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
-
-      const status = normalizeAndUppercase(this.statusFilter);
-      return this.orders.filter((order) =>
-        normalizeAndUppercase(order.status) === status
-      );
+      return this.orders.filter(order => order.status.toUpperCase() === this.statusFilter.toUpperCase());
     },
     totalPages() {
       const ordersPerPage = this.getOrdersPerPage();
@@ -82,52 +77,35 @@ export default {
     fetchOrders() {
       axios
         .get(`${process.env.VUE_APP_API_URL}/pedidos`, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("access_token")}`,
-          },
+          headers: { Authorization: `Bearer ${localStorage.getItem("access_token")}` },
         })
-        .then((response) => {
+        .then(response => {
           this.orders = response.data;
         })
-        .catch((error) => {
-          console.error("Erro ao buscar pedidos:", error.response ? error.response.data : error);
-        });
+        .catch(error => console.error("Erro ao buscar pedidos:", error));
+    },
+    openOrder(order) {
+      this.$emit("open-order", order); 
     },
     closeForm() {
       this.$emit("close");
     },
-    editOrder(order) {
-      this.$emit("edit-order", order);
-    },
+    
     nextPage() {
-      if (this.currentPage < this.totalPages) {
-        this.currentPage++;
-      }
+      if (this.currentPage < this.totalPages) this.currentPage++;
     },
     previousPage() {
-      if (this.currentPage > 1) {
-        this.currentPage--;
-      }
+      if (this.currentPage > 1) this.currentPage--;
     },
     getOrdersPerPage() {
-      // Retorna 2 cards para telas móveis e 6 para telas maiores
       return window.innerWidth <= 768 ? 2 : 6;
     },
-    handleOrderEdited() {
-      // Atualiza os pedidos após a edição
-      this.fetchOrders();
+    formatDate(date) {
+      return new Date(date).toLocaleDateString();
     },
   },
   created() {
     this.fetchOrders();
-  },
-  mounted() {
-    // Registra o evento no EventBus
-    on("order-edited", this.handleOrderEdited);
-  },
-  beforeUnmount() {
-    // Remove o evento do EventBus
-    off("order-edited", this.handleOrderEdited);
   },
 };
 </script>
@@ -244,7 +222,7 @@ export default {
   color: #dfe6e9;
 }
 
-.edit-button {
+.open-button {
   background-color: #ff6f61;
   color: white;
   border: none;

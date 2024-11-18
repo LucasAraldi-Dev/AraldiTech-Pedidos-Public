@@ -2,15 +2,15 @@ import axios from "axios";
 
 export async function isTokenValid() {
   const token = localStorage.getItem("access_token");
-  if (!token) return false;
+  if (!token) return null; // Retorne `null` para tokens ausentes.
   
   try {
-    await axios.get(`${process.env.VUE_APP_API_URL}/auth/validate-token`, {
+    const response = await axios.get(`${process.env.VUE_APP_API_URL}/auth/validate-token`, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    return true;
+    return response.data.user || null; // Retorna o usuário, caso o backend forneça.
   } catch (error) {
     console.error("Token inválido ou expirado", error);
-    return false;
+    return null;
   }
 }

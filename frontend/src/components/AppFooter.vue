@@ -13,41 +13,61 @@
 <script>
 export default {
   name: 'AppFooter'
-}
+};
 </script>
 
 <style scoped>
+/* Estilos Gerais */
 footer {
   background-color: #333;
-  padding: 20px 0;
   color: #fff;
+  padding: 20px 0;
+  width: 100%;
 }
 
 footer .container {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
+  justify-content: center;
   align-items: center;
+  text-align: center; 
+  gap: 10px; 
 }
 
 footer p {
   margin: 0;
+  font-size: 14px; 
 }
 
 .footer-links {
   list-style: none;
   display: flex;
-}
-
-.footer-links li {
-  margin-left: 20px;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
 }
 
 .footer-links li a {
   color: #fff;
   text-decoration: none;
+  font-size: 14px;
 }
 
 .footer-links li a:hover {
   color: #ccc;
+}
+
+/* Garantir que o footer esteja fixo no final */
+body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  margin: 0;
+}
+
+main {
+  flex: 1; 
 }
 </style>

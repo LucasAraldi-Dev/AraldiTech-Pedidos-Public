@@ -18,7 +18,7 @@ class Usuario(BaseModel):
     nome: str
     email: EmailStr
     setor: str
-    tipo_usuario: str  # Adicionando tipo de usuário na resposta também
+    tipo_usuario: str  
 
     class Config:
         arbitrary_types_allowed = True  
@@ -38,13 +38,18 @@ class Token(BaseModel):
 class PedidoCreate(BaseModel):
     descricao: str
     quantidade: int
-    categoria: str  # Adicionando categoria do produto
-    urgencia: Optional[str] = "Padrão"  # Alterado para str com valores Padrão, Urgente, Crítico
+    categoria: str
+    urgencia: Optional[str] = "Padrão"
     observacao: Optional[str] = None
     deliveryDate: date
     sender: str
-    file: Optional[str] = None  
+    file: Optional[str] = None 
     status: Optional[str] = "Pendente"
+    usuario_nome: str
 
     class Config:
         arbitrary_types_allowed = True
+
+
+class PedidoRead(PedidoCreate):
+    id: int  # O campo "id" agora é somente leitura para respostas

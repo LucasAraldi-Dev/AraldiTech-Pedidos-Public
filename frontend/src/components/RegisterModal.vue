@@ -1,23 +1,46 @@
 <template>
-    <div class="modal-overlay" v-if="isModalOpen">
-      <div class="modal">
-        <h2>Cadastro</h2>
-        <form @submit.prevent="handleSignup">
+  <div class="modal-overlay" v-if="isModalOpen">
+    <div class="modal">
+      <h2>Cadastro</h2>
+      <form @submit.prevent="handleSignup">
+        <div v-if="successMessage" class="success-message">
+          {{ successMessage }}
+        </div>
+
+        <div v-else>
           <div class="form-group">
             <label for="name">Nome</label>
-            <input id="name" type="text" v-model="name" placeholder="Digite seu nome" required />
+            <input
+              id="name"
+              type="text"
+              v-model="name"
+              placeholder="Digite seu nome"
+              required
+            />
           </div>
-  
+
           <div class="form-group">
             <label for="signupEmail">E-mail</label>
-            <input id="signupEmail" type="email" v-model="signupEmail" placeholder="Digite seu e-mail" required />
+            <input
+              id="signupEmail"
+              type="email"
+              v-model="signupEmail"
+              placeholder="Digite seu e-mail"
+              required
+            />
           </div>
-  
+
           <div class="form-group">
             <label for="signupPassword">Senha</label>
-            <input id="signupPassword" type="password" v-model="signupPassword" placeholder="Digite sua senha" required />
+            <input
+              id="signupPassword"
+              type="password"
+              v-model="signupPassword"
+              placeholder="Digite sua senha"
+              required
+            />
           </div>
-  
+
           <div class="form-group">
             <label for="setor">Setor</label>
             <select v-model="setor" id="setor" required>
@@ -26,43 +49,52 @@
               <option value="Escritório">Escritório</option>
             </select>
           </div>
-  
+
           <button type="submit" class="submit-button">Cadastrar</button>
-        </form>
-        <button @click="closeModal" class="close-modal">Fechar</button>
-      </div>
+        </div>
+        <button v-if="!successMessage" @click="closeModal" class="close-modal">
+          Fechar
+        </button>
+      </form>
     </div>
-  </template>
-  
-  <script>
-  export default {
-    props: {
-      isModalOpen: Boolean,
+  </div>
+</template>
+
+<script>
+export default {
+  props: {
+    isModalOpen: Boolean,
+  },
+  data() {
+    return {
+      name: "",
+      signupEmail: "",
+      signupPassword: "",
+      setor: "Escritório",
+      successMessage: "", 
+    };
+  },
+  methods: {
+    handleSignup() {
+      this.$emit("signup", {
+        nome: this.name,
+        email: this.signupEmail,
+        senha: this.signupPassword,
+        setor: this.setor,
+      });
+
+      this.successMessage = "Usuário cadastrado com sucesso!";
+      setTimeout(() => {
+        this.closeModal(); // Fecha o modal após exibir a mensagem
+      }, 2000);
     },
-    data() {
-      return {
-        name: '',
-        signupEmail: '',
-        signupPassword: '',
-        setor: 'Escritório',
-      };
+    closeModal() {
+      this.successMessage = ""; // Reseta a mensagem ao fechar
+      this.$emit("close-modal");
     },
-    methods: {
-      handleSignup() {
-        this.$emit('signup', {
-          nome: this.name,
-          email: this.signupEmail,
-          senha: this.signupPassword,
-          setor: this.setor,
-        });
-        this.closeModal();
-      },
-      closeModal() {
-        this.$emit('close-modal');
-      },
-    },
-  };
-  </script>
+  },
+};
+</script>
   
   <style scoped>
   .modal-overlay {
@@ -162,5 +194,12 @@
   .close-modal:hover {
     color: #888;
   }
+
+  .success-message {
+  color: green;
+  margin-bottom: 10px;
+  font-weight: bold;
+}
+
   </style>
   

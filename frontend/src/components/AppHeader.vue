@@ -63,4 +63,25 @@ nav ul li a {
 nav ul li a:hover {
   color: #ccc;
 }
+
+/* Responsividade */
+@media (max-width: 390px) {
+  header .container {
+    padding: 0 10px; 
+  }
+
+  .logo {
+    width: 110px; 
+  }
+
+  nav ul li a {
+    font-size: 14px; 
+    padding: 8px 10px; 
+  }
+
+  .menu-toggle {
+    font-size: 20px; 
+  }
+}
+
 </style>
