@@ -3,25 +3,28 @@
     <section class="login">
       <h1>Login</h1>
       <form @submit.prevent="handleLogin">
-        <input
-          type="email"
-          placeholder="E-mail"
-          v-model="email"
-          required
-        />
-        <input
-          type="password"
-          placeholder="Senha"
-          v-model="password"
-          required
-        />
+        <div class="input-box">
+          <input
+            type="email"
+            v-model="email"
+            required
+          />
+          <label>E-mail</label>
+        </div>
+        <div class="input-box">
+          <input
+            type="password"
+            v-model="password"
+            required
+          />
+          <label>Senha</label>
+        </div>
         <button type="submit">Entrar</button>
       </form>
-
-      <p>Não tem conta? <span @click="openModal" class="register-link">Cadastre-se</span></p>
-
-      <div v-if="successMessage" class="success-message">{{ successMessage }}</div>
-      <div v-if="errorMessage" class="error-message">{{ errorMessage }}</div>
+      <p>
+        Não tem conta? 
+        <span @click="openModal" class="register-link">Cadastre-se</span>
+      </p>
     </section>
 
     <!-- Modal de Cadastro -->
@@ -36,6 +39,7 @@
 <script>
 import axios from "axios";
 import RegisterModal from "../components/RegisterModal.vue";
+import { useToast } from "vue-toastification";
 
 export default {
   name: "AppLogin",
@@ -47,65 +51,37 @@ export default {
       email: "",
       password: "",
       isModalOpen: false,
-      successMessage: "",
-      errorMessage: "",
     };
   },
   methods: {
     async handleLogin() {
-  this.clearMessages();
-  try {
-    const response = await axios.post(
-      `${process.env.VUE_APP_API_URL}/token`,
-      {
-        email: this.email,
-        senha: this.password,
-      },
-      {
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
-    );
-
-    const { access_token, token_type, nome , email} = response.data;
-
-    if (access_token) {
-      localStorage.setItem("access_token", access_token);
-      localStorage.setItem("token_type", token_type);
-      localStorage.setItem('user_name', nome);
-      localStorage.setItem('user_email', email)
-      const user = { nome, tipo_usuario: "comum" };
-      localStorage.setItem("user", JSON.stringify(user));
-
-      this.successMessage = "Login bem-sucedido! Redirecionando...";
-      setTimeout(() => {
-        this.$router.push("/menu");
-      }, 2000);
-    }
-  } catch (error) {
-    console.error(error);
-
-    if (error.response?.status === 401) {
-      this.errorMessage = "Credenciais inválidas! Verifique seu e-mail e senha.";
-    } else {
-      this.errorMessage = "Erro ao tentar fazer login. Tente novamente mais tarde.";
-    }
-  }
-},
-    async handleSignup(userData) {
-      this.clearMessages();
+      const toast = useToast();
       try {
-        await axios.post(`${process.env.VUE_APP_API_URL}/usuarios/`, {
-          ...userData,
-          tipo_usuario: "comum", 
-        });
+        const response = await axios.post(
+          `${process.env.VUE_APP_API_URL}/token`,
+          {
+            email: this.email,
+            senha: this.password,
+          },
+          { headers: { "Content-Type": "application/json" } }
+        );
 
-        this.successMessage = "Usuário cadastrado com sucesso! Faça login.";
-        this.closeModal();
+        const { access_token, token_type, nome, email } = response.data;
+
+        if (access_token) {
+          localStorage.setItem("access_token", access_token);
+          localStorage.setItem("token_type", token_type);
+          localStorage.setItem("user_name", nome);
+          localStorage.setItem("user_email", email);
+
+          toast.success("Login bem-sucedido! Redirecionando...");
+          setTimeout(() => {
+            this.$router.push("/menu");
+          }, 3000);
+        }
       } catch (error) {
         console.error(error);
-        this.errorMessage = "Erro ao cadastrar usuário. Por favor, tente novamente.";
+        toast.error("Erro ao tentar fazer login. Tente novamente mais tarde.");
       }
     },
     openModal() {
@@ -114,16 +90,11 @@ export default {
     closeModal() {
       this.isModalOpen = false;
     },
-    clearMessages() {
-      this.successMessage = "";
-      this.errorMessage = "";
-    },
   },
 };
 </script>
 
 <style scoped>
-
 .login-page {
   display: flex;
   align-items: center;
@@ -152,28 +123,46 @@ h1 {
 form {
   display: flex;
   flex-direction: column;
-  align-items: center;
 }
 
-input {
-  margin: 15px 0;
-  padding: 12px 20px;
+.input-box {
+  position: relative;
+  margin-bottom: 20px;
   width: 100%;
+}
+
+.input-box input {
+  width: 100%;
+  padding: 12px 10px;
   border: 1px solid #555;
   border-radius: 8px;
-  font-size: 16px;
-  background-color: #444;
+  background: #444;
   color: white;
-  transition: all 0.3s ease;
+  outline: none;
+  font-size: 16px;
+  transition: border-color 0.3s ease;
 }
 
-input::placeholder {
-  color: #bbb;
-}
-
-input:focus {
+.input-box input:focus {
   border-color: #888;
-  box-shadow: 0 0 8px rgba(136, 136, 136, 0.7);
+}
+
+.input-box input:focus + label,
+.input-box input:valid + label {
+  top: -19px;
+  left: 10px;
+  font-size: 14px;
+  color: #66ccff;
+}
+
+.input-box label {
+  position: absolute;
+  top: 12px;
+  left: 15px;
+  font-size: 16px;
+  color: #bbb;
+  pointer-events: none;
+  transition: all 0.3s ease;
 }
 
 button {
@@ -181,18 +170,19 @@ button {
   font-size: 16px;
   background-color: #555;
   color: white;
-  border: 2px solid #555;
+  border: none;
   border-radius: 8px;
   cursor: pointer;
-  width: 100%;
-  margin-top: 10px;
   transition: all 0.3s ease;
 }
 
 button:hover {
   background-color: #444;
-  border-color: #444;
   transform: translateY(-3px);
+}
+
+p {
+  padding-top: 35px;
 }
 
 .register-link {
@@ -204,27 +194,4 @@ button:hover {
 .register-link:hover {
   color: #888;
 }
-
-.error-message {
-  color: white;
-  background-color: red;
-  padding: 10px;
-  margin-top: 20px;
-  border-radius: 5px;
-  font-size: 16px;
-  text-align: center;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
-}
-
-.success-message {
-  color: white;
-  background-color: green;
-  padding: 10px;
-  margin-top: 20px;
-  border-radius: 5px;
-  font-size: 16px;
-  text-align: center;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
-}
-
 </style>

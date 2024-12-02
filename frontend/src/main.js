@@ -1,8 +1,21 @@
 import { createApp } from 'vue';
 import App from './App.vue';
 import router from './router';
+import Toast from 'vue-toastification';  
+import 'vue-toastification/dist/index.css';  
 
+const app = createApp(App);
 
-createApp(App)
-  .use(router)
-  .mount('#app');
+// Configuração global do Vue Toastification
+const options = {
+  position: 'top-center',  // Colocando as notificações no topo e centralizadas
+  timeout: 2500,  // Duração da notificação em ms
+  closeButton: true,  // Exibe o botão de fechar
+  pauseOnFocusLoss: true,  // Pausa a notificação quando a página perde foco
+  pauseOnHover: true,  // Pausa a notificação ao passar o mouse sobre ela
+};
+
+app.use(Toast, options);  // Usando o Toast no Vue
+
+app.use(router);
+app.mount('#app');

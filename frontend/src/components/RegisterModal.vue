@@ -61,6 +61,7 @@
 </template>
 
 <script>
+import { useToast } from "vue-toastification";
 export default {
   props: {
     isModalOpen: Boolean,
@@ -76,6 +77,7 @@ export default {
   },
   methods: {
     handleSignup() {
+      const toast = useToast();
       this.$emit("signup", {
         nome: this.name,
         email: this.signupEmail,
@@ -83,7 +85,7 @@ export default {
         setor: this.setor,
       });
 
-      this.successMessage = "Usuário cadastrado com sucesso!";
+      toast.success("Usuário cadastrado com sucesso!");
       setTimeout(() => {
         this.closeModal(); // Fecha o modal após exibir a mensagem
       }, 2000);

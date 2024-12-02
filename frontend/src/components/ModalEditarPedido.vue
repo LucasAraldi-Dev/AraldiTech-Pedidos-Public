@@ -54,6 +54,7 @@
 
 <script>
 import axios from "axios";
+import { useToast } from 'vue-toastification';  // Importando Vue Toastification
 
 export default {
   props: {
@@ -75,6 +76,7 @@ export default {
   },
   methods: {
     async saveOrder() {
+      const toast = useToast();  // Instanciando o Toastification
       try {
         const payload = {
           descricao: this.editedOrder.descricao,
@@ -98,11 +100,13 @@ export default {
         this.$emit("order-updated", response.data);
 
         // Notificar sucesso
-        alert("Pedido atualizado com sucesso!");
+        toast.success("Pedido atualizado com sucesso!");
         this.closeForm();
       } catch (error) {
         console.error("Erro ao salvar pedido:", error.response?.data || error);
-        alert("Erro ao salvar as alterações do pedido.");
+
+        // Notificar erro
+        toast.error("Erro ao salvar as alterações do pedido.");
       }
     },
     closeForm() {

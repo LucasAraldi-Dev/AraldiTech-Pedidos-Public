@@ -3,9 +3,9 @@
     <div class="order-form" @click.stop>
       <h2>ADICIONAR PEDIDO</h2>
 
+      <!-- Formulário de Criação de Pedido -->
       <form v-show="!successMessage" @submit.prevent="handleCreateOrder">
-        
-        <!-- Descrição do Pedido -->
+        <!-- Restante do Formulário (não alterado) -->
         <div class="form-group">
           <label for="orderDescription">DESCRIÇÃO DO PEDIDO</label>
           <textarea
@@ -16,13 +16,11 @@
           ></textarea>
         </div>
 
-        <!-- Quantidade Solicitada -->
         <div class="form-group">
           <label for="orderQuantity">QUANTIDADE SOLICITADA</label>
           <input id="orderQuantity" type="number" v-model="orderQuantity" required />
         </div>
 
-        <!-- Categoria do Pedido -->
         <div class="form-group">
           <label for="orderCategory">CATEGORIA</label>
           <select id="orderCategory" v-model="orderCategory" required>
@@ -35,7 +33,6 @@
           </select>
         </div>
 
-        <!-- Urgência -->
         <div class="form-group">
           <label for="orderUrgency">URGÊNCIA</label>
           <select id="orderUrgency" v-model="orderUrgency" required>
@@ -45,13 +42,11 @@
           </select>
         </div>
 
-        <!-- Data de Entrega -->
         <div class="form-group">
           <label for="orderDeliveryDate">DATA DE ENTREGA</label>
           <input id="orderDeliveryDate" type="date" v-model="orderDeliveryDate" required />
         </div>
 
-        <!-- Observações -->
         <div class="form-group">
           <label for="orderNotes">OBSERVAÇÃO</label>
           <textarea
@@ -61,13 +56,11 @@
           ></textarea>
         </div>
 
-        <!-- Anexo -->
         <div class="form-group">
           <label for="orderFile">ANEXO (IMAGEM/ARQUIVO)</label>
           <input id="orderFile" type="file" @change="handleFileUpload" />
         </div>
 
-        <!-- Responsável pela Compra -->
         <div class="form-group">
           <label for="orderSender">RESPONSÁVEL PELA COMPRA</label>
           <input id="orderSender" type="text" v-model="orderSender" required />
@@ -83,6 +76,7 @@
 
 <script>
 import axios from "axios";
+import { useToast } from 'vue-toastification';  // Importando Vue Toastification
 
 export default {
   props: {
@@ -101,14 +95,13 @@ export default {
       orderFile: null,
       orderFileBase64: "",
       userEmail: null,
-      successMessage: "",
     };
   },
   mounted() {
     this.userEmail = localStorage.getItem("user_email"); 
     this.userName = localStorage.getItem("user_name"); 
     this.token = localStorage.getItem("access_token");
-},
+  },
   methods: {
     async handleCreateOrder() {
       if (!this.orderFileBase64 && this.orderFile) {
@@ -127,17 +120,19 @@ export default {
       const token = localStorage.getItem("access_token");
 
       const payload = {
-    descricao: this.orderDescription,
-    quantidade: this.orderQuantity,
-    categoria: this.orderCategory,
-    urgencia: this.orderUrgency,
-    observacao: this.orderNotes,
-    deliveryDate: this.orderDeliveryDate,
-    sender: this.orderSender,
-    usuario_nome: this.userName,  
-    file: this.orderFileBase64,
-    status: "Pendente",
-};
+        descricao: this.orderDescription,
+        quantidade: this.orderQuantity,
+        categoria: this.orderCategory,
+        urgencia: this.orderUrgency,
+        observacao: this.orderNotes,
+        deliveryDate: this.orderDeliveryDate,
+        sender: this.orderSender,
+        usuario_nome: this.userName,  
+        file: this.orderFileBase64,
+        status: "Pendente",
+      };
+
+      const toast = useToast();  // Instanciando o Toastification
 
       try {
         const response = await axios.post(
@@ -151,11 +146,16 @@ export default {
           }
         );
 
-        this.$emit("create-order", response.data);
-        this.$emit("open-print-modal", response.data);
+        // Exibe a notificação de sucesso
+        toast.success("Pedido criado com sucesso!");
 
         this.resetForm();
+
+        this.$emit("create-order", response.data);
+        this.$emit("open-print-modal", response.data);
       } catch (error) {
+        // Exibe a notificação de erro
+        toast.error("Erro ao criar o pedido.");
         console.error("Erro ao criar pedido:", error.response ? error.response.data : error);
       }
     },
@@ -169,45 +169,43 @@ export default {
       this.orderSender = "";
       this.orderFile = null;
       this.orderFileBase64 = "";
-      this.successMessage = "";
     },
     closeForm() {
       this.$emit("close");
     },
-    handleFileUpload(event) {
-  const file = event.target.files[0];
-
-  if (!file) {
-    console.error("Nenhum arquivo selecionado.");
-    return;
-  }
-
-  console.log("Arquivo selecionado:", file);
-
-  const reader = new FileReader();
-
-  reader.onloadend = () => {
-    const result = reader.result;
-    console.log("FileReader resultado bruto:", result);
-
-    // Garante que só pega a parte Base64 (removendo o prefixo data:image/png;base64,)
-    if (result.includes(",")) {
-      this.orderFileBase64 = result.split(",")[1];
-    } else {
-      this.orderFileBase64 = result;
-    }
-
-    console.log("Base64 gerado:", this.orderFileBase64);
-  };
-
-  reader.onerror = (error) => {
-    console.error("Erro ao ler o arquivo:", error);
-  };
-
-  reader.readAsDataURL(file);
-},
     handleOverlayClick(event) {
       event.stopPropagation(); 
+    },
+    handleFileUpload(event) {
+      const file = event.target.files[0];
+
+      if (!file) {
+        console.error("Nenhum arquivo selecionado.");
+        return;
+      }
+
+      console.log("Arquivo selecionado:", file);
+
+      const reader = new FileReader();
+
+      reader.onloadend = () => {
+        const result = reader.result;
+        console.log("FileReader resultado bruto:", result);
+
+        if (result.includes(",")) {
+          this.orderFileBase64 = result.split(",")[1];
+        } else {
+          this.orderFileBase64 = result;
+        }
+
+        console.log("Base64 gerado:", this.orderFileBase64);
+      };
+
+      reader.onerror = (error) => {
+        console.error("Erro ao ler o arquivo:", error);
+      };
+
+      reader.readAsDataURL(file);
     },
   },
 };
@@ -338,6 +336,15 @@ button[type="submit"]:focus {
 
 .close-btn:focus {
   outline: none;
+}
+
+.success-message {
+  background-color: #4caf50;
+  color: white;
+  padding: 10px;
+  margin-bottom: 15px;
+  border-radius: 5px;
+  text-align: center;
 }
 
 </style>
