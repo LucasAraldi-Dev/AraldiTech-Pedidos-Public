@@ -7,6 +7,7 @@
           <input
             type="email"
             v-model="email"
+            placeholder=" "
             required
           />
           <label>E-mail</label>
@@ -15,6 +16,7 @@
           <input
             type="password"
             v-model="password"
+            placeholder=" "
             required
           />
           <label>Senha</label>
@@ -51,11 +53,17 @@ export default {
       email: "",
       password: "",
       isModalOpen: false,
+      successMessage: "",
+      errorMessage: "",
     };
+  },
+  setup() {
+    const toast = useToast();
+    return { toast }; 
   },
   methods: {
     async handleLogin() {
-      const toast = useToast();
+      this.clearMessages();
       try {
         const response = await axios.post(
           `${process.env.VUE_APP_API_URL}/token`,
@@ -63,7 +71,11 @@ export default {
             email: this.email,
             senha: this.password,
           },
-          { headers: { "Content-Type": "application/json" } }
+          {
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
         );
 
         const { access_token, token_type, nome, email } = response.data;
@@ -73,15 +85,43 @@ export default {
           localStorage.setItem("token_type", token_type);
           localStorage.setItem("user_name", nome);
           localStorage.setItem("user_email", email);
+          const user = { nome, tipo_usuario: "comum" };
+          localStorage.setItem("user", JSON.stringify(user));
 
-          toast.success("Login bem-sucedido! Redirecionando...");
+          this.successMessage = "Login bem-sucedido! Redirecionando..";
+          this.toast.success(this.successMessage); 
+
           setTimeout(() => {
             this.$router.push("/menu");
-          }, 3000);
+          }, 2000);
         }
       } catch (error) {
         console.error(error);
-        toast.error("Erro ao tentar fazer login. Tente novamente mais tarde.");
+
+        if (error.response?.status === 401) {
+          this.errorMessage = "Credenciais inválidas! Verifique seu e-mail e senha.";
+          this.toast.error(this.errorMessage); 
+        } else {
+          this.errorMessage = "Erro ao tentar fazer login. Tente novamente mais tarde.";
+          this.toast.error(this.errorMessage); 
+        }
+      }
+    },
+    async handleSignup(userData) {
+      this.clearMessages();
+      try {
+        await axios.post(`${process.env.VUE_APP_API_URL}/usuarios/`, {
+          ...userData,
+          tipo_usuario: "comum",
+        });
+
+        this.successMessage = "Usuário cadastrado com sucesso! Faça login.";
+        this.toast.success(this.successMessage); 
+        this.closeModal();
+      } catch (error) {
+        console.error(error);
+        this.errorMessage = "Erro ao cadastrar usuário. Por favor, tente novamente.";
+        this.toast.error(this.errorMessage); 
       }
     },
     openModal() {
@@ -89,6 +129,10 @@ export default {
     },
     closeModal() {
       this.isModalOpen = false;
+    },
+    clearMessages() {
+      this.successMessage = "";
+      this.errorMessage = "";
     },
   },
 };
@@ -147,9 +191,9 @@ form {
   border-color: #888;
 }
 
-.input-box input:focus + label,
-.input-box input:valid + label {
-  top: -19px;
+.input-box input:not(:placeholder-shown) + label,
+.input-box input:focus + label {
+  top: -12px;
   left: 10px;
   font-size: 14px;
   color: #66ccff;
@@ -157,7 +201,7 @@ form {
 
 .input-box label {
   position: absolute;
-  top: 12px;
+  top: 27px;
   left: 15px;
   font-size: 16px;
   color: #bbb;
@@ -165,24 +209,44 @@ form {
   transition: all 0.3s ease;
 }
 
+input {
+  margin: 15px 0;
+  padding: 12px 20px;
+  width: 100%;
+  border: 1px solid #555;
+  border-radius: 8px;
+  font-size: 16px;
+  background-color: #444;
+  color: white;
+  transition: all 0.3s ease;
+}
+
+input::placeholder {
+  color: #bbb;
+}
+
+input:focus {
+  border-color: #888;
+  box-shadow: 0 0 8px rgba(136, 136, 136, 0.7);
+}
+
 button {
   padding: 12px 20px;
   font-size: 16px;
   background-color: #555;
   color: white;
-  border: none;
+  border: 2px solid #555;
   border-radius: 8px;
   cursor: pointer;
+  width: 100%;
+  margin-top: 10px;
   transition: all 0.3s ease;
 }
 
 button:hover {
   background-color: #444;
+  border-color: #444;
   transform: translateY(-3px);
-}
-
-p {
-  padding-top: 35px;
 }
 
 .register-link {
@@ -193,5 +257,31 @@ p {
 
 .register-link:hover {
   color: #888;
+}
+
+.error-message {
+  color: white;
+  background-color: red;
+  padding: 10px;
+  margin-top: 20px;
+  border-radius: 5px;
+  font-size: 16px;
+  text-align: center;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+}
+
+p {
+  padding-top: 35px;
+}
+
+.success-message {
+  color: white;
+  background-color: green;
+  padding: 10px;
+  margin-top: 20px;
+  border-radius: 5px;
+  font-size: 16px;
+  text-align: center;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
 }
 </style>

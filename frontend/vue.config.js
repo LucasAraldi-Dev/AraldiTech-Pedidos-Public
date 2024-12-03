@@ -5,7 +5,7 @@ module.exports = defineConfig({
   devServer: {
     proxy: {
       '/': {
-        target: 'http://192.168.10.27',
+        target: 'http://192.168.1.5',
         changeOrigin: true,
         ws: false, // Desativa suporte a WebSocket
       },
