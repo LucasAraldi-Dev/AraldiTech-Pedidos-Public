@@ -146,13 +146,14 @@ export default {
   box-sizing: border-box;
   position: relative;
   text-transform: none;
+  font-size: 1.1rem;
 }
 
 /* Título do formulário */
 .order-form h2 {
   margin-bottom: 20px;
   text-align: center;
-  font-size: 1.4rem;
+  font-size: 2.5rem;
   color: #ff6f61; 
 }
 
@@ -187,6 +188,7 @@ export default {
   flex-direction: column;
   align-items: flex-start;
   gap: 10px;
+  font-size: 1.1rem;
 }
 
 /* Cabeçalho do card */
@@ -194,6 +196,7 @@ export default {
   display: flex;
   justify-content: center;
   width: 100%;
+  font-size: 1.5rem;
 }
 
 .order-id {
@@ -207,7 +210,8 @@ export default {
 .order-title {
   font-size: 1.2em;
   color: #f5f5f5; 
-  text-align: left;
+  text-align: center;
+  font-size: 1.3rem;
 }
 
 .view-attachment {
