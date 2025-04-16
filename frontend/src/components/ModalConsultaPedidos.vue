@@ -247,6 +247,8 @@ export default {
   border-radius: 10px;
   width: 100%;
   max-width: 900px; 
+  max-height: 90vh; /* Limita a altura máxima do modal */
+  overflow-y: auto; /* Adiciona rolagem vertical quando necessário */
   box-sizing: border-box;
   position: relative;
   text-transform: none;
@@ -316,6 +318,9 @@ export default {
   color: #f5f5f5; 
   text-align: center;
   font-size: 1.3rem;
+  word-wrap: break-word; /* Permite quebra de palavras longas */
+  overflow-wrap: break-word; /* Garante que palavras longas quebrem */
+  max-width: 100%; /* Limita a largura máxima */
 }
 
 .view-attachment {
@@ -333,6 +338,9 @@ export default {
 .order-card p {
   font-size: 0.9em;
   color: #dfe6e9;
+  word-wrap: break-word; /* Permite quebra de palavras longas */
+  overflow-wrap: break-word; /* Garante que palavras longas quebrem */
+  max-width: 100%; /* Limita a largura máxima */
 }
 
 .order-actions {
@@ -409,6 +417,9 @@ export default {
   border-radius: 5px;
   cursor: pointer;
   transition: background-color 0.3s ease;
+  position: sticky; /* Mantém o botão visível durante a rolagem */
+  bottom: 10px; /* Distância do fundo */
+  z-index: 10; /* Garante que fique acima de outros elementos */
 }
 
 .close-btn:hover {
@@ -530,6 +541,36 @@ export default {
 }
 
 /* Responsividade para diferentes dispositivos */
+/* Telas muito grandes */
+@media (min-width: 1921px) {
+  .order-form {
+    max-width: 1400px;
+    max-height: 85vh;
+    padding: 30px;
+  }
+  
+  .orders-list {
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 25px;
+  }
+  
+  .pagination {
+    margin-top: 30px;
+    margin-bottom: 20px;
+    position: sticky;
+    bottom: 70px;
+    background-color: #1f1f1f;
+    padding: 10px 0;
+    z-index: 5;
+  }
+  
+  .close-btn {
+    margin-top: 30px;
+    font-size: 22px;
+    padding: 15px 25px;
+  }
+}
+
 /* Tablets e telas menores (1024x768) */
 @media (max-width: 1024px) {
   .order-form {
