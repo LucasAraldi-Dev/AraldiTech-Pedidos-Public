@@ -210,10 +210,96 @@ button:hover {
   display: none;
 }
 
+/* Responsividade para diferentes dispositivos */
+/* Tablets e telas menores (1024x768) */
+@media (max-width: 1024px) {
+  .print-modal {
+    max-width: 90%;
+    padding: 20px;
+  }
+  
+  .logo {
+    width: 150px;
+  }
+  
+  .order-details p {
+    font-size: 0.95rem;
+  }
+}
+
+/* Tablets e dispositivos médios */
 @media (max-width: 768px) {
   .print-modal {
-    width: 80%;
+    width: 90%;
     max-width: 400px;
+    padding: 15px;
+  }
+  
+  .print-modal h2 {
+    font-size: 1.2rem;
+    margin-bottom: 15px;
+  }
+  
+  .logo {
+    width: 120px;
+  }
+  
+  .order-id {
+    font-size: 1.1rem;
+    margin: 15px 0;
+    padding: 8px;
+  }
+  
+  .order-details p {
+    margin-bottom: 10px;
+    font-size: 0.9rem;
+  }
+  
+  button {
+    padding: 10px 15px;
+    font-size: 0.9rem;
+  }
+}
+
+/* Dispositivos móveis */
+@media (max-width: 480px) {
+  .modal-overlay {
+    padding: 10px;
+  }
+  
+  .print-modal {
+    width: 95%;
+    padding: 12px;
+  }
+  
+  .print-modal h2 {
+    font-size: 1.1rem;
+    margin-bottom: 12px;
+  }
+  
+  .logo {
+    width: 100px;
+  }
+  
+  .order-id {
+    font-size: 1rem;
+    margin: 12px 0;
+    padding: 6px;
+  }
+  
+  .order-details p {
+    margin-bottom: 8px;
+    font-size: 0.85rem;
+  }
+  
+  .order-attachment {
+    max-height: 150px;
+  }
+  
+  button {
+    padding: 8px 12px;
+    font-size: 0.85rem;
+    margin-top: 15px;
   }
 }
 </style>

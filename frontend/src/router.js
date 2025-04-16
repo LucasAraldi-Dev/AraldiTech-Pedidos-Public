@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router';
+import { createRouter, createWebHashHistory } from 'vue-router';
 import AppHome from '@/views/AppHome.vue';
 import AppLogin from '@/views/AppLogin.vue';
 import AppContato from '@/views/AppContato.vue';
@@ -63,7 +63,7 @@ const routes = [
 ];
 
 const router = createRouter({
-  history: createWebHistory(process.env.BASE_URL),
+  history: createWebHashHistory(process.env.BASE_URL),
   routes,
 });
 

@@ -226,6 +226,8 @@ export default {
   align-items: center;
   transition: opacity 0.3s ease-in-out;
   overflow-y: auto;
+  padding: 15px;
+  box-sizing: border-box;
 }
 
 /* Estilo do Formulário */
@@ -240,7 +242,7 @@ export default {
   position: relative;
   text-transform: none;
   overflow-y: auto;
-
+  max-height: 90vh;
 }
 
 /* Título do formulário */
@@ -347,4 +349,104 @@ button[type="submit"]:focus {
   text-align: center;
 }
 
+/* Responsividade para diferentes dispositivos */
+/* Tablets e telas menores (1024x768) */
+@media (max-width: 1024px) {
+  .order-form {
+    max-width: 90%;
+    padding: 25px;
+  }
+  
+  .order-form h2 {
+    font-size: 1.8rem;
+  }
+  
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    padding: 10px;
+  }
+}
+
+/* Tablets e dispositivos médios */
+@media (max-width: 768px) {
+  .order-form {
+    max-width: 90%;
+    padding: 20px;
+  }
+  
+  .order-form h2 {
+    font-size: 1.6rem;
+    margin-bottom: 15px;
+  }
+  
+  .form-group {
+    margin-bottom: 12px;
+  }
+  
+  .form-group label {
+    font-size: 0.9rem;
+    margin-bottom: 5px;
+  }
+  
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    padding: 10px;
+    font-size: 0.9rem;
+  }
+  
+  textarea {
+    min-height: 80px;
+  }
+  
+  button[type="submit"],
+  .close-btn {
+    padding: 10px 15px;
+    font-size: 0.9rem;
+  }
+}
+
+/* Dispositivos móveis */
+@media (max-width: 480px) {
+  .modal-overlay {
+    padding: 10px;
+  }
+  
+  .order-form {
+    padding: 15px;
+    max-width: 95%;
+  }
+  
+  .order-form h2 {
+    font-size: 1.4rem;
+    margin-bottom: 12px;
+  }
+  
+  .form-group {
+    margin-bottom: 10px;
+  }
+  
+  .form-group label {
+    font-size: 0.85rem;
+  }
+  
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    padding: 8px;
+    font-size: 0.85rem;
+  }
+  
+  textarea {
+    min-height: 70px;
+  }
+  
+  button[type="submit"],
+  .close-btn {
+    padding: 10px;
+    font-size: 0.85rem;
+    margin-top: 10px;
+  }
+}
 </style>

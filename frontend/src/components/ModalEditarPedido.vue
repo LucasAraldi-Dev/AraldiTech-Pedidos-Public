@@ -201,4 +201,108 @@ button {
 .cancel-btn:hover {
   background-color: #3b484d;
 }
+
+/* Responsividade para diferentes dispositivos */
+/* Tablets e telas menores (1024x768) */
+@media (max-width: 1024px) {
+  .edit-form {
+    max-width: 90%;
+    padding: 25px;
+  }
+  
+  .edit-form h2 {
+    font-size: 1.8rem;
+  }
+  
+  input,
+  textarea,
+  select {
+    padding: 10px;
+  }
+}
+
+/* Tablets e dispositivos médios */
+@media (max-width: 768px) {
+  .edit-form {
+    max-width: 90%;
+    padding: 20px;
+  }
+  
+  .edit-form h2 {
+    font-size: 1.6rem;
+    margin-bottom: 15px;
+  }
+  
+  .form-group {
+    margin-bottom: 12px;
+  }
+  
+  label {
+    font-size: 0.9rem;
+    margin-bottom: 5px;
+  }
+  
+  input,
+  textarea,
+  select {
+    padding: 10px;
+    font-size: 0.9rem;
+  }
+  
+  textarea {
+    height: 80px;
+  }
+  
+  button {
+    padding: 10px 15px;
+    font-size: 0.9rem;
+  }
+}
+
+/* Dispositivos móveis */
+@media (max-width: 480px) {
+  .modal-overlay {
+    padding: 10px;
+  }
+  
+  .edit-form {
+    padding: 15px;
+    max-width: 95%;
+  }
+  
+  .edit-form h2 {
+    font-size: 1.4rem;
+    margin-bottom: 12px;
+  }
+  
+  .form-group {
+    margin-bottom: 10px;
+  }
+  
+  label {
+    font-size: 0.85rem;
+  }
+  
+  input,
+  textarea,
+  select {
+    padding: 8px;
+    font-size: 0.85rem;
+  }
+  
+  textarea {
+    height: 70px;
+  }
+  
+  .form-buttons {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  button {
+    width: 100%;
+    padding: 10px;
+    font-size: 0.85rem;
+  }
+}
 </style>

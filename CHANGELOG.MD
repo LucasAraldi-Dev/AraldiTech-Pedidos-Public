@@ -1,6 +1,17 @@
 # Changelog
 Todas as alterações notáveis deste projeto serão documentadas neste arquivo.
 
+## [0.5.0] - 2025-04-15
+### Adicionado  
+- Implementado o novo botão de CONCLUIR pedido no modal de consulta de pedidos.
+- Novo modal para a visualização do alerta , tipo , "Você deseja realmente marcar esse pedido como CONCLUÍDO?"
+
+### Corrigido
+- Correção no botão de CONCLUIR pedido no modal de consulta de pedidos.
+- Correção na validação do campo "Observação" no modal de criação de pedidos.
+- Correção da responsividade das páginas no geral.
+
+
 ## [0.4.4] - 2024-12-01  
 ### Adicionado  
 - **Sincronização em Tempo Real entre Modais**: Melhorias para garantir que alterações nos modais de edição sejam refletidas imediatamente nos modais de consulta.  

@@ -256,4 +256,99 @@ select:focus {
   transform: scale(0.9);
   opacity: 0;
 }
+
+/* Responsividade para diferentes dispositivos */
+/* Tablets e telas menores (1024x768) */
+@media (max-width: 1024px) {
+  .modal {
+    padding: 30px;
+    max-width: 500px;
+  }
+  
+  h2 {
+    font-size: 24px;
+    margin-bottom: 15px;
+  }
+  
+  .form-group {
+    margin-bottom: 20px;
+  }
+  
+  label {
+    font-size: 16px;
+  }
+  
+  input,
+  select,
+  .submit-button {
+    padding: 12px;
+    font-size: 16px;
+  }
+}
+
+/* Tablets e dispositivos médios */
+@media (max-width: 768px) {
+  .modal {
+    padding: 25px;
+    max-width: 90%;
+  }
+  
+  h2 {
+    font-size: 22px;
+  }
+  
+  .form-group {
+    margin-bottom: 15px;
+  }
+  
+  label {
+    font-size: 15px;
+  }
+  
+  input,
+  select,
+  .submit-button {
+    padding: 10px;
+    font-size: 15px;
+  }
+  
+  .close-modal {
+    font-size: 16px;
+    margin-top: 15px;
+  }
+}
+
+/* Dispositivos móveis */
+@media (max-width: 480px) {
+  .modal {
+    padding: 20px;
+    max-width: 95%;
+  }
+  
+  h2 {
+    font-size: 20px;
+    margin-bottom: 12px;
+  }
+  
+  .form-group {
+    margin-bottom: 12px;
+  }
+  
+  label {
+    font-size: 14px;
+    margin-bottom: 5px;
+  }
+  
+  input,
+  select,
+  .submit-button {
+    padding: 8px;
+    font-size: 14px;
+  }
+  
+  .close-modal {
+    font-size: 14px;
+    margin-top: 12px;
+  }
+}
 </style>

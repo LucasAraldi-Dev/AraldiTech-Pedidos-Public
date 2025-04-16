@@ -159,6 +159,56 @@ footer p {
   color: #ccc;
 }
 
+/* Responsividade para diferentes dispositivos */
+/* Tablets e telas menores (1024x768) */
+@media (max-width: 1024px) {
+  .intro h1 {
+    font-size: 42px;
+  }
+  
+  .intro p {
+    font-size: 16px;
+  }
+  
+  .btn-login {
+    padding: 14px 28px;
+    font-size: 18px;
+  }
+}
 
+/* Tablets e dispositivos médios */
+@media (max-width: 768px) {
+  .intro h1 {
+    font-size: 36px;
+    margin-bottom: 15px;
+  }
+  
+  .intro p {
+    font-size: 15px;
+    margin-bottom: 25px;
+  }
+  
+  .btn-login {
+    padding: 12px 24px;
+    font-size: 16px;
+  }
+}
 
+/* Dispositivos móveis */
+@media (max-width: 480px) {
+  .intro h1 {
+    font-size: 28px;
+    margin-bottom: 12px;
+  }
+  
+  .intro p {
+    font-size: 14px;
+    margin-bottom: 20px;
+  }
+  
+  .btn-login {
+    padding: 10px 20px;
+    font-size: 14px;
+  }
+}
 </style>
