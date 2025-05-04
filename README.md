@@ -24,12 +24,11 @@ Principais funcionalidades:
 - **OAuth2 com JWT**: Autenticação segura usando JSON Web Tokens.
 
 ## Versão
-A versão atual do projeto é **0.5.0**. 
+A versão atual do projeto é **0.6.0**. 
 
-### Mudanças Principais na Versão 0.5.0
-A versão 0.5.0 traz diversas melhorias e novos recursos, incluindo:
-- **Novo Botão de CONCLUIR Pedido**: Adicionado um novo botão para marcar pedidos como CONCLUÍDOS.
-- **Modal de Alerta para CONCLUIR Pedido**: Um modal interativo para confirmar a ação de CONCLUIR um pedido.
+### Mudanças Principais na Versão 0.6.0
+A versão 0.6.0 traz diversas melhorias e novos recursos, incluindo:
+- **Novos Modais de Criação , edição e consulta de pedidos**: Adicionado novos modais para o WebApp , todos refeitos num design mais similar.
 - **Sincronização em Tempo Real**: Atualizações dinâmicas entre modais de edição e consulta de pedidos.
 - **Feedback Visual nos Botões**: Destaque visual nos botões ao interagir com os modais.
 - **Correção de Bugs nos Modais**: Sincronização aprimorada entre modais de consulta e edição de pedidos.
