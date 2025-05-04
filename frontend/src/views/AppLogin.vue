@@ -5,12 +5,12 @@
       <form @submit.prevent="handleLogin">
         <div class="input-box">
           <input
-            type="email"
-            v-model="email"
+            type="text"
+            v-model="username"
             placeholder=" "
             required
           />
-          <label>E-mail</label>
+          <label>Nome de Usuário</label>
         </div>
         <div class="input-box">
           <input
@@ -42,98 +42,122 @@
 import axios from "axios";
 import RegisterModal from "../components/RegisterModal.vue";
 import { useToast } from "vue-toastification";
+import { ref } from "vue";
 
 export default {
   name: "AppLogin",
   components: {
     RegisterModal,
   },
-  data() {
-    return {
-      email: "",
-      password: "",
-      isModalOpen: false,
-      successMessage: "",
-      errorMessage: "",
-    };
-  },
   setup() {
     const toast = useToast();
-    return { toast }; 
-  },
-  methods: {
-    async handleLogin() {
-      this.clearMessages();
+    const username = ref("");
+    const password = ref("");
+    const isModalOpen = ref(false);
+    const successMessage = ref("");
+    const errorMessage = ref("");
+
+    const handleLogin = async () => {
       try {
         const response = await axios.post(
           `${process.env.VUE_APP_API_URL}/token`,
           {
-            email: this.email,
-            senha: this.password,
-          },
-          {
-            headers: {
-              "Content-Type": "application/json",
-            },
+            username: username.value,
+            senha: password.value,
           }
         );
 
-        const { access_token, token_type, nome, email } = response.data;
+        console.log("Resposta completa do login:", response.data);
+        
+        const { access_token, token_type, nome, tipo_usuario } = response.data;
+        console.log("Tipo de usuário recebido:", tipo_usuario);
+        
+        localStorage.setItem("access_token", access_token);
+        localStorage.setItem("token_type", token_type);
+        localStorage.setItem("tipo_usuario", tipo_usuario || "comum");
+        
+        // Armazenando o modelo completo do usuário
+        const userModel = {
+          nome: nome,
+          tipo_usuario: tipo_usuario || "comum",
+          username: username.value
+        };
+        console.log("Modelo de usuário a ser salvo:", userModel);
+        localStorage.setItem("user", JSON.stringify(userModel));
+        console.log("LocalStorage após salvar:", localStorage.getItem("user"));
 
-        if (access_token) {
-          localStorage.setItem("access_token", access_token);
-          localStorage.setItem("token_type", token_type);
-          localStorage.setItem("user_name", nome);
-          localStorage.setItem("user_email", email);
-          const user = { nome, tipo_usuario: "comum" };
-          localStorage.setItem("user", JSON.stringify(user));
+        successMessage.value = "Login bem-sucedido! Redirecionando...";
+        toast.success(successMessage.value);
 
-          this.successMessage = "Login bem-sucedido! Redirecionando..";
-          this.toast.success(this.successMessage); 
-
-          setTimeout(() => {
-            this.$router.push("/menu");
-          }, 2000);
-        }
+        // Redirecionamento com múltiplas estratégias
+        setTimeout(() => {
+          console.log("Redirecionando para menu...");
+          try {
+            // Tenta primeiro com window.location
+            window.location.href = '/#/menu';
+            
+            // Como fallback, recarrega a página após um pequeno atraso
+            setTimeout(() => {
+              console.log("Recarregando a página...");
+              window.location.reload();
+            }, 2000);
+            
+          } catch (navError) {
+            console.error("Erro durante navegação:", navError);
+            window.location.href = '/';
+          }
+        }, 1000);
       } catch (error) {
-        console.error(error);
-
-        if (error.response?.status === 401) {
-          this.errorMessage = "Credenciais inválidas! Verifique seu e-mail e senha.";
-          this.toast.error(this.errorMessage); 
-        } else {
-          this.errorMessage = "Erro ao tentar fazer login. Tente novamente mais tarde.";
-          this.toast.error(this.errorMessage); 
-        }
+        console.error("Erro ao fazer login:", error);
+        errorMessage.value = "Erro ao fazer login. Verifique suas credenciais.";
+        toast.error(errorMessage.value);
       }
-    },
-    async handleSignup(userData) {
-      this.clearMessages();
+    };
+
+    const handleSignup = async (userData) => {
       try {
         await axios.post(`${process.env.VUE_APP_API_URL}/usuarios/`, {
           ...userData,
           tipo_usuario: "comum",
         });
 
-        this.successMessage = "Usuário cadastrado com sucesso! Faça login.";
-        this.toast.success(this.successMessage); 
-        this.closeModal();
+        // Após o cadastro, armazenar o modelo do usuário
+        const userModel = {
+          nome: userData.nome,
+          tipo_usuario: "comum",
+          username: userData.username
+        };
+        localStorage.setItem("user", JSON.stringify(userModel));
+
+        successMessage.value = "Usuário cadastrado com sucesso! Faça login.";
+        toast.success(successMessage.value);
+        isModalOpen.value = false;
       } catch (error) {
         console.error(error);
-        this.errorMessage = "Erro ao cadastrar usuário. Por favor, tente novamente.";
-        this.toast.error(this.errorMessage); 
+        errorMessage.value = "Erro ao cadastrar usuário. Por favor, tente novamente.";
+        toast.error(errorMessage.value);
       }
-    },
-    openModal() {
-      this.isModalOpen = true;
-    },
-    closeModal() {
-      this.isModalOpen = false;
-    },
-    clearMessages() {
-      this.successMessage = "";
-      this.errorMessage = "";
-    },
+    };
+
+    const openModal = () => {
+      isModalOpen.value = true;
+    };
+
+    const closeModal = () => {
+      isModalOpen.value = false;
+    };
+
+    return {
+      username,
+      password,
+      isModalOpen,
+      successMessage,
+      errorMessage,
+      handleLogin,
+      handleSignup,
+      openModal,
+      closeModal,
+    };
   },
 };
 </script>

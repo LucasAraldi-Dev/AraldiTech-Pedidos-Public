@@ -1,6 +1,19 @@
 # Changelog
 Todas as alterações notáveis deste projeto serão documentadas neste arquivo.
 
+## [0.6.0] - 2025-03-04
+### Adicionado  
+- Implementado o novo modal de criação , consulta e edição de pedidos
+- Inclusão de um histórico de pedidos editados.
+- Criado um menu de gerencimento de usuários para admins.
+- Inclusão de novos toasts variados sobre tokens , pedidos.
+
+
+### Corrigido
+- Correção de segurança e pedidos que podiam ser editados sem ter feito login , ou com token JWT expirado.
+- Correção de segurança na geração do token JWT 
+- Correção na responsividade em alguns tipos de telas.
+
 ## [0.5.0] - 2025-04-15
 ### Adicionado  
 - Implementado o novo botão de CONCLUIR pedido no modal de consulta de pedidos.

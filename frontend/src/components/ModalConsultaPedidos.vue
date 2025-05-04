@@ -1,16 +1,19 @@
 <template>
-  <div v-if="isOpen" class="modal-overlay">
+  <div v-if="isOpen" class="modal-overlay" @click.self="closeForm">
     <div class="order-form" @click.stop>
-      <h2>CONSULTAR PEDIDOS</h2>
-
-      <!-- Filtro de Status -->
-      <div class="filter">
-        <label for="statusFilter">Status</label>
-        <select v-model="statusFilter" id="statusFilter">
-          <option value="PENDENTE">PENDENTE</option>
-          <option value="CONCLUIDO">CONCLUÍDO</option>
-          <option value="CANCELADO">CANCELADO</option>
-        </select>
+      <div class="form-header">
+        <h2>CONSULTAR PEDIDOS</h2>
+        <div class="filter-container">
+          <label for="statusFilter">
+            <i class="material-icons">filter_list</i>
+            Status:
+          </label>
+          <select v-model="statusFilter" id="statusFilter">
+            <option value="PENDENTE">PENDENTE</option>
+            <option value="CONCLUIDO">CONCLUÍDO</option>
+            <option value="CANCELADO">CANCELADO</option>
+          </select>
+        </div>
       </div>
 
       <!-- Cards dos Pedidos -->
@@ -21,30 +24,66 @@
           </div>
           <h3 class="order-title">{{ order.descricao }}</h3>
           <div class="order-details">
-            <p><strong>Quantidade:</strong> {{ order.quantidade }}</p>
-            <p><strong>Categoria:</strong> {{ order.categoria }}</p>
-            <p><strong>Urgência:</strong> {{ order.urgencia }}</p>
-            <p><strong>Entrega:</strong> {{ formatDate(order.deliveryDate) }}</p>
-            <p><strong>Observação:</strong> {{ order.observacao || "Nenhuma observação" }}</p>
-            <p><strong>Usuário:</strong> {{ order.usuario_nome }}</p>
+            <p>
+              <i class="material-icons">format_list_numbered</i>
+              <strong>Quantidade:</strong> {{ order.quantidade }}
+            </p>
+            <p>
+              <i class="material-icons">category</i>
+              <strong>Categoria:</strong> {{ order.categoria }}
+            </p>
+            <p>
+              <i class="material-icons">priority_high</i>
+              <strong>Urgência:</strong> {{ order.urgencia }}
+            </p>
+            <p>
+              <i class="material-icons">event</i>
+              <strong>Entrega:</strong> {{ formatDate(order.deliveryDate) }}
+            </p>
+            <p>
+              <i class="material-icons">notes</i>
+              <strong>Observação:</strong> {{ order.observacao || "Nenhuma observação" }}
+            </p>
+            <p>
+              <i class="material-icons">person</i>
+              <strong>Usuário:</strong> {{ order.usuario_nome }}
+            </p>
           </div>
           <div class="order-actions">
-            <button class="open-button" @click="openOrder(order)">ABRIR</button>
-            <button class="edit-button" @click="editOrder(order)">EDITAR</button>
-            <button v-if="order.status.toUpperCase() === 'PENDENTE'" class="complete-button" @click="showConfirmModal(order)">CONCLUIR</button>
+            <button class="open-button" @click="openOrder(order)">
+              <i class="material-icons">visibility</i>
+              ABRIR
+            </button>
+            <button class="edit-button" @click="editOrder(order)">
+              <i class="material-icons">edit</i>
+              EDITAR
+            </button>
+            <button v-if="order.status.toUpperCase() === 'PENDENTE'" class="complete-button" @click="showConfirmModal(order)">
+              <i class="material-icons">check_circle</i>
+              CONCLUIR
+            </button>
           </div>
         </div>
       </div>
 
       <!-- Paginação -->
       <div class="pagination">
-        <button :disabled="currentPage === 1" @click="previousPage">Anterior</button>
+        <button :disabled="currentPage === 1" @click="previousPage">
+          <i class="material-icons">navigate_before</i>
+          Anterior
+        </button>
         <span>Página {{ currentPage }} de {{ totalPages }}</span>
-        <button :disabled="currentPage === totalPages" @click="nextPage">Próximo</button>
+        <button :disabled="currentPage === totalPages" @click="nextPage">
+          Próximo
+          <i class="material-icons">navigate_next</i>
+        </button>
       </div>
 
       <!-- Botão Fechar -->
-      <button class="close-btn" @click="closeForm">FECHAR</button>
+      <button class="close-btn" @click="closeForm">
+        <i class="material-icons">close</i>
+        FECHAR
+      </button>
     </div>
   </div>
   
@@ -58,17 +97,38 @@
         </div>
         <h4 class="confirm-order-title">{{ selectedOrder.descricao }}</h4>
         <div class="confirm-order-info">
-          <p><strong>Quantidade:</strong> {{ selectedOrder.quantidade }}</p>
-          <p><strong>Categoria:</strong> {{ selectedOrder.categoria }}</p>
-          <p><strong>Urgência:</strong> {{ selectedOrder.urgencia }}</p>
-          <p><strong>Entrega:</strong> {{ formatDate(selectedOrder.deliveryDate) }}</p>
-          <p><strong>Usuário:</strong> {{ selectedOrder.usuario_nome }}</p>
+          <p>
+            <i class="material-icons">format_list_numbered</i>
+            <strong>Quantidade:</strong> {{ selectedOrder.quantidade }}
+          </p>
+          <p>
+            <i class="material-icons">category</i>
+            <strong>Categoria:</strong> {{ selectedOrder.categoria }}
+          </p>
+          <p>
+            <i class="material-icons">priority_high</i>
+            <strong>Urgência:</strong> {{ selectedOrder.urgencia }}
+          </p>
+          <p>
+            <i class="material-icons">event</i>
+            <strong>Entrega:</strong> {{ formatDate(selectedOrder.deliveryDate) }}
+          </p>
+          <p>
+            <i class="material-icons">person</i>
+            <strong>Usuário:</strong> {{ selectedOrder.usuario_nome }}
+          </p>
         </div>
       </div>
       <p class="confirm-message">Tem certeza que deseja concluir este pedido?</p>
       <div class="confirm-buttons">
-        <button class="confirm-yes" @click="confirmComplete">CONFIRMAR</button>
-        <button class="confirm-no" @click="cancelConfirmation">CANCELAR</button>
+        <button class="confirm-yes" @click="confirmComplete">
+          <i class="material-icons">check</i>
+          CONFIRMAR
+        </button>
+        <button class="confirm-no" @click="cancelConfirmation">
+          <i class="material-icons">cancel</i>
+          CANCELAR
+        </button>
       </div>
     </div>
   </div>
@@ -115,7 +175,14 @@ export default {
         .then(response => {
           this.orders = response.data;
         })
-        .catch(error => console.error("Erro ao buscar pedidos:", error));
+        .catch(error => {
+          console.error("Erro ao buscar pedidos:", error);
+          this.toast.error("Erro ao buscar pedidos. Verifique sua conexão.", {
+            toastClassName: "custom-toast-error",
+            bodyClassName: "custom-toast-body",
+            closeButtonClassName: "custom-toast-close"
+          });
+        });
     },
     openOrder(order) {
       this.$emit("open-order", order);
@@ -195,11 +262,9 @@ export default {
 };
 </script>
 
-
-
-
-
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Material+Icons&display=swap');
+
 /* Modal Overlay */
 .modal-overlay {
   position: fixed;
@@ -213,6 +278,9 @@ export default {
   justify-content: center;
   align-items: center;
   transition: opacity 0.3s ease-in-out;
+  overflow-y: auto;
+  padding: 15px;
+  box-sizing: border-box;
 }
 
 /* Estilos personalizados para os toasts */
@@ -243,7 +311,7 @@ export default {
 .order-form {
   background-color: #1f1f1f; 
   color: #f5f5f5;
-  padding: 25px; 
+  padding: 30px; 
   border-radius: 10px;
   width: 100%;
   max-width: 900px; 
@@ -251,27 +319,58 @@ export default {
   position: relative;
   text-transform: none;
   font-size: 1.1rem;
+  overflow-y: auto;
+  max-height: 90vh;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+/* Cabeçalho do formulário */
+.form-header {
+  margin-bottom: 25px;
+  border-bottom: 1px solid #333;
+  padding-bottom: 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
 }
 
 /* Título do formulário */
-.order-form h2 {
-  margin-bottom: 20px;
-  text-align: center;
-  font-size: 2.5rem;
-  color: #ff6f61; 
+.form-header h2 {
+  color: #ff6f61;
+  font-size: 1.4rem;
+  margin: 0;
 }
 
-/* Estilo dos campos do formulário */
-.filter {
-  margin-bottom: 20px;
-}
-
-.filter select {
-  width: 100%;
-  padding: 12px;
+/* Container de filtro */
+.filter-container {
+  display: flex;
+  align-items: center;
+  background-color: #333;
+  padding: 5px 10px;
   border-radius: 5px;
-  background-color: #333; 
+}
+
+.filter-container label {
+  display: flex;
+  align-items: center;
+  color: #999;
+  margin-right: 10px;
+}
+
+.filter-container label i {
+  margin-right: 5px;
+  color: #ff6f61;
+  font-size: 18px;
+}
+
+.filter-container select {
+  background-color: #444;
   color: #f5f5f5;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 3px;
+  font-size: 0.9rem;
 }
 
 /* Cards dos Pedidos */
@@ -283,16 +382,23 @@ export default {
 }
 
 .order-card {
-  background-color: #1f1f1f;
+  background-color: #2a2a2a;
   color: white;
   padding: 20px;
   border-radius: 10px;
-  box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.5);
+  box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.3);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 10px;
-  font-size: 1.1rem;
+  font-size: 1rem;
+  transition: transform 0.2s, box-shadow 0.2s;
+  border: 1px solid #333;
+}
+
+.order-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.4);
 }
 
 /* Cabeçalho do card */
@@ -312,35 +418,40 @@ export default {
 }
 
 .order-title {
-  font-size: 1.2em;
+  font-size: 1.3rem;
   color: #f5f5f5; 
   text-align: center;
-  font-size: 1.3rem;
-}
-
-.view-attachment {
-  background: transparent;
-  border: none;
-  color: #ff6f61;
-  font-size: 1.5em;
-  cursor: pointer;
+  width: 100%;
+  margin: 5px 0 10px;
+  border-bottom: 1px solid #444;
+  padding-bottom: 8px;
 }
 
 .order-details {
   width: 100%;
 }
 
-.order-card p {
-  font-size: 0.9em;
+.order-details p {
+  font-size: 0.9rem;
   color: #dfe6e9;
+  margin: 8px 0;
+  display: flex;
+  align-items: center;
+}
+
+.order-details p i {
+  margin-right: 8px;
+  color: #ff6f61;
+  font-size: 16px;
 }
 
 .order-actions {
   display: flex;
-  gap: 10px; /* Espaçamento horizontal entre os botões */
-  flex-wrap: wrap; /* Permite que os botões quebrem para a próxima linha em telas menores */
-  width: 100%; /* Garante que ocupe toda a largura disponível */
-  margin-top: 10px; /* Adiciona espaço acima dos botões */
+  gap: 10px;
+  flex-wrap: wrap;
+  width: 100%;
+  margin-top: 15px;
+  justify-content: space-between;
 }
 
 .open-button,
@@ -348,14 +459,28 @@ export default {
 .complete-button {
   color: white;
   border: none;
-  padding: 10px 15px;
+  padding: 8px 12px;
   border-radius: 5px;
   cursor: pointer;
   transition: background-color 0.3s ease;
-  font-size: 1em;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
 }
 
-.open-button,
+.open-button i,
+.edit-button i,
+.complete-button i {
+  margin-right: 5px;
+  font-size: 16px;
+}
+
+.open-button {
+  background-color: #3498db;
+}
+
 .edit-button {
   background-color: #ff6f61;
 }
@@ -364,7 +489,10 @@ export default {
   background-color: #4CAF50;
 }
 
-.open-button:hover,
+.open-button:hover {
+  background-color: #2980b9;
+}
+
 .edit-button:hover {
   background-color: #e55b55;
 }
@@ -379,36 +507,60 @@ export default {
   justify-content: center;
   align-items: center;
   gap: 15px;
-  margin-top: 20px;
+  margin-top: 25px;
 }
 
 .pagination button {
-  background-color: #4f5b62;
+  background-color: #444;
   color: white;
   border: none;
-  padding: 10px 15px;
+  padding: 8px 15px;
   border-radius: 5px;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  font-size: 0.9rem;
+  transition: background-color 0.3s ease;
+}
+
+.pagination button i {
+  font-size: 18px;
 }
 
 .pagination button:disabled {
-  background-color: #aaa;
+  background-color: #333;
   cursor: not-allowed;
+  opacity: 0.5;
 }
 
-/* Botão de fechar pgn */
+.pagination button:not(:disabled):hover {
+  background-color: #555;
+}
+
+.pagination span {
+  color: #ddd;
+  font-size: 0.9rem;
+}
+
+/* Botão de fechar */
 .close-btn {
-  display: block;
-  margin: 20px auto 0; 
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 25px auto 0; 
   background: transparent;
   border: 2px solid #ff6f61;
   color: #ff6f61;
-  font-size: 20px;
-  padding: 12px 20px;
-  padding-top: 10px;
+  font-size: 1rem;
+  padding: 10px 20px;
   border-radius: 5px;
   cursor: pointer;
   transition: background-color 0.3s ease;
+}
+
+.close-btn i {
+  margin-right: 8px;
+  font-size: 18px;
 }
 
 .close-btn:hover {
@@ -429,6 +581,8 @@ export default {
   justify-content: center;
   align-items: center;
   transition: opacity 0.3s ease-in-out;
+  padding: 15px;
+  box-sizing: border-box;
 }
 
 .confirm-modal {
@@ -442,7 +596,7 @@ export default {
   position: relative;
   text-transform: none;
   font-size: 1.1rem;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
 }
 
 .confirm-modal h3 {
@@ -450,6 +604,8 @@ export default {
   text-align: center;
   font-size: 1.8rem;
   color: #ff6f61;
+  border-bottom: 1px solid #333;
+  padding-bottom: 10px;
 }
 
 .confirm-order-details {
@@ -457,6 +613,7 @@ export default {
   padding: 15px;
   border-radius: 8px;
   margin-bottom: 20px;
+  border: 1px solid #333;
 }
 
 .confirm-order-header {
@@ -478,12 +635,22 @@ export default {
   color: #f5f5f5;
   text-align: center;
   margin-bottom: 15px;
+  border-bottom: 1px solid #444;
+  padding-bottom: 8px;
 }
 
 .confirm-order-info p {
-  margin: 5px 0;
-  font-size: 0.9em;
+  margin: 8px 0;
+  font-size: 0.9rem;
   color: #dfe6e9;
+  display: flex;
+  align-items: center;
+}
+
+.confirm-order-info p i {
+  margin-right: 8px;
+  color: #ff6f61;
+  font-size: 16px;
 }
 
 .confirm-message {
@@ -491,6 +658,9 @@ export default {
   font-size: 1.2rem;
   margin: 20px 0;
   color: #f5f5f5;
+  background-color: #333;
+  padding: 10px;
+  border-radius: 5px;
 }
 
 .confirm-buttons {
@@ -506,9 +676,18 @@ export default {
   padding: 12px 0;
   border-radius: 5px;
   cursor: pointer;
-  font-size: 1.1rem;
+  font-size: 1rem;
   border: none;
   transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.confirm-yes i,
+.confirm-no i {
+  margin-right: 8px;
+  font-size: 18px;
 }
 
 .confirm-yes {
@@ -534,7 +713,7 @@ export default {
 @media (max-width: 1024px) {
   .order-form {
     max-width: 90%;
-    padding: 20px;
+    padding: 25px;
   }
   
   .orders-list {
@@ -542,8 +721,8 @@ export default {
     gap: 15px;
   }
   
-  .order-form h2 {
-    font-size: 2rem;
+  .form-header h2 {
+    font-size: 1.3rem;
   }
   
   .order-card {
@@ -563,8 +742,19 @@ export default {
     padding: 20px;
   }
   
-  .order-form h2 {
-    font-size: 1.8rem;
+  .form-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .filter-container {
+    margin-top: 15px;
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .form-header h2 {
+    font-size: 1.2rem;
   }
   
   .order-id {
@@ -576,7 +766,7 @@ export default {
   }
   
   .order-card p {
-    font-size: 0.85em;
+    font-size: 0.85rem;
   }
   
   .pagination {
@@ -591,9 +781,14 @@ export default {
 
 /* Dispositivos móveis */
 @media (max-width: 480px) {
+  .modal-overlay,
+  .confirm-modal-overlay {
+    padding: 10px;
+  }
+  
   .order-form {
     padding: 15px;
-    max-width: 95%;
+    max-width: 100%;
   }
   
   .orders-list {
@@ -601,12 +796,11 @@ export default {
   }
 
   .order-card {
-    padding: 10px;
+    padding: 15px;
   }
   
-  .order-form h2 {
-    font-size: 1.5rem;
-    margin-bottom: 15px;
+  .form-header h2 {
+    font-size: 1.1rem;
   }
   
   .order-actions {
@@ -619,7 +813,7 @@ export default {
   .complete-button {
     width: 100%;
     margin-bottom: 5px;
-    font-size: 0.9em;
+    font-size: 0.9rem;
     padding: 8px 12px;
   }
   
@@ -642,8 +836,9 @@ export default {
   }
   
   .close-btn {
-    font-size: 16px;
+    font-size: 0.9rem;
     padding: 10px 15px;
+    margin-top: 15px;
   }
 }
 </style>

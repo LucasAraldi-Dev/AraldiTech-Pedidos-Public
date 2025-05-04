@@ -12,6 +12,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 class Usuario(BaseModel):
     id: Optional[str] = None  
     nome: str
+    username: str
     email: EmailStr
     senha: str
     setor: str = "Escritório"
@@ -66,3 +67,18 @@ CATEGORIAS_VALIDAS = [
     "Serviços", 
     "Mercadorias diversas"
 ]
+
+# Modelo para histórico de edições de pedidos
+class PedidoHistorico(BaseModel):
+    pedido_id: int
+    usuario_nome: str
+    data_edicao: datetime = Field(default_factory=datetime.now)
+    campo_alterado: str
+    valor_anterior: str
+    valor_novo: str
+    
+    class Config:
+        json_encoders = {
+            ObjectId: str,
+            datetime: lambda dt: dt.isoformat(),
+        }

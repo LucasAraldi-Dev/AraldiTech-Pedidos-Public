@@ -23,11 +23,22 @@ def hash_password(password):
     return pwd_context.hash(password)
 
 # Função para autenticar usuário
-async def authenticate_user(db, email: str, senha: str):
+async def authenticate_user(db, username: str, senha: str):
     """Valida o usuário a partir do banco e verifica a senha."""
-    user = await db["users"].find_one({"email": email})
+    user = await db["users"].find_one({"username": username})
     if not user or not verify_password(senha, user["senha"]):
         return None
+    
+    # Garante que todos os usuários tenham um tipo_usuario definido
+    if "tipo_usuario" not in user:
+        user["tipo_usuario"] = "comum"
+        # Atualiza o usuário no banco se necessário
+        await db["users"].update_one(
+            {"_id": user["_id"]},
+            {"$set": {"tipo_usuario": "comum"}}
+        )
+    
+    print(f"Usuário autenticado: {user.get('nome')} - Tipo: {user.get('tipo_usuario')}")
     return user
 
 # Função para criar o token de acesso
@@ -44,14 +55,14 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db=Depends(get_d
     """Valida o token e retorna o usuário correspondente."""
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        email = payload.get("sub")
-        if email is None:
+        username = payload.get("sub")
+        if username is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Token inválido ou expirado",
                 headers={"WWW-Authenticate": "Bearer"},
             )
-        user = await db["users"].find_one({"email": email})
+        user = await db["users"].find_one({"username": username})
         if user is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,

@@ -8,6 +8,7 @@ from pydantic import parse_obj_as
 from . import crud, models, schemas, database, auth
 from .auth import get_current_user
 import logging
+from fastapi import status
 
 logging.basicConfig(level=logging.INFO)
 
@@ -20,6 +21,9 @@ origins = [
     "http://localhost:8000",
     "http://192.168.10.27",
     "http://192.168.10.27:8080",
+    "http://192.168.1.5",
+    "http://192.168.1.5:8000",
+    "http://192.168.1.5:8080",
     "*",
 ]
 
@@ -65,20 +69,46 @@ async def create_user(user: schemas.UsuarioCreate, db=Depends(database.get_db)):
 # Rota para login e geração de token
 @app.post("/token", response_model=schemas.Token)
 async def login_for_access_token(form_data: schemas.LoginRequest, db=Depends(database.get_db)):
-    user = await auth.authenticate_user(db, form_data.email, form_data.senha)
+    user = await auth.authenticate_user(db, form_data.username, form_data.senha)
     if not user:
         logging.warning("Credenciais inválidas fornecidas.")
         raise HTTPException(status_code=401, detail="Credenciais inválidas")
-    access_token = auth.create_access_token(data={"sub": user["email"], "nome": user["nome"]})
-    logging.info(f"Token gerado com sucesso para o usuário: {user['email']}")
-    return {"access_token": access_token, "token_type": "bearer", "nome": user["nome"]}
+    
+    access_token = auth.create_access_token(data={"sub": user["username"], "nome": user["nome"]})
+    logging.info(f"Token gerado com sucesso para o usuário: {user['username']}")
+    
+    # Log para verificar se o tipo_usuario existe no objeto user
+    logging.info(f"Tipo de usuário encontrado: {user.get('tipo_usuario', 'Não encontrado')}")
+    
+    response_data = {
+        "access_token": access_token, 
+        "token_type": "bearer", 
+        "nome": user["nome"],
+        "tipo_usuario": user.get("tipo_usuario", "comum")  # Define "comum" como padrão se não existir
+    }
+    
+    # Log do objeto de resposta completo
+    logging.info(f"Resposta completa: {response_data}")
+    
+    return response_data
 
 # Rota para validação de token
 @app.get("/auth/validate-token")
 async def validate_token(token: str = Depends(auth.oauth2_scheme), db=Depends(database.get_db)):
-    user = await auth.get_current_user(token=token, db=db)
-    logging.info(f"Token validado para o usuário: {user['email']}")
-    return {"status": "valid", "user": user["email"]}
+    try:
+        user = await auth.get_current_user(token=token, db=db)
+        # Converte o _id para string para evitar problemas de serialização
+        if "_id" in user:
+            user["_id"] = str(user["_id"])
+        
+        logging.info(f"Token validado para o usuário: {user['username']}")
+        return {"status": "valid", "user": user}
+    except Exception as e:
+        logging.error(f"Erro na validação do token: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token inválido ou expirado"
+        )
 
 # Função para obter o próximo ID de pedido
 async def get_last_id(db):
@@ -163,3 +193,190 @@ async def atualizar_pedido(pedido_id: int, pedido: schemas.PedidoCreate, db=Depe
     except Exception as e:
         logging.error(f"Erro ao atualizar pedido: {e}")
         raise HTTPException(status_code=500, detail=f"Erro ao atualizar pedido: {str(e)}")
+
+# Rota para atualizar pedido com histórico de alterações
+@app.put("/pedidos/{pedido_id}/com-historico")
+async def atualizar_pedido_com_historico(
+    pedido_id: int, 
+    dados: dict,
+    db=Depends(database.get_db),
+    current_user=Depends(get_current_user)
+):
+    try:
+        logging.info(f"Requisição PUT com histórico para o pedido ID: {pedido_id}")
+        logging.info(f"Dados recebidos: {dados}")
+        
+        # Extrair dados do pedido e histórico
+        historico = dados.pop("historico", []) if "historico" in dados else []
+        
+        # Busca o pedido original para comparar depois
+        pedido_original = await db["pedidos"].find_one({"id": pedido_id})
+        if not pedido_original:
+            raise HTTPException(status_code=404, detail="Pedido não encontrado.")
+        
+        # Preparar os dados para atualização do pedido usando os dados restantes
+        update_data = dados
+        
+        # Converter a data de entrega se presente
+        if "deliveryDate" in update_data:
+            if isinstance(update_data["deliveryDate"], str):
+                update_data["deliveryDate"] = validate_and_convert_date(update_data["deliveryDate"])
+            elif isinstance(update_data["deliveryDate"], date):
+                update_data["deliveryDate"] = datetime.combine(update_data["deliveryDate"], datetime.min.time())
+
+        # Atualiza o pedido
+        result = await db["pedidos"].update_one(
+            {"id": pedido_id},
+            {"$set": update_data}
+        )
+
+        # Salva o histórico de alterações caso tenha sido fornecido
+        if historico and isinstance(historico, list):
+            for registro in historico:
+                # Garantir que tenha todos os campos necessários
+                hist_data = {
+                    "pedido_id": pedido_id,
+                    "usuario_nome": registro.get("usuario_nome", dados.get("usuario_nome", "Sistema")),
+                    "campo_alterado": registro.get("campo_alterado", ""),
+                    "valor_anterior": registro.get("valor_anterior", ""),
+                    "valor_novo": registro.get("valor_novo", ""),
+                    "data_edicao": datetime.now()
+                }
+                await db["pedido_historico"].insert_one(hist_data)
+                logging.info(f"Histórico de alteração registrado: {hist_data}")
+
+        logging.info(f"Pedido atualizado com histórico: ID {pedido_id}")
+        return {"message": "Pedido atualizado com sucesso!"}
+
+    except Exception as e:
+        logging.error(f"Erro ao atualizar pedido com histórico: {e}")
+        raise HTTPException(status_code=500, detail=f"Erro ao atualizar pedido: {str(e)}")
+
+# Rota para adicionar registro ao histórico de um pedido
+@app.post("/pedidos/{pedido_id}/historico")
+async def adicionar_historico_pedido(
+    pedido_id: int,
+    dados: dict,
+    db=Depends(database.get_db),
+    current_user=Depends(get_current_user)
+):
+    try:
+        # Verificar se o pedido existe
+        pedido = await db["pedidos"].find_one({"id": pedido_id})
+        if not pedido:
+            raise HTTPException(status_code=404, detail="Pedido não encontrado.")
+        
+        # Preparar os dados do histórico
+        hist_data = {
+            "pedido_id": pedido_id,
+            "usuario_nome": dados.get("usuario_nome", current_user.get("nome", "Sistema")),
+            "campo_alterado": dados.get("campo_alterado", ""),
+            "valor_anterior": dados.get("valor_anterior", ""),
+            "valor_novo": dados.get("valor_novo", ""),
+            "data_edicao": datetime.now()
+        }
+        
+        # Inserir o registro no histórico
+        result = await db["pedido_historico"].insert_one(hist_data)
+        
+        logging.info(f"Registro de histórico adicionado para o pedido {pedido_id}")
+        return {"message": "Registro de histórico adicionado com sucesso!"}
+        
+    except Exception as e:
+        logging.error(f"Erro ao adicionar histórico: {e}")
+        raise HTTPException(status_code=500, detail=f"Erro ao adicionar histórico: {str(e)}")
+
+# Rota para obter histórico de edições de um pedido
+@app.get("/pedidos/{pedido_id}/historico")
+async def obter_historico_pedido(
+    pedido_id: int,
+    db=Depends(database.get_db),
+    current_user=Depends(get_current_user)
+):
+    try:
+        historico = await db["pedido_historico"].find({"pedido_id": pedido_id}).sort("data_edicao", -1).to_list(None)
+        
+        # Formata os dados para resposta
+        for item in historico:
+            item["_id"] = str(item["_id"])
+            
+        return historico
+    except Exception as e:
+        logging.error(f"Erro ao buscar histórico do pedido: {e}")
+        raise HTTPException(status_code=500, detail=f"Erro ao buscar histórico: {str(e)}")
+
+# Rota para listar usuários (apenas para administradores)
+@app.get("/usuarios")
+async def listar_usuarios(db=Depends(database.get_db), current_user=Depends(get_current_user)):
+    try:
+        # Verifica se o usuário atual é um administrador
+        if current_user.get("tipo_usuario") != "admin":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Acesso permitido apenas para administradores"
+            )
+        
+        # Busca todos os usuários no banco de dados
+        users = await db["users"].find().to_list(None)
+        
+        # Converte ObjectId para string e remove senhas por segurança
+        for user in users:
+            user["_id"] = str(user["_id"])
+            if "senha" in user:
+                del user["senha"]
+        
+        logging.info(f"Usuários encontrados: {len(users)}")
+        return users
+    except Exception as e:
+        logging.error(f"Erro ao listar usuários: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Erro ao listar usuários"
+        )
+
+# Rota para atualizar usuário (apenas para administradores)
+@app.put("/usuarios/{user_id}")
+async def atualizar_usuario(
+    user_id: str, 
+    user_update: dict, 
+    current_user=Depends(get_current_user),
+    db=Depends(database.get_db)
+):
+    try:
+        # Verifica se o usuário atual é um administrador
+        if current_user.get("tipo_usuario") != "admin":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Acesso permitido apenas para administradores"
+            )
+        
+        # Remove campos que não devem ser atualizados
+        if "_id" in user_update:
+            del user_update["_id"]
+        
+        # Se houver alteração de senha, faz o hash
+        if user_update.get("senha"):
+            user_update["senha"] = auth.hash_password(user_update["senha"])
+        
+        logging.info(f"Atualizando usuário: {user_id}")
+        
+        # Atualiza o usuário
+        result = await db["users"].update_one(
+            {"_id": ObjectId(user_id)},
+            {"$set": user_update}
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Usuário não encontrado"
+            )
+        
+        logging.info(f"Usuário atualizado com sucesso: {user_id}")
+        return {"message": "Usuário atualizado com sucesso"}
+    except Exception as e:
+        logging.error(f"Erro ao atualizar usuário: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erro ao atualizar usuário: {str(e)}"
+        )

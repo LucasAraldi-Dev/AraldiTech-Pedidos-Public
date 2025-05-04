@@ -29,6 +29,7 @@
 
       <!-- Botões -->
       <button @click="generateImage">GERAR IMAGEM</button>
+      <button class="primary-btn" @click="createNewOrder">NOVO PEDIDO</button>
       <button class="close-btn" @click="closeModal">FECHAR</button>
     </div>
   </div>
@@ -38,6 +39,7 @@
 import html2canvas from "html2canvas";
 
 export default {
+  name: 'ModalImprimirPedido',
   props: {
     isOpen: Boolean,
     pedido: Object,
@@ -45,6 +47,9 @@ export default {
   methods: {
     closeModal() {
       this.$emit("close");
+    },
+    createNewOrder() {
+      this.$emit("new-order");
     },
     formatDate(date) {
       const d = new Date(date);
@@ -193,6 +198,16 @@ button {
 
 button.close-btn {
   background-color: #555;
+}
+
+button.primary-btn {
+  background-color: #2ecc71;
+  color: #1f1f1f;
+  margin-top: 10px;
+}
+
+button.primary-btn:hover {
+  background-color: #27ae60;
 }
 
 button:hover {

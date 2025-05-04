@@ -10,12 +10,23 @@
 
           <div v-else>
             <div class="form-group">
-              <label for="name">Nome</label>
+              <label for="name">Nome Completo</label>
               <input
                 id="name"
                 type="text"
                 v-model="name"
-                placeholder="Digite seu nome"
+                placeholder="Digite seu nome completo"
+                required
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="username">Nome de Usuário</label>
+              <input
+                id="username"
+                type="text"
+                v-model="username"
+                placeholder="Digite seu nome de usuário"
                 required
               />
             </div>
@@ -39,7 +50,26 @@
                 v-model="signupPassword"
                 placeholder="Digite sua senha"
                 required
+                @input="checkPasswordStrength"
               />
+              <div class="password-strength" :class="passwordStrengthClass">
+                {{ passwordStrengthMessage }}
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="confirmPassword">Repetir Senha</label>
+              <input
+                id="confirmPassword"
+                type="password"
+                v-model="confirmPassword"
+                placeholder="Repita sua senha"
+                required
+                @input="checkPasswordMatch"
+              />
+              <div v-if="!passwordsMatch" class="password-error">
+                As senhas não coincidem
+              </div>
             </div>
 
             <div class="form-group">
@@ -51,7 +81,7 @@
               </select>
             </div>
 
-            <button type="submit" class="submit-button">Cadastrar</button>
+            <button type="submit" class="submit-button" :disabled="!isFormValid">Cadastrar</button>
           </div>
           <button v-if="!successMessage" @click="closeModal" class="close-modal">
             Fechar
@@ -72,23 +102,77 @@ export default {
   data() {
     return {
       name: "",
+      username: "",
       signupEmail: "",
       signupPassword: "",
+      confirmPassword: "",
       setor: "Escritório",
       successMessage: "",
+      passwordStrength: 0,
+      passwordStrengthMessage: "",
+      passwordsMatch: true
     };
+  },
+  computed: {
+    passwordStrengthClass() {
+      return {
+        'weak': this.passwordStrength < 2,
+        'medium': this.passwordStrength === 2,
+        'strong': this.passwordStrength > 2
+      };
+    },
+    isFormValid() {
+      return this.name && 
+             this.username && 
+             this.signupEmail && 
+             this.signupPassword && 
+             this.confirmPassword && 
+             this.passwordsMatch;
+    }
   },
   setup() {
     const toast = useToast(); 
     return { toast }; 
   },
   methods: {
-    handleSignup() {
+    checkPasswordStrength() {
+      let strength = 0;
+      let message = "Senha fraca";
+
+      // Verifica comprimento
+      if (this.signupPassword.length >= 8) strength++;
       
-      if (this.name && this.signupEmail && this.signupPassword) {
-        
+      // Verifica se contém números
+      if (/\d/.test(this.signupPassword)) strength++;
+      
+      // Verifica se contém letras maiúsculas e minúsculas
+      if (/[a-z]/.test(this.signupPassword) && /[A-Z]/.test(this.signupPassword)) strength++;
+      
+      // Verifica se contém caracteres especiais
+      if (/[!@#$%^&*(),.?":{}|<>]/.test(this.signupPassword)) strength++;
+
+      // Define a mensagem baseada na força
+      if (strength <= 1) {
+        message = "Senha fraca";
+      } else if (strength === 2) {
+        message = "Senha média";
+      } else if (strength === 3) {
+        message = "Senha forte";
+      } else {
+        message = "Senha muito forte";
+      }
+
+      this.passwordStrength = strength;
+      this.passwordStrengthMessage = message;
+    },
+    checkPasswordMatch() {
+      this.passwordsMatch = this.signupPassword === this.confirmPassword;
+    },
+    handleSignup() {
+      if (this.isFormValid) {
         this.$emit("signup", {
           nome: this.name,
+          username: this.username,
           email: this.signupEmail,
           senha: this.signupPassword,
           setor: this.setor,
@@ -97,8 +181,7 @@ export default {
           this.closeModal(); 
         }, 1000);
       } else {
-        
-        this.toast.error("Por favor, preencha todos os campos!"); 
+        this.toast.error("Por favor, preencha todos os campos corretamente!"); 
       }
     },
     closeModal() {
@@ -350,5 +433,45 @@ select:focus {
     font-size: 14px;
     margin-top: 12px;
   }
+}
+
+.password-strength {
+  margin-top: 5px;
+  font-size: 14px;
+  padding: 5px;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.password-strength.weak {
+  background-color: #ff6b6b;
+  color: white;
+}
+
+.password-strength.medium {
+  background-color: #ffd93d;
+  color: black;
+}
+
+.password-strength.strong {
+  background-color: #6bff6b;
+  color: black;
+}
+
+.password-error {
+  color: #ff6b6b;
+  font-size: 14px;
+  margin-top: 5px;
+}
+
+.submit-button:disabled {
+  background-color: #666;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.submit-button:disabled:hover {
+  background-color: #666;
+  transform: none;
 }
 </style>

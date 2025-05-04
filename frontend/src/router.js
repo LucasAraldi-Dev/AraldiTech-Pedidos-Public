@@ -18,10 +18,13 @@ const routes = [
     name: 'Login',
     component: AppLogin,
     beforeEnter: async (to, from, next) => {
+      console.log("Navegando para login, verificando token...");
       const token = localStorage.getItem('access_token');
       if (token && (await isTokenValid())) {
+        console.log("Token válido encontrado, redirecionando para Menu");
         next({ name: 'Menu' });
       } else {
+        console.log("Nenhum token válido, continuando para login");
         next();
       }
     },
@@ -47,16 +50,34 @@ const routes = [
       },
     ],
     beforeEnter: async (to, from, next) => {
-    const token = localStorage.getItem('access_token');
-    if (!token || !(await isTokenValid())) {
-      next({ name: 'Login' });
-    } else {
+      console.log("Navegando para menu, verificando autenticação...");
+      const token = localStorage.getItem('access_token');
+      console.log("Token encontrado:", token ? "Sim" : "Não");
+      
+      if (!token) {
+        console.log("Token não encontrado, redirecionando para login");
+        next({ name: 'Login' });
+        return;
+      }
+      
+      const isValid = await isTokenValid();
+      console.log("Token é válido:", isValid ? "Sim" : "Não");
+      
+      if (!isValid) {
+        console.log("Token inválido, redirecionando para login");
+        next({ name: 'Login' });
+        return;
+      }
+      
       const user = JSON.parse(localStorage.getItem('user'));
-      if (user && user.tipo_usuario === 'comum') { // Verifique se o `user` existe
+      console.log("Usuário recuperado do localStorage:", user);
+      
+      if (user) {
+        console.log("Usuário encontrado, permitindo acesso ao menu");
         next();
       } else {
+        console.warn("Dados de usuário não encontrados no localStorage");
         next({ name: 'Login' }); // Redirecione para login se o usuário não for válido
-      }
       }
     },
   },

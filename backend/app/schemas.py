@@ -5,6 +5,7 @@ from datetime import date, datetime
 # Esquema para criação de usuário
 class UsuarioCreate(BaseModel):
     nome: str
+    username: str
     email: EmailStr
     senha: str
     setor: str
@@ -16,6 +17,7 @@ class UsuarioCreate(BaseModel):
 # Esquema de resposta do usuário
 class Usuario(BaseModel):
     nome: str
+    username: str
     email: EmailStr
     setor: str
     tipo_usuario: str  
@@ -25,14 +27,15 @@ class Usuario(BaseModel):
 
 # Esquema para login de usuário
 class LoginRequest(BaseModel):
-    email: EmailStr
+    username: str
     senha: str
 
 # Esquema de Token
 class Token(BaseModel):
     access_token: str
     token_type: str
-    nome: str  
+    nome: str
+    tipo_usuario: str
 
 # Esquema de criação de Pedido
 class PedidoCreate(BaseModel):
@@ -71,3 +74,14 @@ class PedidoCreate(BaseModel):
 
 class PedidoRead(PedidoCreate):
     id: int  # O campo "id" agora é somente leitura para respostas
+
+# Esquema para histórico de edições
+class PedidoHistoricoCreate(BaseModel):
+    pedido_id: int
+    usuario_nome: str
+    campo_alterado: str
+    valor_anterior: str
+    valor_novo: str
+    
+    class Config:
+        arbitrary_types_allowed = True
