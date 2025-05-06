@@ -129,7 +129,7 @@
             </label>
             <select id="orderStatus" v-model="orderStatus" required>
               <option value="Pendente">Pendente</option>
-              <option value="Concluido">Concluído</option>
+              <option value="Concluído">Concluído</option>
               <option value="Cancelado">Cancelado</option>
             </select>
           </div>
@@ -340,17 +340,31 @@ export default {
         status: this.orderStatus
       };
       
+      console.log("Pedido original:", this.pedido);
+      console.log("Novos dados do pedido:", payload);
+      
       // Gerar histórico de alterações
       this.gerarHistoricoAlteracoes(payload);
       
+      if (this.modificacoes.length > 0) {
+        console.log("Alterações detectadas e serão registradas:", this.modificacoes);
+      } else {
+        console.log("Nenhuma alteração detectada para registrar");
+      }
+      
       try {
+        // Preparar payload completo com histórico
+        const payloadCompleto = {
+          ...payload,
+          historico: this.modificacoes
+        };
+        
+        console.log("Enviando dados para atualização:", payloadCompleto);
+        
         // Enviar alterações com histórico
-        await axios.put(
+        const response = await axios.put(
           `${process.env.VUE_APP_API_URL}/pedidos/${this.pedido.id}/com-historico`,
-          {
-            ...payload,
-            historico: this.modificacoes
-          },
+          payloadCompleto,
           {
             headers: {
               Authorization: `Bearer ${this.token}`,
@@ -358,9 +372,16 @@ export default {
             },
           }
         );
+        
+        console.log("Resposta do servidor:", response.data);
 
         // Mostrar notificação de sucesso
         toast.success("Pedido atualizado com sucesso!");
+        
+        // Verificar explicitamente se o histórico foi atualizado
+        if (this.modificacoes.length > 0) {
+          toast.info(`${this.modificacoes.length} alterações registradas no histórico`);
+        }
         
         // Emitir evento e fechar o modal
         this.$emit("update-order", { id: this.pedido.id, ...payload });
@@ -375,49 +396,51 @@ export default {
       this.modificacoes = [];
       
       // Comparar dados atuais com originais e registrar mudanças
-      if (this.pedido.descricao !== novosDados.descricao) {
+      if (String(this.pedido.descricao) !== String(novosDados.descricao)) {
         this.modificacoes.push({
           pedido_id: this.pedido.id,
           usuario_nome: this.userName,
           campo_alterado: "Descrição",
-          valor_anterior: this.pedido.descricao,
-          valor_novo: novosDados.descricao
+          valor_anterior: String(this.pedido.descricao || ''),
+          valor_novo: String(novosDados.descricao || '')
         });
       }
       
-      if (this.pedido.quantidade !== novosDados.quantidade) {
+      if (Number(this.pedido.quantidade) !== Number(novosDados.quantidade)) {
         this.modificacoes.push({
           pedido_id: this.pedido.id,
           usuario_nome: this.userName,
           campo_alterado: "Quantidade",
-          valor_anterior: String(this.pedido.quantidade),
-          valor_novo: String(novosDados.quantidade)
+          valor_anterior: String(this.pedido.quantidade || '0'),
+          valor_novo: String(novosDados.quantidade || '0')
         });
       }
       
-      if (this.pedido.categoria !== novosDados.categoria) {
+      if (String(this.pedido.categoria) !== String(novosDados.categoria)) {
         this.modificacoes.push({
           pedido_id: this.pedido.id,
           usuario_nome: this.userName,
           campo_alterado: "Categoria",
-          valor_anterior: this.pedido.categoria,
-          valor_novo: novosDados.categoria
+          valor_anterior: String(this.pedido.categoria || ''),
+          valor_novo: String(novosDados.categoria || '')
         });
       }
       
-      if (this.pedido.urgencia !== novosDados.urgencia) {
+      if (String(this.pedido.urgencia) !== String(novosDados.urgencia)) {
         this.modificacoes.push({
           pedido_id: this.pedido.id,
           usuario_nome: this.userName,
           campo_alterado: "Urgência",
-          valor_anterior: this.pedido.urgencia,
-          valor_novo: novosDados.urgencia
+          valor_anterior: String(this.pedido.urgencia || ''),
+          valor_novo: String(novosDados.urgencia || '')
         });
       }
       
-      // Comparar datas
-      const dataOriginal = new Date(this.pedido.deliveryDate).toISOString().split('T')[0];
-      if (dataOriginal !== novosDados.deliveryDate) {
+      // Comparar datas de forma mais efetiva
+      const dataOriginal = new Date(this.pedido.deliveryDate || new Date()).toISOString().split('T')[0];
+      const dataNova = new Date(novosDados.deliveryDate || new Date()).toISOString().split('T')[0];
+      
+      if (dataOriginal !== dataNova) {
         this.modificacoes.push({
           pedido_id: this.pedido.id,
           usuario_nome: this.userName,
@@ -427,35 +450,54 @@ export default {
         });
       }
       
-      if (this.pedido.observacao !== novosDados.observacao) {
+      // Comparar observações, tratando valores nulos ou vazios
+      const obsOriginal = String(this.pedido.observacao || '').trim();
+      const obsNova = String(novosDados.observacao || '').trim();
+      
+      if (obsOriginal !== obsNova) {
         this.modificacoes.push({
           pedido_id: this.pedido.id,
           usuario_nome: this.userName,
           campo_alterado: "Observação",
-          valor_anterior: this.pedido.observacao || "Nenhuma",
-          valor_novo: novosDados.observacao || "Nenhuma"
+          valor_anterior: obsOriginal || "Nenhuma",
+          valor_novo: obsNova || "Nenhuma"
         });
       }
       
-      if (this.pedido.sender !== novosDados.sender) {
+      if (String(this.pedido.sender) !== String(novosDados.sender)) {
         this.modificacoes.push({
           pedido_id: this.pedido.id,
           usuario_nome: this.userName,
           campo_alterado: "Responsável",
-          valor_anterior: this.pedido.sender,
-          valor_novo: novosDados.sender
+          valor_anterior: String(this.pedido.sender || ''),
+          valor_novo: String(novosDados.sender || '')
         });
       }
       
-      if (this.pedido.status !== novosDados.status) {
+      if (String(this.pedido.status) !== String(novosDados.status)) {
         this.modificacoes.push({
           pedido_id: this.pedido.id,
           usuario_nome: this.userName,
           campo_alterado: "Status",
-          valor_anterior: this.pedido.status,
-          valor_novo: novosDados.status
+          valor_anterior: String(this.pedido.status || ''),
+          valor_novo: String(novosDados.status || '')
         });
       }
+      
+      // Garantir que temos pelo menos um registro se o usuário editou o pedido
+      if (this.modificacoes.length === 0) {
+        console.log("Nenhuma modificação detectada, mas o pedido foi salvo");
+        // Vamos registrar que o pedido foi verificado/revisado
+        this.modificacoes.push({
+          pedido_id: this.pedido.id,
+          usuario_nome: this.userName,
+          campo_alterado: "Revisão",
+          valor_anterior: "Pedido anterior",
+          valor_novo: "Pedido revisado"
+        });
+      }
+      
+      console.log("Modificações detectadas:", this.modificacoes);
     },
     closeForm() {
       this.$emit("close");

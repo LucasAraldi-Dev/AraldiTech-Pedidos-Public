@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, Field, validator
-from typing import Optional
+from typing import Optional, List
 from datetime import date, datetime
 
 # Esquema para criação de usuário
@@ -36,6 +36,7 @@ class Token(BaseModel):
     token_type: str
     nome: str
     tipo_usuario: str
+    setor: str
 
 # Esquema de criação de Pedido
 class PedidoCreate(BaseModel):
@@ -49,6 +50,9 @@ class PedidoCreate(BaseModel):
     file: Optional[str] = None
     status: Optional[str] = "Pendente"
     usuario_nome: Optional[str] = None
+    historico: Optional[List[dict]] = None
+    completionDate: Optional[date] = None
+    setor: Optional[str] = None
 
     # Validando e convertendo a data corretamente
     @validator("deliveryDate", pre=True)
@@ -59,6 +63,19 @@ class PedidoCreate(BaseModel):
                 return datetime.fromisoformat(value).date()
             except ValueError:
                 raise ValueError("Formato de data inválido. Esperado: yyyy-MM-dd.")
+        return value
+        
+    # Validando e convertendo a data de conclusão
+    @validator("completionDate", pre=True)
+    def parse_completion_date(cls, value):
+        if value is None:
+            return None
+        if isinstance(value, str):
+            try:
+                # Converter string para date
+                return datetime.fromisoformat(value).date()
+            except ValueError:
+                raise ValueError("Formato de data de conclusão inválido. Esperado: yyyy-MM-dd.")
         return value
 
     class Config:
@@ -82,6 +99,41 @@ class PedidoHistoricoCreate(BaseModel):
     campo_alterado: str
     valor_anterior: str
     valor_novo: str
+    
+    class Config:
+        arbitrary_types_allowed = True
+
+# Esquema para atividades
+class Atividade(BaseModel):
+    id: Optional[str] = None
+    tipo: str  # criacao, edicao, conclusao, cancelamento, login, registro
+    descricao: str
+    usuario_nome: str
+    data: datetime = Field(default_factory=datetime.now)
+    pedido_id: Optional[int] = None
+    
+    class Config:
+        arbitrary_types_allowed = True
+        json_encoders = {
+            datetime: lambda dt: dt.isoformat()
+        }
+
+# Esquema para relatórios
+class RelatorioParams(BaseModel):
+    tipo: str  # pedidos, atividades
+    periodo: str  # diario, semanal, mensal, personalizado
+    formato: str  # pdf, excel
+    dataInicial: Optional[date] = None
+    dataFinal: Optional[date] = None
+    
+    @validator('dataInicial', 'dataFinal', pre=True)
+    def parse_date(cls, value):
+        if isinstance(value, str):
+            try:
+                return datetime.fromisoformat(value).date()
+            except ValueError:
+                raise ValueError("Formato de data inválido. Esperado: yyyy-MM-dd.")
+        return value
     
     class Config:
         arbitrary_types_allowed = True

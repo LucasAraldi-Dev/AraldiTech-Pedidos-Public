@@ -10,7 +10,7 @@
           </label>
           <select v-model="statusFilter" id="statusFilter">
             <option value="PENDENTE">PENDENTE</option>
-            <option value="CONCLUIDO">CONCLUÍDO</option>
+            <option value="CONCLUÍDO">CONCLUÍDO</option>
             <option value="CANCELADO">CANCELADO</option>
           </select>
         </div>
@@ -39,6 +39,10 @@
             <p>
               <i class="material-icons">event</i>
               <strong>Entrega:</strong> {{ formatDate(order.deliveryDate) }}
+            </p>
+            <p v-if="order.status.toUpperCase() === 'CONCLUÍDO' && order.conclusao_data">
+              <i class="material-icons">event_available</i>
+              <strong>Concluído em:</strong> {{ formatDate(order.conclusao_data) }}
             </p>
             <p>
               <i class="material-icons">notes</i>
@@ -114,11 +118,32 @@
             <strong>Entrega:</strong> {{ formatDate(selectedOrder.deliveryDate) }}
           </p>
           <p>
+            <i class="material-icons">event_available</i>
+            <strong>Data de Conclusão:</strong> {{ formatDate(completionDate) }}
+          </p>
+          <p>
             <i class="material-icons">person</i>
             <strong>Usuário:</strong> {{ selectedOrder.usuario_nome }}
           </p>
         </div>
       </div>
+      
+      <!-- Campo de data de conclusão -->
+      <div class="completion-date-container">
+        <label for="completionDate">
+          <i class="material-icons">event_available</i>
+          Data de Conclusão:
+        </label>
+        <input 
+          id="completionDate" 
+          type="date" 
+          v-model="completionDate" 
+          :min="minDate"
+          required 
+          class="date-picker"
+        />
+      </div>
+      
       <p class="confirm-message">Tem certeza que deseja concluir este pedido?</p>
       <div class="confirm-buttons">
         <button class="confirm-yes" @click="confirmComplete">
@@ -151,6 +176,8 @@ export default {
       toast: useToast(),
       showConfirmation: false,
       selectedOrder: null,
+      completionDate: null,
+      minDate: new Date().toISOString().split('T')[0],
     };
   },
   computed: {
@@ -208,6 +235,8 @@ export default {
     // Exibe o modal de confirmação com os detalhes do pedido
     showConfirmModal(order) {
       this.selectedOrder = order;
+      // Inicializar a data de conclusão com a data atual
+      this.completionDate = new Date().toISOString().split('T')[0];
       this.showConfirmation = true;
     },
     
@@ -215,6 +244,7 @@ export default {
     cancelConfirmation() {
       this.showConfirmation = false;
       this.selectedOrder = null;
+      this.completionDate = null;
     },
     
     // Confirma a conclusão do pedido após confirmação no modal
@@ -224,20 +254,25 @@ export default {
       // Preparar os dados para atualização
       const updateData = {
         ...this.selectedOrder,
-        status: "CONCLUIDO"
+        status: "Concluído",
+        completionDate: this.completionDate
       };
       
-      // Enviar requisição para atualizar o status do pedido
+      console.log("Dados enviados para atualização:", updateData);
+      
+      // Enviar requisição para atualizar o status do pedido usando o endpoint com-historico
       axios
-        .put(`${process.env.VUE_APP_API_URL}/pedidos/${this.selectedOrder.id}`, updateData, {
+        .put(`${process.env.VUE_APP_API_URL}/pedidos/${this.selectedOrder.id}/com-historico`, updateData, {
           headers: { Authorization: `Bearer ${localStorage.getItem("access_token")}` },
         })
-        .then(() => {
+        .then((response) => {
+          console.log("Resposta do servidor:", response.data);
           // Atualizar a lista de pedidos após concluir
           this.fetchOrders();
           // Fechar o modal de confirmação
           this.showConfirmation = false;
           this.selectedOrder = null;
+          this.completionDate = null;
           // Notificação estilizada com as cores do sistema
           this.toast.success("Pedido concluído com sucesso!", {
             toastClassName: "custom-toast-success",
@@ -247,8 +282,12 @@ export default {
         })
         .catch(error => {
           console.error("Erro ao concluir pedido:", error);
+          const errorMessage = error.response && error.response.data && error.response.data.detail
+            ? error.response.data.detail
+            : "Erro ao concluir pedido. Por favor, tente novamente.";
+            
           // Notificação de erro estilizada
-          this.toast.error("Erro ao concluir pedido. Por favor, tente novamente.", {
+          this.toast.error(errorMessage, {
             toastClassName: "custom-toast-error",
             bodyClassName: "custom-toast-body",
             closeButtonClassName: "custom-toast-close"
@@ -651,6 +690,51 @@ export default {
   margin-right: 8px;
   color: #ff6f61;
   font-size: 16px;
+}
+
+.completion-date-container {
+  margin: 15px 0 20px;
+  padding: 15px;
+  background-color: #2a2a2a;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  border: 1px solid #333;
+}
+
+.completion-date-container label {
+  display: flex;
+  align-items: center;
+  color: #f5f5f5;
+  font-weight: bold;
+  margin-right: 10px;
+  min-width: 150px;
+}
+
+.completion-date-container label i {
+  margin-right: 8px;
+  color: #ff6f61;
+  font-size: 18px;
+}
+
+.completion-date-container input {
+  background-color: #333;
+  color: #f5f5f5;
+  border: 1px solid #444;
+  padding: 8px 15px;
+  border-radius: 5px;
+  font-size: 1rem;
+  flex: 1;
+  min-width: 200px;
+  transition: all 0.3s ease;
+}
+
+.completion-date-container input:focus {
+  border-color: #ff6f61;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(255, 111, 97, 0.2);
 }
 
 .confirm-message {

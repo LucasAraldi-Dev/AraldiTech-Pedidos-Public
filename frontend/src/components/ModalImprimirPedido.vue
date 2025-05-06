@@ -14,16 +14,47 @@
 
       <!-- Detalhes do Pedido -->
       <div class="order-details">
-        <p><strong>DESCRIÇÃO:</strong> {{ pedido.descricao.toUpperCase() }}</p>
-        <p><strong>QUANTIDADE:</strong> {{ pedido.quantidade }}</p>
-        <p><strong>URGÊNCIA:</strong> {{ pedido.urgencia.toUpperCase() }}</p>
-        <p><strong>CATEGORIA:</strong> {{ pedido.categoria.toUpperCase() }}</p>
-        <p><strong>DATA DE ENTREGA:</strong> {{ formatDate(pedido.deliveryDate).toUpperCase() }}</p>
+        <p><strong>DESCRIÇÃO:</strong> {{ (pedido.descricao || 'Não informado').toUpperCase() }}</p>
+        <p><strong>QUANTIDADE:</strong> {{ pedido.quantidade || 0 }}</p>
+        <p><strong>URGÊNCIA:</strong> {{ (pedido.urgencia || 'Normal').toUpperCase() }}</p>
+        <p><strong>CATEGORIA:</strong> {{ (pedido.categoria || 'Não categorizado').toUpperCase() }}</p>
+        <p><strong>DATA DE ENTREGA:</strong> {{ formatDate(pedido.deliveryDate || new Date()).toUpperCase() }}</p>
+        <p v-if="pedido.status === 'Concluído'"><strong>DATA DE CONCLUSÃO:</strong> {{ formatDate(pedido.conclusao_data || new Date()).toUpperCase() }}</p>
         <p><strong>OBSERVAÇÃO:</strong> {{ pedido.observacao ? pedido.observacao.toUpperCase() : "NENHUMA" }}</p>
-        <p><strong>RESPONSÁVEL:</strong> {{ pedido.sender.toUpperCase() }}</p>
+        <p><strong>RESPONSÁVEL:</strong> {{ (pedido.sender || 'Não informado').toUpperCase() }}</p>
+        <p v-if="pedido.status"><strong>STATUS:</strong> {{ pedido.status.toUpperCase() }}</p>
         <div v-if="pedido.anexo">
           <p><strong>ANEXO:</strong></p>
           <img :src="'data:image/png;base64,' + pedido.anexo" alt="ANEXO" class="order-attachment" />
+        </div>
+      </div>
+      
+      <!-- Histórico de Alterações Expansível -->
+      <div class="order-history">
+        <div class="history-header" @click="toggleHistory">
+          <strong>HISTÓRICO DE ALTERAÇÕES</strong>
+          <span class="toggle-icon">{{ isHistoryExpanded ? '▼' : '►' }}</span>
+        </div>
+        <div v-if="isHistoryExpanded" class="history-content">
+          <div v-if="isLoadingHistory" class="loading-history">
+            Carregando histórico...
+          </div>
+          <div v-else-if="historico.length === 0" class="empty-history">
+            Nenhuma alteração registrada.
+          </div>
+          <div v-else class="history-list">
+            <div v-for="(item, index) in historico" :key="index" class="history-item">
+              <div class="history-header">
+                <span class="history-user">{{ item.usuario_nome }}</span>
+                <span class="history-date">{{ formatDateTime(item.data_edicao) }}</span>
+              </div>
+              <div class="history-details">
+                <span class="field">{{ item.campo_alterado }}</span>:
+                <span class="old-value">{{ item.valor_anterior }}</span> →
+                <span class="new-value">{{ item.valor_novo }}</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -37,12 +68,52 @@
 
 <script>
 import html2canvas from "html2canvas";
+// Importação modificada para evitar o erro de 'module is not defined'
+import * as axiosModule from "axios";
+const axios = axiosModule.default || axiosModule;
 
 export default {
   name: 'ModalImprimirPedido',
   props: {
     isOpen: Boolean,
     pedido: Object,
+  },
+  data() {
+    return {
+      isHistoryExpanded: false,
+      historico: [],
+      isLoadingHistory: false,
+      ultimaAtualizacao: null
+    };
+  },
+  mounted() {
+    // Quando o componente for montado, já carregamos os dados do histórico
+    // mas mantemos ele recolhido por padrão
+    if (this.isOpen && this.pedido && this.pedido.id) {
+      console.log("Modal montado, pré-carregando histórico");
+      // Pré-carregar o histórico mantendo-o recolhido
+      this.carregarHistorico();
+    }
+  },
+  watch: {
+    isOpen(newVal) {
+      if (newVal && this.pedido) {
+        // Resetar o estado do histórico
+        this.isHistoryExpanded = false;
+        // Pré-carregar o histórico em segundo plano
+        this.carregarHistorico();
+      }
+    },
+    pedido(newVal) {
+      if (newVal && this.isOpen) {
+        // Caso o pedido mude enquanto o modal estiver aberto
+        console.log("Pedido mudou, recarregando histórico");
+        this.isHistoryExpanded = false;
+        this.historico = [];
+        // Carregar o histórico do novo pedido
+        this.carregarHistorico();
+      }
+    }
   },
   methods: {
     closeModal() {
@@ -52,24 +123,58 @@ export default {
       this.$emit("new-order");
     },
     formatDate(date) {
-      const d = new Date(date);
-      return d.toLocaleDateString("pt-BR", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-      });
+      if (!date) return 'Data não informada';
+      
+      try {
+        const d = new Date(date);
+        
+        // Verificar se a data é válida
+        if (isNaN(d.getTime())) {
+          console.warn(`Data inválida: ${date}`);
+          return 'Data inválida';
+        }
+        
+        return d.toLocaleDateString("pt-BR", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+        });
+      } catch (error) {
+        console.error(`Erro ao formatar data: ${date}`, error);
+        return 'Erro de formato';
+      }
+    },
+    formatDateTime(dateTime) {
+      if (!dateTime) return 'Data não informada';
+      
+      try {
+        const d = new Date(dateTime);
+        
+        // Verificar se a data é válida
+        if (isNaN(d.getTime())) {
+          console.warn(`Data inválida: ${dateTime}`);
+          return 'Data inválida';
+        }
+        
+        return d.toLocaleDateString("pt-BR", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit"
+        });
+      } catch (error) {
+        console.error(`Erro ao formatar data: ${dateTime}`, error);
+        return 'Erro de formato';
+      }
     },
     async generateImage() {
       const orderElement = this.$refs.orderContent;
-      const printButton = this.$el.querySelector('button'); 
-      const closeButton = this.$el.querySelectorAll('button')[1]; 
+      const buttons = this.$el.querySelectorAll('button'); 
 
       if (orderElement) {
         // Ocultar os botões antes de gerar a imagem
-        if (printButton && closeButton) {
-          printButton.classList.add('hidden');
-          closeButton.classList.add('hidden');
-        }
+        buttons.forEach(btn => btn.classList.add('hidden'));
 
         // Escalar o conteúdo para caber em uma única página
         const originalScale = orderElement.style.transform;
@@ -96,16 +201,90 @@ export default {
         // Criar um link para baixar a imagem
         const link = document.createElement('a');
         link.href = imgData;
-        link.download = 'pedido.png'; 
+        link.download = `pedido_${this.pedido.id}.png`; 
         link.click();
 
         // Restaurar a visibilidade dos botões
-        if (printButton && closeButton) {
-          printButton.classList.remove('hidden');
-          closeButton.classList.remove('hidden');
+        buttons.forEach(btn => btn.classList.remove('hidden'));
+      }
+    },
+    toggleHistory() {
+      this.isHistoryExpanded = !this.isHistoryExpanded;
+      
+      // Se estamos expandindo e não temos dados ou eles estão desatualizados
+      if (this.isHistoryExpanded) {
+        console.log("Expandindo seção de histórico");
+        
+        // Se não temos histórico ou já se passaram mais de 5 segundos desde a última carga
+        const forcarRecarga = this.historico.length === 0 || 
+                              (this.ultimaAtualizacao && 
+                               (Date.now() - this.ultimaAtualizacao > 5000));
+        
+        if (forcarRecarga) {
+          console.log("Recarregando histórico ao expandir");
+          this.carregarHistorico();
         }
       }
     },
+    async carregarHistorico() {
+      if (!this.pedido || !this.pedido.id) {
+        console.log("Não é possível carregar histórico: pedido inválido ou sem ID");
+        this.isLoadingHistory = false;
+        return;
+      }
+      
+      this.isLoadingHistory = true;
+      console.log("Carregando histórico para o pedido ID:", this.pedido.id);
+      
+      try {
+        const token = localStorage.getItem("access_token");
+        if (!token) {
+          console.warn("Token de autenticação não encontrado");
+          this.isLoadingHistory = false;
+          return;
+        }
+        
+        const url = `${process.env.VUE_APP_API_URL}/pedidos/${this.pedido.id}/historico`;
+        console.log("URL da requisição:", url);
+        
+        const response = await axios.get(url, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        // Verificar se a resposta contém dados válidos
+        if (response.data && Array.isArray(response.data)) {
+          console.log("Histórico recebido:", response.data);
+          this.historico = response.data;
+          
+          // Filtrar quaisquer entradas inválidas
+          this.historico = this.historico.filter(item => 
+            item && 
+            item.campo_alterado && 
+            (item.valor_anterior !== undefined || item.valor_novo !== undefined)
+          );
+          
+          if (this.historico.length === 0) {
+            console.log("Nenhum histórico válido encontrado para este pedido");
+          } else {
+            console.log(`Encontrados ${this.historico.length} registros no histórico`);
+          }
+        } else {
+          console.warn("Resposta inválida ao carregar histórico:", response.data);
+          this.historico = [];
+        }
+        
+        this.ultimaAtualizacao = Date.now();
+      } catch (error) {
+        console.error("Erro ao carregar histórico do pedido:", error);
+        if (error.response) {
+          console.error("Detalhes do erro:", error.response.data);
+          console.error("Status do erro:", error.response.status);
+        }
+        this.historico = [];
+      } finally {
+        this.isLoadingHistory = false;
+      }
+    }
   },
 };
 </script>
@@ -134,6 +313,8 @@ export default {
   box-sizing: border-box;
   text-align: left;
   position: relative;
+  max-height: 90vh;
+  overflow-y: auto;
 }
 
 .print-modal h2 {
@@ -181,6 +362,99 @@ export default {
   height: auto; 
   border-radius: 5px;
   object-fit: contain; 
+}
+
+/* Estilos para o histórico de alterações */
+.order-history {
+  margin-top: 20px;
+  border-top: 1px solid #444;
+  padding-top: 15px;
+}
+
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  padding: 10px;
+  background-color: #333;
+  border-radius: 5px;
+  margin-bottom: 5px;
+  user-select: none;
+}
+
+.history-header strong {
+  color: #ff6f61;
+}
+
+.toggle-icon {
+  color: #ff6f61;
+  font-size: 14px;
+}
+
+.history-content {
+  padding: 10px;
+  background-color: #272727;
+  border-radius: 5px;
+  margin-top: 5px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.loading-history, .empty-history {
+  padding: 15px;
+  text-align: center;
+  color: #aaa;
+  font-style: italic;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.history-item {
+  background-color: #333;
+  border-radius: 5px;
+  padding: 10px;
+}
+
+.history-item .history-header {
+  background-color: transparent;
+  padding: 0;
+  margin-bottom: 5px;
+}
+
+.history-user {
+  font-weight: bold;
+  color: #e0e0e0;
+}
+
+.history-date {
+  color: #aaa;
+  font-size: 0.85em;
+}
+
+.history-details {
+  font-size: 0.9em;
+  color: #ddd;
+}
+
+.field {
+  font-weight: bold;
+  color: #ff6f61;
+}
+
+.old-value {
+  color: #ff6f61;
+  text-decoration: line-through;
+  margin: 0 5px;
+}
+
+.new-value {
+  color: #2ecc71;
+  margin-left: 5px;
 }
 
 button {
@@ -250,23 +524,11 @@ button:hover {
     padding: 15px;
   }
   
-  .print-modal h2 {
-    font-size: 1.2rem;
-    margin-bottom: 15px;
-  }
-  
   .logo {
     width: 120px;
   }
   
-  .order-id {
-    font-size: 1.1rem;
-    margin: 15px 0;
-    padding: 8px;
-  }
-  
   .order-details p {
-    margin-bottom: 10px;
     font-size: 0.9rem;
   }
   
@@ -276,45 +538,27 @@ button:hover {
   }
 }
 
-/* Dispositivos móveis */
-@media (max-width: 480px) {
-  .modal-overlay {
-    padding: 10px;
-  }
-  
-  .print-modal {
-    width: 95%;
-    padding: 12px;
-  }
-  
-  .print-modal h2 {
-    font-size: 1.1rem;
-    margin-bottom: 12px;
-  }
-  
-  .logo {
-    width: 100px;
-  }
-  
-  .order-id {
-    font-size: 1rem;
-    margin: 12px 0;
-    padding: 6px;
-  }
-  
-  .order-details p {
-    margin-bottom: 8px;
-    font-size: 0.85rem;
-  }
-  
-  .order-attachment {
-    max-height: 150px;
-  }
-  
-  button {
-    padding: 8px 12px;
-    font-size: 0.85rem;
-    margin-top: 15px;
-  }
+.activity-details a {
+  color: #8ab4f8;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+/* Estilo atualizado para o hiperlink de ver pedido */
+.activity-details a {
+  display: inline-block;
+  background-color: #4a6da7;
+  color: white;
+  padding: 5px 10px;
+  border-radius: 4px;
+  text-decoration: none;
+  font-size: 0.85em;
+  margin-top: 5px;
+  transition: background-color 0.3s, transform 0.2s;
+}
+
+.activity-details a:hover {
+  background-color: #5e82bc;
+  transform: translateY(-2px);
 }
 </style>

@@ -4,6 +4,10 @@ import router from './router';
 import Toast from 'vue-toastification';  
 import 'vue-toastification/dist/index.css';  
 
+// Configuração do Axios de forma global (importação simplificada)
+import axios from 'axios';
+window.axios = axios;
+
 const app = createApp(App);
 
 // Configuração global do Vue Toastification

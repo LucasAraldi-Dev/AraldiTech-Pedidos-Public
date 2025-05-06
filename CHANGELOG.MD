@@ -1,7 +1,27 @@
 # Changelog
 Todas as alterações notáveis deste projeto serão documentadas neste arquivo.
 
-## [0.6.0] - 2025-03-04
+## [0.7.0] - 2025-05-05
+### Adicionado
+- Expansão dos setores disponíveis: Escritório, Fábrica de Ração, CPO, Granjas, Abatedouro, Transporte, Incubatório e Favorito.
+- Implementação de segurança por setor: usuários visualizam apenas pedidos do seu próprio setor.
+- Acesso exclusivo para administradores a todos os setores da plataforma.
+- Menu de Dashboard para gestores com visualização de métricas.
+- Gráficos de acompanhamento de pedidos e atividades.
+- Sistema de logs e registro de atividades detalhado para cada pedido.
+- Histórico completo de alterações por pedido com registro do usuário responsável.
+
+### Melhorado
+- Segurança aprimorada no controle de acesso a pedidos por setor.
+- Interface do dashboard para visualização de dados e métricas.
+- Experiência do usuário com feedback visual para ações realizadas.
+
+### Corrigido
+- Problemas de visualização entre setores diferentes.
+- Permissões de acesso a pedidos fora do setor do usuário.
+- Otimização da consulta de pedidos por setor.
+
+## [0.6.0] - 2025-05-03
 ### Adicionado  
 - Implementado o novo modal de criação , consulta e edição de pedidos
 - Inclusão de um histórico de pedidos editados.

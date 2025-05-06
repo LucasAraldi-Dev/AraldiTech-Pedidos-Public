@@ -39,7 +39,9 @@
 </template>
 
 <script>
-import axios from "axios";
+// Importação modificada para evitar o erro de 'module is not defined'
+import * as axiosModule from "axios";
+const axios = axiosModule.default || axiosModule;
 import RegisterModal from "../components/RegisterModal.vue";
 import { useToast } from "vue-toastification";
 import { ref } from "vue";

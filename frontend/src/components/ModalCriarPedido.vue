@@ -235,7 +235,8 @@
 </template>
 
 <script>
-import axios from "axios";
+// Usando axiosService para requisições HTTP
+import axiosService from '../api/axiosService';
 import { useToast } from 'vue-toastification';  // Importando Vue Toastification
 
 export default {
@@ -382,15 +383,9 @@ export default {
       console.log("Enviando pedido com nome de usuário:", this.userName);
 
       try {
-        const response = await axios.post(
-          `${process.env.VUE_APP_API_URL}/pedidos/`,
-          payload,
-          {
-            headers: {
-              Authorization: `Bearer ${this.token}`,
-              "Content-Type": "application/json",
-            },
-          }
+        const response = await axiosService.post(
+          `/pedidos/`,
+          payload
         );
 
         // Exibe a notificação de sucesso

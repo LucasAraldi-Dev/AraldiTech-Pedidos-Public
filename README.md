@@ -1,5 +1,5 @@
-# AraldiTech - Pedidos (Versão 0.5) 
-![GitHub version](https://img.shields.io/badge/version-0.5.0-blue)
+# AraldiTech - Pedidos (Versão 0.7) 
+![GitHub version](https://img.shields.io/badge/version-0.7.0-blue)
 
 ## Descrição
 **AraldiTech - Pedidos** é um WebApp desenvolvido para gerenciar pedidos de produtos para setores específicos, com interface moderna, intuitiva e responsiva, proporcionando uma experiência de uso otimizada.
@@ -8,12 +8,13 @@ O projeto é construído com **FastAPI**, **MongoDB**, **Vue.js**, e conta com a
 
 Principais funcionalidades:
 - Criação e edição de novos pedidos
-- Listagem e consulta de pedidos
+- Listagem e consulta de pedidos por setor
 - Controle de acesso por autenticação JWT
+- Dashboard com gráficos e métricas para gestores
 - Interface interativa e responsiva com Vue.js
-- Modal de impressão de pedidos
-- Hierarquia de usuários: **Comum** e **Gestor**
-- Sincronização dinâmica entre modais
+- Histórico detalhado de atividades e alterações
+- Hierarquia de usuários: **Comum**, **Gestor** e **Admin**
+- Segmentação por setores com permissões específicas
 
 ## Tecnologias Utilizadas
 - **Python**: Linguagem de programação principal para a API.
@@ -22,28 +23,32 @@ Principais funcionalidades:
 - **MongoDB**: Banco de dados NoSQL utilizado para o armazenamento dos pedidos e usuários.
 - **Motor**: Driver assíncrono para integração com MongoDB.
 - **OAuth2 com JWT**: Autenticação segura usando JSON Web Tokens.
+- **Chart.js**: Biblioteca para criação de gráficos interativos no dashboard.
 
 ## Versão
-A versão atual do projeto é **0.6.0**. 
+A versão atual do projeto é **0.7.0**. 
 
-### Mudanças Principais na Versão 0.6.0
-A versão 0.6.0 traz diversas melhorias e novos recursos, incluindo:
-- **Novos Modais de Criação , edição e consulta de pedidos**: Adicionado novos modais para o WebApp , todos refeitos num design mais similar.
-- **Sincronização em Tempo Real**: Atualizações dinâmicas entre modais de edição e consulta de pedidos.
-- **Feedback Visual nos Botões**: Destaque visual nos botões ao interagir com os modais.
-- **Correção de Bugs nos Modais**: Sincronização aprimorada entre modais de consulta e edição de pedidos.
-- **Melhorias na Responsividade**: Ajustes adicionais para dispositivos móveis.
+### Mudanças Principais na Versão 0.7.0
+A versão 0.7.0 traz diversas melhorias e novos recursos, incluindo:
+- **Expansão de Setores**: Agora oferecendo suporte para 8 setores diferentes (Escritório, Fábrica de Ração, CPO, Granjas, Abatedouro, Transporte, Incubatório e Favorito).
+- **Segurança por Setor**: Usuários visualizam apenas pedidos do seu próprio setor, aumentando a privacidade e organização.
+- **Dashboard para Gestores**: Novo painel com gráficos e métricas para acompanhamento de atividades.
+- **Sistema de Logs Detalhado**: Registro completo de atividades para cada pedido, incluindo quem realizou cada alteração.
+- **Histórico de Modificações**: Rastreamento de todas as alterações feitas em cada pedido.
+- **Acesso Administrativo Universal**: Administradores têm acesso a pedidos de todos os setores.
 
 
 ## Funcionalidades
 - **Autenticação JWT**: Somente usuários autenticados têm permissão para criar, listar e editar pedidos.
 - **Hierarquia de Usuários**:
-  - **Comum**: Acesso limitado às funcionalidades de pedidos e consulta.
-  - **Gestor**: Planejado para funcionalidades avançadas de gerenciamento.
+  - **Comum**: Acesso limitado às funcionalidades de pedidos e consulta no seu setor.
+  - **Gestor**: Acesso ao dashboard com métricas e relatórios.
+  - **Admin**: Acesso total a todos os setores e funcionalidades administrativas.
 - **CRUD de Pedidos**: Funcionalidades de Criação, Leitura, Atualização e Exclusão de pedidos.
-- **Interface Responsiva**: Suporte melhorado para dispositivos móveis com ajustes visuais e de navegação.
-- **Modal de Impressão**: Modal interativo para facilitar a impressão de pedidos.
-- **Sincronização de Modais**: Melhor integração entre modais para operações contínuas.
+- **Segmentação por Setor**: Visualização e gerenciamento de pedidos organizados por setor.
+- **Interface Responsiva**: Suporte para dispositivos móveis com ajustes visuais e de navegação.
+- **Dashboard com Gráficos**: Visualização interativa de dados e métricas para gestores.
+- **Logs de Atividades**: Registro detalhado de todas as ações realizadas no sistema.
 
 ## Instalação
 

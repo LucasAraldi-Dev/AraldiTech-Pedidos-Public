@@ -50,6 +50,8 @@ class Pedido(BaseModel):
     usuario_nome: Optional[str] = None
     deliveryDate: Optional[datetime]
     sender: Optional[str] = None
+    conclusao_data: Optional[datetime] = None
+    setor: Optional[str] = None  # Setor ao qual o pedido pertence
 
     class Config:
         json_encoders = {
@@ -57,7 +59,16 @@ class Pedido(BaseModel):
         }
 
 # Setores válidos
-SETORES_VALIDOS = ["Fábrica de Ração", "Oficina", "Escritório"]
+SETORES_VALIDOS = [
+    "Escritório", 
+    "Fábrica de Ração", 
+    "CPO", 
+    "Granjas", 
+    "Abatedouro", 
+    "Transporte", 
+    "Incubatório", 
+    "Favorito"
+]
 
 # Categorias de produto válidas
 CATEGORIAS_VALIDAS = [
@@ -76,6 +87,21 @@ class PedidoHistorico(BaseModel):
     campo_alterado: str
     valor_anterior: str
     valor_novo: str
+    
+    class Config:
+        json_encoders = {
+            ObjectId: str,
+            datetime: lambda dt: dt.isoformat(),
+        }
+
+# Modelo de atividade para o MongoDB
+class Atividade(BaseModel):
+    id: Optional[str] = None
+    tipo: str  # criacao, edicao, conclusao, cancelamento, login, registro
+    descricao: str
+    usuario_nome: str
+    data: datetime = Field(default_factory=datetime.now)
+    pedido_id: Optional[int] = None
     
     class Config:
         json_encoders = {

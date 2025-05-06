@@ -92,9 +92,14 @@
           <div class="form-group">
             <label for="editSetor">Setor</label>
             <select id="editSetor" v-model="editingUser.setor" required>
-              <option value="Fábrica de Ração">Fábrica de Ração</option>
-              <option value="Oficina">Oficina</option>
               <option value="Escritório">Escritório</option>
+              <option value="Fábrica de Ração">Fábrica de Ração</option>
+              <option value="CPO">CPO</option>
+              <option value="Granjas">Granjas</option>
+              <option value="Abatedouro">Abatedouro</option>
+              <option value="Transporte">Transporte</option>
+              <option value="Incubatório">Incubatório</option>
+              <option value="Favorito">Favorito</option>
             </select>
           </div>
 

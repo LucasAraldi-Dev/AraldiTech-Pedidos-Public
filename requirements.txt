@@ -1,9 +1,14 @@
-fastapi               # Framework principal para o backend
-uvicorn               # Servidor ASGI para rodar a aplicação
-pydantic              # Validação e criação de modelos de dados
+fastapi==0.68.0
+uvicorn==0.15.0
+pydantic==1.8.2
 motor                 # Driver assíncrono para MongoDB
-python-jose           # JWT e OAuth para autenticação
-passlib[bcrypt]       # Hash de senha seguro com bcrypt
-pymongo               # Driver MongoDB para manipulação direta do banco
+python-jose==3.3.0
+passlib==1.7.4
+pymongo==3.12.0
 python-dotenv         # Gerenciamento de variáveis de ambiente
 pydantic[email]
+python-multipart==0.0.5
+websockets==10.0
+reportlab==3.6.3
+pandas==1.3.3
+xlsxwriter==3.0.2
