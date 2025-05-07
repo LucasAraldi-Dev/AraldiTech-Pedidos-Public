@@ -3,12 +3,22 @@
     <h1 class="dashboard-title">Dashboard de Gestão</h1>
     
     <div class="dashboard-sections">
+      <!-- Componente de Resumo Financeiro -->
+      <div class="dashboard-section full-width">
+        <h2>Resumo Financeiro</h2>
+        <FinancialSummary @edit-pedido="openOrderDetails" />
+      </div>
+      
       <!-- Feed de atividades recentes -->
       <div class="dashboard-section">
         <h2>Atividades Recentes</h2>
         <div class="activity-feed">
-          <div v-if="isLoading" class="loading">Carregando atividades...</div>
+          <div v-if="isLoading" class="loading">
+            <div class="loading-spinner"></div>
+            Carregando atividades...
+          </div>
           <div v-else-if="activities.length === 0" class="empty-feed">
+            <i class="material-icons">info</i>
             Nenhuma atividade recente encontrada.
           </div>
           <div v-else class="activity-list">
@@ -38,14 +48,17 @@
           <div class="statistics-row">
             <!-- KPIs -->
             <div class="kpi-card">
+              <i class="material-icons kpi-icon">assignment</i>
               <h3>Total de Pedidos</h3>
               <div class="kpi-value">{{ totalPedidos }}</div>
             </div>
             <div class="kpi-card">
+              <i class="material-icons kpi-icon">timer</i>
               <h3>Tempo Médio de Conclusão</h3>
               <div class="kpi-value">{{ tempoMedioConclusao }}</div>
             </div>
             <div class="kpi-card">
+              <i class="material-icons kpi-icon">pending_actions</i>
               <h3>Pedidos Pendentes</h3>
               <div class="kpi-value">{{ pedidosPendentes }}</div>
             </div>
@@ -136,6 +149,7 @@ const axios = axiosModule.default || axiosModule;
 import { Chart, registerables } from 'chart.js';
 import authService from '@/api/authService';
 import ModalDetalhePedido from '@/components/ModalDetalhePedido.vue';
+import FinancialSummary from '@/components/FinancialSummary.vue';
 
 // Registrar todos os componentes
 Chart.register(...registerables);
@@ -143,7 +157,8 @@ Chart.register(...registerables);
 export default {
   name: 'AppDashboard',
   components: {
-    ModalDetalhePedido
+    ModalDetalhePedido,
+    FinancialSummary
   },
   data() {
     return {
@@ -494,17 +509,32 @@ export default {
 </script>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Material+Icons&display=swap');
+
 .dashboard-container {
   padding: 20px;
   max-width: 1200px;
   margin: 0 auto;
+  font-family: 'Roboto', sans-serif;
+  color: #f5f5f5;
 }
 
 .dashboard-title {
   font-size: 28px;
   margin-bottom: 30px;
-  color: #333;
+  color: #f5f5f5;
   text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dashboard-title::before {
+  content: 'dashboard';
+  font-family: 'Material Icons';
+  margin-right: 15px;
+  color: #ff6f61;
+  font-size: 32px;
 }
 
 .dashboard-sections {
@@ -514,30 +544,103 @@ export default {
 }
 
 .dashboard-section {
-  background-color: #fff;
+  background-color: #1f1f1f;
   border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
   padding: 20px;
+  border: 1px solid #333;
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.dashboard-section:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
 }
 
 .dashboard-section h2 {
   font-size: 20px;
   margin-bottom: 20px;
-  color: #333;
-  border-bottom: 1px solid #eee;
+  color: #ff6f61;
+  border-bottom: 1px solid #333;
   padding-bottom: 10px;
+  display: flex;
+  align-items: center;
+}
+
+.dashboard-section h2::before {
+  font-family: 'Material Icons';
+  margin-right: 10px;
+  font-size: 24px;
+}
+
+.dashboard-section:nth-child(1) h2::before {
+  content: 'account_balance';
+}
+
+.dashboard-section:nth-child(2) h2::before {
+  content: 'history';
+}
+
+.dashboard-section:nth-child(3) h2::before {
+  content: 'insert_chart';
+}
+
+.dashboard-section:nth-child(4) h2::before {
+  content: 'description';
 }
 
 /* Feed de Atividades */
 .activity-feed {
   max-height: 400px;
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #ff6f61 #333;
+}
+
+.activity-feed::-webkit-scrollbar {
+  width: 8px;
+}
+
+.activity-feed::-webkit-scrollbar-track {
+  background: #333;
+  border-radius: 4px;
+}
+
+.activity-feed::-webkit-scrollbar-thumb {
+  background-color: #ff6f61;
+  border-radius: 4px;
 }
 
 .loading, .empty-feed {
   text-align: center;
   padding: 20px;
-  color: #777;
+  color: #999;
+  font-style: italic;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.loading-spinner {
+  display: inline-block;
+  width: 25px;
+  height: 25px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #ff6f61;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.empty-feed i {
+  font-size: 32px;
+  color: #ff6f61;
 }
 
 .activity-list {
@@ -549,14 +652,18 @@ export default {
 .activity-item {
   display: flex;
   gap: 15px;
-  background-color: #f9f9f9;
+  background-color: #2a2a2a;
   border-radius: 8px;
   padding: 15px;
-  transition: background-color 0.3s;
+  transition: all 0.3s;
+  border: 1px solid #333;
 }
 
 .activity-item:hover {
-  background-color: #f0f0f0;
+  background-color: #333;
+  border-color: #ff6f61;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
 }
 
 .activity-icon {
@@ -567,6 +674,7 @@ export default {
   height: 40px;
   border-radius: 50%;
   color: white;
+  flex-shrink: 0;
 }
 
 .activity-icon-criacao {
@@ -597,26 +705,35 @@ export default {
   display: flex;
   justify-content: space-between;
   margin-bottom: 5px;
+  flex-wrap: wrap;
 }
 
 .activity-user {
   font-weight: bold;
-  color: #333;
+  color: #f5f5f5;
 }
 
 .activity-date {
-  color: #777;
+  color: #999;
   font-size: 0.85em;
 }
 
 .activity-description {
   margin-bottom: 5px;
+  color: #ddd;
 }
 
 .activity-details a {
-  color: #0066cc;
+  color: #ff6f61;
   text-decoration: underline;
   cursor: pointer;
+  transition: color 0.3s;
+  display: inline-flex;
+  align-items: center;
+}
+
+.activity-details a:hover {
+  color: #e55b55;
 }
 
 /* Statistics and Charts */
@@ -635,22 +752,48 @@ export default {
 .kpi-card {
   flex: 1;
   text-align: center;
-  background-color: #f5f5f5;
+  background-color: #2a2a2a;
   border-radius: 8px;
   padding: 15px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  border: 1px solid #333;
+  transition: transform 0.3s, box-shadow 0.3s;
+  position: relative;
+  overflow: hidden;
+}
+
+.kpi-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  border-color: #ff6f61;
+}
+
+.kpi-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background-color: #ff6f61;
+}
+
+.kpi-icon {
+  font-size: 36px;
+  color: #ff6f61;
+  margin-bottom: 10px;
 }
 
 .kpi-card h3 {
   font-size: 16px;
-  color: #555;
-  margin-bottom: 10px;
+  color: #ff6f61;
+  margin: 10px 0;
 }
 
 .kpi-value {
   font-size: 28px;
   font-weight: bold;
-  color: #333;
+  color: #f5f5f5;
 }
 
 .charts-container {
@@ -660,18 +803,26 @@ export default {
 }
 
 .chart-wrapper {
-  background-color: #f5f5f5;
+  background-color: #2a2a2a;
   border-radius: 8px;
   padding: 15px;
   height: 300px;
   position: relative;
+  border: 1px solid #333;
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.chart-wrapper:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  border-color: #ff6f61;
 }
 
 .chart-wrapper h3 {
   text-align: center;
   margin-bottom: 15px;
   font-size: 16px;
-  color: #555;
+  color: #ff6f61;
 }
 
 canvas {
@@ -682,6 +833,9 @@ canvas {
 /* Relatórios */
 .reports-container {
   padding: 10px;
+  background-color: #2a2a2a;
+  border-radius: 8px;
+  border: 1px solid #333;
 }
 
 .report-options {
@@ -699,14 +853,47 @@ canvas {
 
 .form-group label {
   font-size: 14px;
-  color: #555;
+  color: #ff6f61;
+  display: flex;
+  align-items: center;
+}
+
+.form-group label::before {
+  font-family: 'Material Icons';
+  margin-right: 5px;
+  font-size: 18px;
+}
+
+.form-group:nth-child(1) label::before {
+  content: 'description';
+}
+
+.form-group:nth-child(2) label::before {
+  content: 'date_range';
+}
+
+.form-group:nth-child(3) label::before {
+  content: 'calendar_today';
+}
+
+.form-group:nth-child(4) label::before {
+  content: 'insert_drive_file';
 }
 
 .form-group select, .form-group input {
-  padding: 8px 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  background-color: white;
+  padding: 10px 12px;
+  border: 1px solid #444;
+  border-radius: 6px;
+  background-color: #333;
+  color: #f5f5f5;
+  font-size: 14px;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.form-group select:focus, .form-group input:focus {
+  border-color: #ff6f61;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(255, 111, 97, 0.2);
 }
 
 .date-range {
@@ -725,22 +912,38 @@ canvas {
 }
 
 .btn-generate {
-  padding: 10px 20px;
-  background-color: #4CAF50;
-  color: white;
+  padding: 12px 24px;
+  background-color: #ff6f61;
+  color: #1f1f1f;
   border: none;
-  border-radius: 5px;
+  border-radius: 6px;
   cursor: pointer;
   font-size: 16px;
-  transition: background-color 0.3s;
+  font-weight: bold;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+}
+
+.btn-generate::before {
+  content: 'get_app';
+  font-family: 'Material Icons';
+  margin-right: 8px;
+  font-size: 20px;
 }
 
 .btn-generate:hover {
-  background-color: #388E3C;
+  background-color: #e55b55;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+.btn-generate:active {
+  transform: translateY(0);
 }
 
 /* Media queries para responsividade */
-@media (max-width: 768px) {
+@media (max-width: 992px) {
   .statistics-row {
     flex-direction: column;
   }
@@ -750,11 +953,96 @@ canvas {
   }
   
   .report-options {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-container {
+    padding: 15px;
+  }
+  
+  .dashboard-title {
+    font-size: 24px;
+  }
+  
+  .dashboard-title::before {
+    font-size: 28px;
+  }
+  
+  .dashboard-section {
+    padding: 15px;
+  }
+  
+  .dashboard-section h2 {
+    font-size: 18px;
+  }
+  
+  .chart-wrapper {
+    height: 250px;
+  }
+  
+  .report-options {
     grid-template-columns: 1fr;
   }
   
   .date-range {
     flex-direction: column;
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard-container {
+    padding: 10px;
+  }
+  
+  .dashboard-section {
+    padding: 12px;
+    margin-bottom: 15px;
+  }
+  
+  .dashboard-title {
+    font-size: 20px;
+    margin-bottom: 20px;
+  }
+  
+  .dashboard-title::before {
+    font-size: 24px;
+  }
+  
+  .kpi-card {
+    padding: 10px;
+  }
+  
+  .kpi-icon {
+    font-size: 28px;
+  }
+  
+  .kpi-value {
+    font-size: 22px;
+  }
+  
+  .activity-item {
+    padding: 10px;
+  }
+  
+  .chart-wrapper {
+    height: 200px;
+  }
+  
+  .btn-generate {
+    width: 100%;
+    padding: 10px;
+  }
+}
+
+.full-width {
+  grid-column: span 2;
+}
+
+@media (max-width: 992px) {
+  .full-width {
+    grid-column: span 1;
   }
 }
 </style> 

@@ -1,5 +1,5 @@
-# AraldiTech - Pedidos (Versão 0.7) 
-![GitHub version](https://img.shields.io/badge/version-0.7.0-blue)
+# AraldiTech - Pedidos (Versão 0.8) 
+![GitHub version](https://img.shields.io/badge/version-0.8.0-blue)
 
 ## Descrição
 **AraldiTech - Pedidos** é um WebApp desenvolvido para gerenciar pedidos de produtos para setores específicos, com interface moderna, intuitiva e responsiva, proporcionando uma experiência de uso otimizada.
@@ -25,17 +25,22 @@ Principais funcionalidades:
 - **OAuth2 com JWT**: Autenticação segura usando JSON Web Tokens.
 - **Chart.js**: Biblioteca para criação de gráficos interativos no dashboard.
 
-## Versão
-A versão atual do projeto é **0.7.0**. 
+## Versão  
+A versão atual do projeto é **0.8.0**.
 
-### Mudanças Principais na Versão 0.7.0
-A versão 0.7.0 traz diversas melhorias e novos recursos, incluindo:
-- **Expansão de Setores**: Agora oferecendo suporte para 8 setores diferentes (Escritório, Fábrica de Ração, CPO, Granjas, Abatedouro, Transporte, Incubatório e Favorito).
-- **Segurança por Setor**: Usuários visualizam apenas pedidos do seu próprio setor, aumentando a privacidade e organização.
-- **Dashboard para Gestores**: Novo painel com gráficos e métricas para acompanhamento de atividades.
-- **Sistema de Logs Detalhado**: Registro completo de atividades para cada pedido, incluindo quem realizou cada alteração.
-- **Histórico de Modificações**: Rastreamento de todas as alterações feitas em cada pedido.
-- **Acesso Administrativo Universal**: Administradores têm acesso a pedidos de todos os setores.
+### Mudanças Principais na Versão 0.8.0  
+A versão 0.8.0 traz aprimoramentos significativos em usabilidade, segurança e visualização de dados:
+
+- **Dashboard Reformulado**: Interface totalmente refeita para facilitar a visualização de métricas do sistema, incluindo estatísticas de pedidos e relatório financeiro com base nos dados preenchidos pelos usuários.
+- **Melhorias no Login e Cadastro**: Fluxos de autenticação e registro refeitos para oferecer uma experiência mais fluida e intuitiva ao usuário.
+- **Segurança Aprimorada**: Corrigidas vulnerabilidades nas áreas de login, cadastro e log de pedidos editados, garantindo maior proteção dos dados.
+- **Sistema de Logs Detalhado**: Agora cada alteração em um pedido é registrada com o autor da modificação, fortalecendo a rastreabilidade.
+- **Histórico de Modificações**: As edições realizadas em pedidos são armazenadas para consulta futura.
+- **Dashboard para Gestores**: Painel exclusivo com gráficos e indicadores para facilitar o acompanhamento da operação.
+- **Restrição por Setor**: Usuários agora acessam apenas os pedidos relacionados ao seu setor.
+- **Acesso Total para Administradores**: Permissão especial para visualizar e gerenciar pedidos de todos os setores.
+- **Correções de Responsividade**: Ajustes na interface para melhor adaptação em diferentes tamanhos de tela.
+- **Padronização de Pedidos Concluídos**: Unificação do formato de dados dos pedidos concluídos, evitando problemas de exibição no dashboard.
 
 
 ## Funcionalidades

@@ -17,6 +17,14 @@
       >
         Dashboard de Gestão
       </button>
+      <!-- Botão Relatório Financeiro para gestores -->
+      <button 
+        v-if="isGestor" 
+        class="menu-btn finance-btn" 
+        @click="openFinancialReport"
+      >
+        Relatório Financeiro
+      </button>
       <!-- Botão Gerenciar Usuários apenas para administradores -->
       <button 
         v-if="isAdmin" 
@@ -40,6 +48,14 @@
       >
         Dashboard de Gestão
       </button>
+      <!-- Botão Relatório Financeiro para gestores -->
+      <button 
+        v-if="isGestor" 
+        class="menu-btn finance-btn" 
+        @click="openFinancialReport"
+      >
+        Relatório Financeiro
+      </button>
       <!-- Botão Gerenciar Usuários apenas para administradores -->
       <button 
         v-if="isAdmin" 
@@ -52,119 +68,8 @@
       <button class="menu-btn logout-btn" @click="logout">Sair</button>
     </div>
 
-    <div class="main-content" :class="{'has-content': isDashboardOpen || isCreateOrderSectionOpen || isConsultOrdersSectionOpen || isPrintModalOpen || isEditOrderOpen || isUserManagementOpen}">
-      <!-- Dashboard para Gestores -->
-      <div v-if="isDashboardOpen && isGestor" class="dashboard-grid">
-        <h1 class="dashboard-title">Dashboard de Gestão</h1>
-        
-        <!-- Primeira linha: KPIs -->
-        <div class="dashboard-row kpi-row">
-          <div class="kpi-card">
-            <h3>Total de Pedidos</h3>
-            <div class="kpi-value">{{ totalPedidos }}</div>
-          </div>
-          <div class="kpi-card">
-            <h3>Tempo Médio de Conclusão</h3>
-            <div class="kpi-value">{{ tempoMedioConclusao }}</div>
-          </div>
-          <div class="kpi-card">
-            <h3>Pedidos Pendentes</h3>
-            <div class="kpi-value">{{ pedidosPendentes }}</div>
-          </div>
-        </div>
-        
-        <!-- Segunda linha: Gráficos -->
-        <div class="dashboard-row chart-row">
-          <div class="chart-wrapper">
-            <h3>Pedidos por Status</h3>
-            <canvas ref="statusChart"></canvas>
-          </div>
-          <div class="chart-wrapper">
-            <h3>Pedidos por Categoria</h3>
-            <canvas ref="categoryChart"></canvas>
-          </div>
-          <div class="chart-wrapper">
-            <h3>Pedidos por Urgência</h3>
-            <canvas ref="urgencyChart"></canvas>
-          </div>
-        </div>
-        
-        <!-- Terceira linha: Atividades e Relatórios -->
-        <div class="dashboard-row split-row">
-          <!-- Feed de atividades -->
-          <div class="activities-section">
-            <h2>Atividades Recentes</h2>
-            <div class="activity-feed">
-              <div v-if="isLoading" class="loading">Carregando atividades...</div>
-              <div v-else-if="activities.length === 0" class="empty-feed">
-                Nenhuma atividade recente encontrada.
-              </div>
-              <div v-else class="activity-list">
-                <div v-for="activity in activities" :key="activity.id" class="activity-item">
-                  <div class="activity-icon" :class="getActivityIcon(activity.tipo)">
-                    <i :class="getActivityIconClass(activity.tipo)"></i>
-                  </div>
-                  <div class="activity-content">
-                    <div class="activity-header">
-                      <span class="activity-user">{{ activity.usuario_nome }}</span>
-                      <span class="activity-date">{{ formatDate(activity.data) }}</span>
-                    </div>
-                    <div class="activity-description">{{ activity.descricao }}</div>
-                    <div v-if="activity.pedido_id" class="activity-details">
-                      <a @click="openOrderDetailsFromActivity(activity.pedido_id)" class="view-order-btn">Ver pedido #{{ activity.pedido_id }}</a>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Geração de Relatórios -->
-          <div class="reports-section">
-            <h2>Relatórios</h2>
-            <div class="report-options">
-              <div class="form-group">
-                <label for="reportType">Tipo:</label>
-                <select id="reportType" v-model="reportOptions.tipo">
-                  <option value="pedidos">Pedidos</option>
-                  <option value="atividades">Atividades</option>
-                </select>
-              </div>
-              
-              <div class="form-group">
-                <label for="reportPeriod">Período:</label>
-                <select id="reportPeriod" v-model="reportOptions.periodo">
-                  <option value="diario">Diário</option>
-                  <option value="semanal">Semanal</option>
-                  <option value="mensal">Mensal</option>
-                  <option value="personalizado">Personalizado</option>
-                </select>
-              </div>
-              
-              <div class="date-range" v-if="reportOptions.periodo === 'personalizado'">
-                <div class="form-group">
-                  <label for="startDate">Data Inicial:</label>
-                  <input type="date" id="startDate" v-model="reportOptions.dataInicial">
-                </div>
-                <div class="form-group">
-                  <label for="endDate">Data Final:</label>
-                  <input type="date" id="endDate" v-model="reportOptions.dataFinal">
-                </div>
-              </div>
-              
-              <div class="form-group">
-                <label for="reportFormat">Formato:</label>
-                <select id="reportFormat" v-model="reportOptions.formato">
-                  <option value="pdf">PDF</option>
-                  <option value="excel">Excel</option>
-                </select>
-              </div>
-              
-              <button class="btn-generate" @click="generateReport">Gerar Relatório</button>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div class="main-content" :class="{'has-content': isCreateOrderSectionOpen || isConsultOrdersSectionOpen || isPrintModalOpen || isEditOrderOpen || isUserManagementOpen || isFinancialReportOpen || isDashboardOpen}">
+      <!-- O Dashboard foi movido para um componente modal separado e foi removido daqui -->
     </div>
 
     <!-- Modal de Criação de Pedido -->
@@ -213,15 +118,31 @@
       @close="closeUserManagementModal"
       @close-menu="closeMenu"
     />
+
+    <!-- Modal de Relatório Financeiro -->
+    <ModalRelatorioFinanceiro
+      v-if="isFinancialReportOpen"
+      :isOpen="isFinancialReportOpen"
+      @close="closeFinancialReport"
+    />
+
+    <!-- Modal de Dashboard de Gestão -->
+    <ModalDashboard
+      v-if="isDashboardOpen"
+      :isOpen="isDashboardOpen"
+      @close="closeDashboard"
+    />
   </div>
 </template>
 
 <script>
-import ModalCriarPedido from "@/components/ModalCriarPedido.vue";
-import ModalConsultaPedidos from "@/components/ModalConsultaPedidos.vue";
-import ModalEditarPedido from "@/components/ModalEditarPedido.vue";
-import ModalImprimirPedido from "@/components/ModalImprimirPedido.vue";
-import ModalGerenciarUsuarios from "@/components/ModalGerenciarUsuarios.vue";
+import ModalCriarPedido from '@/components/ModalCriarPedido.vue';
+import ModalConsultaPedidos from '@/components/ModalConsultaPedidos.vue';
+import ModalEditarPedido from '@/components/ModalEditarPedido.vue';
+import ModalImprimirPedido from '@/components/ModalImprimirPedido.vue';
+import ModalGerenciarUsuarios from '@/components/ModalGerenciarUsuarios.vue';
+import ModalRelatorioFinanceiro from '@/components/ModalRelatorioFinanceiro.vue';
+import ModalDashboard from '@/components/ModalDashboard.vue';
 import html2canvas from "html2canvas";
 // Importação modificada para evitar o erro de 'module is not defined'
 import * as axiosModule from "axios";
@@ -232,46 +153,35 @@ import { Chart, registerables } from 'chart.js';
 Chart.register(...registerables);
 
 export default {
+  name: 'AppMenu',
   components: {
     ModalCriarPedido,
     ModalConsultaPedidos,
     ModalEditarPedido,
     ModalImprimirPedido,
     ModalGerenciarUsuarios,
+    ModalRelatorioFinanceiro,
+    ModalDashboard,
   },
   data() {
     return {
       isCreateOrderSectionOpen: false,
       isConsultOrdersSectionOpen: false,
       isPrintModalOpen: false,
-      isEditOrderOpen: false,
-      isUserManagementOpen: false,
-      selectedOrder: null,
-      pedidoCriado: null,
-      orders: [],
-      isMobile: false,
-      isMenuOpen: false,
-      isAdmin: false,
-      isGestor: false,
       isDashboardOpen: false,
-      // Dashboard data
-      totalPedidos: 0,
-      tempoMedioConclusao: '0 dias',
-      pedidosPendentes: 0,
-      isLoading: true,
-      activities: [],
-      charts: {
-        status: null,
-        category: null,
-        urgency: null
-      },
-      reportOptions: {
-        tipo: 'pedidos',
-        periodo: 'diario',
-        dataInicial: this.getDefaultStartDate(),
-        dataFinal: this.formatDateForInput(new Date()),
-        formato: 'pdf',
-      },
+      isEditOrderOpen: false,
+      isFinancialReportOpen: false,
+      isUserManagementOpen: false,
+      isMenuOpen: false,
+      isMobile: false,
+      pedidoCriado: null,
+      selectedOrder: null,
+      orders: [],
+      // Remover variáveis específicas do dashboard que não são mais necessárias
+      userName: '',
+      // Verificar permissões de usuário
+      isAdmin: false,
+      isGestor: false
     };
   },
   created() {
@@ -297,10 +207,6 @@ export default {
   },
   unmounted() {
     window.removeEventListener("resize", this.checkIfMobile);
-    // Limpar os gráficos do Chart.js para evitar vazamento de memória
-    Object.values(this.charts).forEach(chart => {
-      if (chart) chart.destroy();
-    });
   },
   methods: {
     openCreateOrderSection() {
@@ -329,9 +235,11 @@ export default {
       this.isEditOrderOpen = false;
     },
     handleEditOrder(updatedOrder) {
-      // Atualiza pedido na lista local e fecha o modal
-      const index = this.orders.findIndex((o) => o.id === updatedOrder.id);
-      if (index !== -1) this.orders.splice(index, 1, updatedOrder);
+      // Atualizar no array orders se existir
+      if (this.orders && this.orders.length > 0) {
+        const index = this.orders.findIndex((o) => o.id === updatedOrder.id);
+        if (index !== -1) this.orders.splice(index, 1, updatedOrder);
+      }
       
       // Atualizar a lista do modal de consulta
       if (this.$refs.consultModal) {
@@ -453,343 +361,19 @@ export default {
     // Métodos do Dashboard
     openDashboard() {
       this.isDashboardOpen = true;
+      if (this.isMobile) {
+        this.isMenuOpen = false;
+      }
+    },
+    closeDashboard() {
+      this.isDashboardOpen = false;
+    },
+    openFinancialReport() {
+      this.isFinancialReportOpen = true;
       this.isMenuOpen = false;
-      this.fetchDashboardData();
     },
-    async fetchDashboardData() {
-      this.isLoading = true;
-      try {
-        // Carrega pedidos
-        await this.fetchPedidosForDashboard();
-        
-        // Carrega atividades recentes
-        await this.fetchActivities();
-        
-        // Inicializa gráficos após carregar os dados
-        this.$nextTick(() => {
-          this.initCharts();
-        });
-      } catch (error) {
-        console.error("Erro ao carregar dados do dashboard:", error);
-      } finally {
-        this.isLoading = false;
-      }
-    },
-    async fetchPedidosForDashboard() {
-      try {
-        const response = await axios.get(`${process.env.VUE_APP_API_URL}/pedidos`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem("access_token")}` },
-        });
-        this.orders = response.data;
-        this.totalPedidos = this.orders.length;
-        this.pedidosPendentes = this.orders.filter(p => p.status === 'Pendente').length;
-        
-        // Calcula tempo médio de conclusão
-        const pedidosConcluidos = this.orders.filter(p => p.status === 'Concluído');
-        if (pedidosConcluidos.length > 0) {
-          let totalDias = 0;
-          pedidosConcluidos.forEach(pedido => {
-            const dataCriacao = new Date(pedido.criacao_data || pedido.deliveryDate);
-            const dataConclusao = new Date(pedido.conclusao_data || new Date());
-            const diffTime = Math.abs(dataConclusao - dataCriacao);
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            totalDias += diffDays;
-          });
-          const mediaDias = totalDias / pedidosConcluidos.length;
-          this.tempoMedioConclusao = `${mediaDias.toFixed(1)} dias`;
-        }
-      } catch (error) {
-        console.error("Erro ao carregar pedidos:", error);
-      }
-    },
-    async fetchActivities() {
-      try {
-        const response = await axios.get(`${process.env.VUE_APP_API_URL}/atividades`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem("access_token")}` },
-        });
-        this.activities = response.data;
-      } catch (error) {
-        console.error("Erro ao carregar atividades:", error);
-      }
-    },
-    initCharts() {
-      // Destruir gráficos existentes antes de criar novos
-      Object.entries(this.charts).forEach(([key, chart]) => {
-        if (chart) {
-          chart.destroy();
-          this.charts[key] = null;
-        }
-      });
-      
-      // Inicializar os novos gráficos
-      this.initStatusChart();
-      this.initCategoryChart();
-      this.initUrgencyChart();
-    },
-    initStatusChart() {
-      const ctx = this.$refs.statusChart?.getContext('2d');
-      if (!ctx) return;
-      
-      // Contagem de pedidos por status
-      const statusCounts = {};
-      this.orders.forEach(pedido => {
-        const status = pedido.status || 'Não definido';
-        statusCounts[status] = (statusCounts[status] || 0) + 1;
-      });
-      
-      // Cores para cada status
-      const statusColors = {
-        'Pendente': '#FFD700',
-        'Em Andamento': '#1E90FF',
-        'Concluído': '#32CD32',
-        'Cancelado': '#FF6347',
-        'Não definido': '#A9A9A9'
-      };
-      
-      // Prepara dados para o gráfico
-      const labels = Object.keys(statusCounts);
-      const data = Object.values(statusCounts);
-      const colors = labels.map(label => statusColors[label] || '#A9A9A9');
-      
-      // Cria o gráfico
-      this.charts.status = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-          labels: labels,
-          datasets: [{
-            data: data,
-            backgroundColor: colors,
-            borderWidth: 1
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              position: 'right',
-              labels: {
-                color: '#f5f5f5'
-              }
-            }
-          }
-        }
-      });
-    },
-    initCategoryChart() {
-      const ctx = this.$refs.categoryChart?.getContext('2d');
-      if (!ctx) return;
-      
-      // Contagem de pedidos por categoria
-      const categoryCounts = {};
-      this.orders.forEach(pedido => {
-        const categoria = pedido.categoria || 'Não categorizado';
-        categoryCounts[categoria] = (categoryCounts[categoria] || 0) + 1;
-      });
-      
-      // Prepara dados para o gráfico
-      const labels = Object.keys(categoryCounts);
-      const data = Object.values(categoryCounts);
-      
-      // Cria o gráfico
-      this.charts.category = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: labels,
-          datasets: [{
-            label: 'Pedidos por Categoria',
-            data: data,
-            backgroundColor: 'rgba(54, 162, 235, 0.7)',
-            borderColor: 'rgba(54, 162, 235, 1)',
-            borderWidth: 1
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            y: {
-              beginAtZero: true,
-              ticks: {
-                precision: 0,
-                color: '#f5f5f5'
-              },
-              grid: {
-                color: 'rgba(255, 255, 255, 0.1)'
-              }
-            },
-            x: {
-              ticks: {
-                color: '#f5f5f5'
-              },
-              grid: {
-                color: 'rgba(255, 255, 255, 0.1)'
-              }
-            }
-          },
-          plugins: {
-            legend: {
-              labels: {
-                color: '#f5f5f5'
-              }
-            }
-          }
-        }
-      });
-    },
-    initUrgencyChart() {
-      const ctx = this.$refs.urgencyChart?.getContext('2d');
-      if (!ctx) return;
-      
-      // Contagem de pedidos por urgência
-      const urgencyCounts = {};
-      this.orders.forEach(pedido => {
-        const urgencia = pedido.urgencia || 'Normal';
-        urgencyCounts[urgencia] = (urgencyCounts[urgencia] || 0) + 1;
-      });
-      
-      // Cores para cada nível de urgência
-      const urgencyColors = {
-        'Normal': '#32CD32',
-        'Urgente': '#FFD700',
-        'Crítico': '#FF6347',
-        'Não definido': '#A9A9A9'
-      };
-      
-      // Prepara dados para o gráfico
-      const labels = Object.keys(urgencyCounts);
-      const data = Object.values(urgencyCounts);
-      const colors = labels.map(label => urgencyColors[label] || '#A9A9A9');
-      
-      // Cria o gráfico
-      this.charts.urgency = new Chart(ctx, {
-        type: 'pie',
-        data: {
-          labels: labels,
-          datasets: [{
-            data: data,
-            backgroundColor: colors,
-            borderWidth: 1
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              position: 'right',
-              labels: {
-                color: '#f5f5f5'
-              }
-            }
-          }
-        }
-      });
-    },
-    getDefaultStartDate() {
-      const date = new Date();
-      date.setMonth(date.getMonth() - 1);
-      return this.formatDateForInput(date);
-    },
-    formatDateForInput(date) {
-      if (!date) return '';
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    },
-    async generateReport() {
-      try {
-        // Construir parâmetros do relatório
-        const params = {
-          tipo: this.reportOptions.tipo,
-          periodo: this.reportOptions.periodo,
-          formato: this.reportOptions.formato
-        };
-        
-        // Adicionar datas se for personalizado
-        if (this.reportOptions.periodo === 'personalizado') {
-          params.dataInicial = this.reportOptions.dataInicial;
-          params.dataFinal = this.reportOptions.dataFinal;
-        }
-        
-        // Chamar API para gerar relatório
-        const response = await axios.get(`${process.env.VUE_APP_API_URL}/relatorios`, {
-          params: params,
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("access_token")}`,
-            'Accept': this.reportOptions.formato === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-          },
-          responseType: 'blob'
-        });
-        
-        // Criar link para download
-        const blob = new Blob([response.data], {
-          type: this.reportOptions.formato === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        
-        // Nome do arquivo
-        const dataAtual = new Date().toISOString().split('T')[0];
-        const extensao = this.reportOptions.formato === 'pdf' ? 'pdf' : 'xlsx';
-        a.download = `relatorio_${this.reportOptions.tipo}_${dataAtual}.${extensao}`;
-        
-        // Disparar download
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-        
-      } catch (error) {
-        console.error('Erro ao gerar relatório:', error);
-        alert('Erro ao gerar relatório. Por favor, tente novamente.');
-      }
-    },
-    getActivityIcon(tipo) {
-      const tipoMap = {
-        'criacao': 'activity-icon-create',
-        'edicao': 'activity-icon-edit',
-        'conclusao': 'activity-icon-complete',
-        'cancelamento': 'activity-icon-cancel',
-        'login': 'activity-icon-login',
-        'registro': 'activity-icon-register'
-      };
-      return tipoMap[tipo] || 'activity-icon-default';
-    },
-    getActivityIconClass(tipo) {
-      const iconMap = {
-        'criacao': 'fas fa-plus',
-        'edicao': 'fas fa-edit',
-        'conclusao': 'fas fa-check',
-        'cancelamento': 'fas fa-times',
-        'login': 'fas fa-sign-in-alt',
-        'registro': 'fas fa-user-plus'
-      };
-      return iconMap[tipo] || 'fas fa-info';
-    },
-    formatDate(date) {
-      if (!date) return '';
-      const options = { 
-        day: '2-digit', 
-        month: '2-digit', 
-        year: 'numeric', 
-        hour: '2-digit', 
-        minute: '2-digit' 
-      };
-      return new Date(date).toLocaleDateString('pt-BR', options);
-    },
-    openOrderDetailsFromActivity(pedidoId) {
-      // Encontrar o pedido pelo ID
-      const pedido = this.orders.find(p => p.id === pedidoId);
-      if (pedido) {
-        // Usar o mesmo modal de impressão/visualização que é usado na consulta
-        this.pedidoCriado = pedido;
-        this.isPrintModalOpen = true;
-      } else {
-        console.error(`Pedido #${pedidoId} não encontrado`);
-      }
+    closeFinancialReport() {
+      this.isFinancialReportOpen = false;
     },
   },
 };
@@ -839,6 +423,10 @@ export default {
   background-color: #ff5252;
 }
 
+.logout-btn:hover {
+  background-color: #ff3333;
+}
+
 .admin-btn {
   background-color: #4a6da7; /* Azul escuro para indicar ações administrativas */
 }
@@ -848,11 +436,19 @@ export default {
 }
 
 .gestor-btn {
-  background-color: #2ecc71; /* Verde para indicar ações de gestão */
+  background-color: #555555; /* Cinza neutro para Dashboard */
 }
 
 .gestor-btn:hover {
-  background-color: #27ae60;
+  background-color: #666666;
+}
+
+.finance-btn {
+  background-color: #555555; /* Cinza neutro para Relatório Financeiro */
+}
+
+.finance-btn:hover {
+  background-color: #666666;
 }
 
 .main-content {
@@ -1193,6 +789,67 @@ export default {
   font-style: italic;
 }
 
+.financial-summary-section {
+  background-color: #2c3e50;
+  border-radius: 10px;
+  padding: 20px;
+  margin-top: 20px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.financial-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.financial-kpi {
+  background-color: #34495e;
+  border-radius: 8px;
+  padding: 15px;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.financial-kpi h3 {
+  margin: 0 0 10px 0;
+  font-size: 16px;
+  color: #ccc;
+}
+
+.financial-kpi .kpi-value {
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.positive-balance .kpi-value {
+  color: #2ecc71;
+}
+
+.negative-balance .kpi-value {
+  color: #e74c3c;
+}
+
+.financial-chart-wrapper {
+  background-color: #34495e;
+  border-radius: 8px;
+  padding: 15px;
+  height: 300px;
+  margin-top: 20px;
+}
+
+.financial-chart-wrapper h3 {
+  margin: 0 0 15px 0;
+  font-size: 18px;
+  text-align: center;
+  color: #f5f5f5;
+}
+
+.activity-icon-finance {
+  background-color: #9b59b6;
+}
+
 @media (max-width: 768px) {
   .sidebar {
     display: none;
@@ -1210,15 +867,139 @@ export default {
   .dashboard-title {
     font-size: 22px;
   }
+  .financial-kpis {
+    grid-template-columns: 1fr;
+  }
 }
 
-@media (max-width: 1200px) and (min-width: 769px) {
+/* Otimizações para tablets e telas 1024x768 */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .sidebar {
+    width: 200px;
+  }
+  
+  .main-content {
+    width: calc(100vw - 200px);
+    margin-left: 200px;
+    padding: 25px;
+  }
+  
+  .kpi-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .kpi-card:last-child {
+    grid-column: span 2;
+  }
+  
+  .chart-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .financial-kpis {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .financial-kpi:last-child {
+    grid-column: span 2;
+  }
+  
+  .menu-btn {
+    font-size: 14px;
+    padding: 10px 15px;
+  }
+}
+
+/* Otimizações para telas entre 1025px e 1200px */
+@media (min-width: 1025px) and (max-width: 1200px) {
   .chart-row {
     grid-template-columns: 1fr 1fr;
   }
   
   .chart-wrapper:last-child {
     grid-column: span 2;
+  }
+  
+  .main-content {
+    padding: 30px;
+  }
+}
+
+/* Otimizações para telas Full HD (1920x1080) */
+@media (min-width: 1367px) and (max-width: 1920px) {
+  .main-content {
+    padding: 40px 60px;
+  }
+  
+  .sidebar {
+    width: 270px;
+  }
+  
+  .main-content {
+    width: calc(100vw - 270px);
+    margin-left: 270px;
+  }
+  
+  .menu-btn {
+    padding: 15px 25px;
+    font-size: 18px;
+  }
+  
+  .dashboard-title {
+    font-size: 32px;
+  }
+  
+  .kpi-card {
+    padding: 25px;
+  }
+  
+  .kpi-card h3 {
+    font-size: 18px;
+  }
+  
+  .kpi-value {
+    font-size: 38px;
+  }
+}
+
+/* Otimizações para telas maiores que Full HD */
+@media (min-width: 1921px) {
+  .sidebar {
+    width: 300px;
+  }
+  
+  .main-content {
+    width: calc(100vw - 300px);
+    margin-left: 300px;
+    padding: 50px 80px;
+  }
+  
+  .menu-btn {
+    padding: 18px 30px;
+    font-size: 20px;
+    margin-bottom: 15px;
+  }
+  
+  .dashboard-title {
+    font-size: 36px;
+  }
+  
+  .kpi-row, .chart-row {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 30px;
+  }
+  
+  .kpi-card {
+    padding: 30px;
+  }
+  
+  .kpi-card h3 {
+    font-size: 20px;
+    margin-bottom: 20px;
+  }
+  
+  .kpi-value {
+    font-size: 42px;
   }
 }
 </style>

@@ -272,32 +272,36 @@ async def atualizar_pedido(pedido_id: int, pedido: schemas.PedidoCreate, db=Depe
         if not pedido_atual:
             raise HTTPException(status_code=404, detail="Pedido não encontrado.")
             
-        # Verificar se o usuário é admin
+        # Verificar se o usuário é admin ou gestor
         is_admin = current_user.get("tipo_usuario") == "admin"
+        is_gestor = current_user.get("tipo_usuario") == "gestor"
         
-        # Obter o setor do usuário
+        # Obter o setor e nome do usuário
         setor_usuario = current_user.get("setor", "Escritório")
+        usuario_nome = current_user.get("nome")
         
         # Verificar se o usuário tem permissão para editar este pedido
-        if not is_admin and pedido_atual.get("setor") != setor_usuario:
-            logging.warning(f"Usuário {current_user.get('nome')} (setor: {setor_usuario}) tentou editar um pedido do setor {pedido_atual.get('setor')}")
-            raise HTTPException(
-                status_code=403, 
-                detail="Você não tem permissão para editar pedidos de outros setores."
-            )
+        pode_editar = False
+        
+        # Admin e gestor podem editar qualquer pedido
+        if is_admin or is_gestor:
+            pode_editar = True
+        # Usuário comum só pode editar pedidos que ele mesmo criou
+        elif pedido_atual.get("usuario_nome") == usuario_nome:
+            pode_editar = True
+            
+        if not pode_editar:
+            msg_erro = "Você não tem permissão para editar este pedido."
+            if current_user.get("tipo_usuario") == "comum":
+                msg_erro += " Apenas o criador do pedido, gestores e administradores podem editar."
+            logging.warning(f"Usuário {usuario_nome} (tipo: {current_user.get('tipo_usuario')}) tentou editar pedido #{pedido_id} sem permissão")
+            raise HTTPException(status_code=403, detail=msg_erro)
             
         # Armazena o status original
         status_original = pedido_atual.get("status", "Pendente")
 
         update_data = pedido.dict(exclude_unset=True)
         logging.info(f"Dados iniciais: {update_data}")
-        
-        # Obter o nome do usuário autenticado do token
-        usuario_nome = current_user.get("nome")
-        if not usuario_nome:
-            usuario_nome = current_user.get("username", "Sistema")
-            
-        logging.info(f"Usuário autenticado: {usuario_nome}")
         
         # Sobrescreve o campo usuario_nome, ignorando o enviado pelo cliente
         update_data["usuario_nome"] = usuario_nome
@@ -346,6 +350,33 @@ async def atualizar_pedido(pedido_id: int, pedido: schemas.PedidoCreate, db=Depe
                 # Verificar se o status está mudando para Concluído
                 if status_original != "Concluído":
                     status_está_mudando_para_concluido = True
+        
+        # Validar e processar campos de orçamento
+        if "orcamento_previsto" in update_data:
+            # Registrar data de registro do orçamento
+            update_data["data_orcamento"] = datetime.now()
+            
+            # Criar registro de atividade para atualização de orçamento
+            await registrar_atividade(
+                db,
+                tipo="orcamento",
+                descricao=f"Orçamento previsto do pedido #{pedido_id} atualizado para R$ {update_data['orcamento_previsto']:.2f}",
+                usuario_nome=usuario_nome,
+                pedido_id=pedido_id
+            )
+            
+        if "custo_real" in update_data:
+            # Registrar data de registro do custo real
+            update_data["data_custo_real"] = datetime.now()
+            
+            # Criar registro de atividade para atualização de custo
+            await registrar_atividade(
+                db,
+                tipo="orcamento",
+                descricao=f"Custo real do pedido #{pedido_id} registrado em R$ {update_data['custo_real']:.2f}",
+                usuario_nome=usuario_nome,
+                pedido_id=pedido_id
+            )
 
         logging.info(f"Dados para atualização após transformação: {update_data}")
 
@@ -427,19 +458,30 @@ async def atualizar_pedido_com_historico(
         if not pedido_atual:
             raise HTTPException(status_code=404, detail="Pedido não encontrado.")
         
-        # Verificar se o usuário é admin
+        # Verificar se o usuário é admin ou gestor
         is_admin = current_user.get("tipo_usuario") == "admin"
+        is_gestor = current_user.get("tipo_usuario") == "gestor"
         
-        # Obter o setor do usuário
+        # Obter o setor e nome do usuário
         setor_usuario = current_user.get("setor", "Escritório")
+        usuario_nome = current_user.get("nome")
         
         # Verificar se o usuário tem permissão para editar este pedido
-        if not is_admin and pedido_atual.get("setor") != setor_usuario:
-            logging.warning(f"Usuário {current_user.get('nome')} (setor: {setor_usuario}) tentou editar um pedido do setor {pedido_atual.get('setor')}")
-            raise HTTPException(
-                status_code=403, 
-                detail="Você não tem permissão para editar pedidos de outros setores."
-            )
+        pode_editar = False
+        
+        # Admin e gestor podem editar qualquer pedido
+        if is_admin or is_gestor:
+            pode_editar = True
+        # Usuário comum só pode editar pedidos que ele mesmo criou
+        elif pedido_atual.get("usuario_nome") == usuario_nome:
+            pode_editar = True
+            
+        if not pode_editar:
+            msg_erro = "Você não tem permissão para editar este pedido."
+            if current_user.get("tipo_usuario") == "comum":
+                msg_erro += " Apenas o criador do pedido, gestores e administradores podem editar."
+            logging.warning(f"Usuário {usuario_nome} (tipo: {current_user.get('tipo_usuario')}) tentou editar pedido #{pedido_id} sem permissão")
+            raise HTTPException(status_code=403, detail=msg_erro)
         
         # Prepara os dados para atualização
         update_data = pedido.dict(exclude_unset=True)
@@ -995,4 +1037,324 @@ async def gerar_relatorio(
         raise HTTPException(
             status_code=500,
             detail=f"Erro ao gerar relatório: {str(e)}"
+        )
+
+@app.get("/relatorios/financeiro")
+async def gerar_relatorio_financeiro(
+    periodo: str = "mensal",
+    formato: str = "pdf",
+    dataInicial: Optional[str] = None,
+    dataFinal: Optional[str] = None,
+    db=Depends(database.get_db),
+    current_user=Depends(get_current_user)
+):
+    """
+    Gera relatórios financeiros com base nos valores de orçamento e custos reais.
+    """
+    # Verificar se o usuário tem permissão
+    if current_user.get("tipo_usuario") not in ["gestor", "admin"]:
+        raise HTTPException(
+            status_code=403,
+            detail="Acesso não autorizado. Apenas gestores podem gerar relatórios financeiros."
+        )
+    
+    try:
+        # Determinar o intervalo de datas para o relatório
+        data_final = datetime.now()
+        data_inicial = data_final
+        
+        if periodo == "diario":
+            data_inicial = data_final.replace(hour=0, minute=0, second=0, microsecond=0)
+        elif periodo == "semanal":
+            data_inicial = data_final - timedelta(days=7)
+        elif periodo == "mensal":
+            data_inicial = data_final.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        elif periodo == "personalizado" and dataInicial and dataFinal:
+            try:
+                data_inicial = datetime.fromisoformat(dataInicial)
+                data_final = datetime.fromisoformat(dataFinal)
+                # Ajustar final do dia
+                data_final = data_final.replace(hour=23, minute=59, second=59)
+            except ValueError:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Formato de data inválido. Use o formato ISO (YYYY-MM-DD)."
+                )
+        
+        # Buscar pedidos no período especificado que tenham dados de orçamento ou custo
+        filtro = {
+            "$or": [
+                {"deliveryDate": {"$gte": data_inicial, "$lte": data_final}},
+                {"data_orcamento": {"$gte": data_inicial, "$lte": data_final}},
+                {"data_custo_real": {"$gte": data_inicial, "$lte": data_final}}
+            ],
+            "$or": [
+                {"orcamento_previsto": {"$gt": 0}},
+                {"custo_real": {"$gt": 0}}
+            ]
+        }
+        
+        dados = await db["pedidos"].find(filtro).to_list(1000)
+        
+        # Preparar dados para o relatório
+        dados_relatorio = []
+        total_orcamento = 0.0
+        total_custo = 0.0
+        
+        for pedido in dados:
+            # Remover o _id para serialização
+            if "_id" in pedido:
+                del pedido["_id"]
+            
+            # Calcular a diferença entre orçamento e custo real
+            orcamento = pedido.get("orcamento_previsto", 0.0)
+            custo = pedido.get("custo_real", 0.0)
+            diferenca = orcamento - custo
+            
+            # Determinar se está acima ou abaixo do orçamento
+            status_orcamento = "Dentro do orçamento"
+            if diferenca < 0:
+                status_orcamento = "Acima do orçamento"
+            elif diferenca > 0 and custo > 0:
+                status_orcamento = "Abaixo do orçamento"
+            elif custo == 0:
+                status_orcamento = "Não executado"
+            
+            # Adicionar ao total
+            total_orcamento += orcamento
+            total_custo += custo
+            
+            # Formatar datas
+            if "deliveryDate" in pedido:
+                pedido["deliveryDate"] = pedido["deliveryDate"].strftime("%d/%m/%Y")
+            if "data_orcamento" in pedido and pedido["data_orcamento"]:
+                pedido["data_orcamento"] = pedido["data_orcamento"].strftime("%d/%m/%Y")
+            if "data_custo_real" in pedido and pedido["data_custo_real"]:
+                pedido["data_custo_real"] = pedido["data_custo_real"].strftime("%d/%m/%Y")
+            
+            # Adicionar os campos calculados
+            relatorio_item = {
+                "id": pedido.get("id"),
+                "descricao": pedido.get("descricao"),
+                "categoria": pedido.get("categoria", "Não definido"),
+                "status": pedido.get("status"),
+                "usuario_nome": pedido.get("usuario_nome"),
+                "deliveryDate": pedido.get("deliveryDate"),
+                "fornecedor": pedido.get("fornecedor", "Não definido"),
+                "orcamento_previsto": float(orcamento),
+                "custo_real": float(custo),
+                "diferenca": float(diferenca),
+                "status_orcamento": status_orcamento,
+                "observacao_orcamento": pedido.get("observacao_orcamento", "")
+            }
+            
+            dados_relatorio.append(relatorio_item)
+            
+        # Criar dataframe
+        df = pd.DataFrame(dados_relatorio)
+        if df.empty:
+            df = pd.DataFrame(columns=['id', 'descricao', 'categoria', 'status', 'orcamento_previsto', 'custo_real', 'diferenca', 'status_orcamento'])
+        else:
+            # Reorganizar e renomear colunas
+            colunas = {
+                'id': 'ID',
+                'descricao': 'Descrição',
+                'categoria': 'Categoria',
+                'status': 'Status',
+                'usuario_nome': 'Solicitante',
+                'deliveryDate': 'Data de Entrega',
+                'fornecedor': 'Fornecedor',
+                'orcamento_previsto': 'Orçamento Previsto (R$)',
+                'custo_real': 'Custo Real (R$)',
+                'diferenca': 'Diferença (R$)',
+                'status_orcamento': 'Situação',
+                'observacao_orcamento': 'Observações'
+            }
+            df = df.rename(columns=colunas)
+            
+        # Título do relatório
+        titulo = f"Relatório Financeiro de Pedidos - {periodo.capitalize()}"
+        subtitulo = f"Período: {data_inicial.strftime('%d/%m/%Y')} a {data_final.strftime('%d/%m/%Y')}"
+        
+        # Resumo financeiro
+        resumo = pd.DataFrame([
+            {"Tipo": "Total em Orçamentos", "Valor": f"R$ {total_orcamento:.2f}"},
+            {"Tipo": "Total em Custos Reais", "Valor": f"R$ {total_custo:.2f}"},
+            {"Tipo": "Saldo", "Valor": f"R$ {total_orcamento - total_custo:.2f}"}
+        ])
+        
+        # Gerar relatório no formato solicitado
+        if formato == "pdf":
+            # Criar buffer para armazenar o PDF
+            buffer = io.BytesIO()
+            
+            # Configurar documento PDF
+            doc = SimpleDocTemplate(buffer, pagesize=letter)
+            elementos = []
+            
+            # Adicionar título e resumo
+            estilos = getSampleStyleSheet()
+            elementos.append(Paragraph(titulo, estilos['Title']))
+            elementos.append(Paragraph(subtitulo, estilos['Normal']))
+            elementos.append(Paragraph(f"Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M')}", estilos['Normal']))
+            elementos.append(Paragraph(f"Gerado por: {current_user.get('nome', 'Usuário')}", estilos['Normal']))
+            elementos.append(Paragraph("<br/><br/>", estilos['Normal']))  # Espaçamento
+            
+            # Adicionar resumo financeiro
+            elementos.append(Paragraph("Resumo Financeiro", estilos['Heading2']))
+            
+            dados_resumo = [["Tipo", "Valor"]]
+            for _, row in resumo.iterrows():
+                dados_resumo.append(row.tolist())
+                
+            tabela_resumo = Table(dados_resumo)
+            tabela_resumo.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black)
+            ]))
+            elementos.append(tabela_resumo)
+            elementos.append(Paragraph("<br/><br/>", estilos['Normal']))  # Espaçamento
+            
+            # Adicionar detalhes dos pedidos
+            elementos.append(Paragraph("Detalhes dos Pedidos", estilos['Heading2']))
+            
+            # Adicionar tabela com dados
+            dados_tabela = [df.columns.tolist()]
+            for _, row in df.iterrows():
+                dados_tabela.append(row.tolist())
+                
+            tabela = Table(dados_tabela)
+            tabela.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black)
+            ]))
+            
+            elementos.append(tabela)
+            
+            # Construir o PDF
+            doc.build(elementos)
+            
+            # Resetar o buffer para o início
+            buffer.seek(0)
+            
+            # Retornar o PDF como resposta
+            return StreamingResponse(
+                buffer, 
+                media_type="application/pdf",
+                headers={"Content-Disposition": f"attachment; filename=relatorio_financeiro_{periodo}_{data_inicial.strftime('%Y%m%d')}.pdf"}
+            )
+            
+        elif formato == "excel":
+            # Criar buffer para armazenar o Excel
+            buffer = io.BytesIO()
+            
+            # Criar workbook
+            workbook = xlsxwriter.Workbook(buffer)
+            
+            # Formatos
+            titulo_formato = workbook.add_format({
+                'bold': True,
+                'font_size': 14,
+                'align': 'center',
+                'valign': 'vcenter'
+            })
+            
+            cabecalho_formato = workbook.add_format({
+                'bold': True,
+                'bg_color': '#CCCCCC',
+                'border': 1
+            })
+            
+            data_formato = workbook.add_format({
+                'num_format': 'dd/mm/yyyy',
+                'border': 1
+            })
+            
+            moeda_formato = workbook.add_format({
+                'num_format': 'R$ #,##0.00',
+                'border': 1
+            })
+            
+            texto_formato = workbook.add_format({
+                'border': 1
+            })
+            
+            # Adicionar planilha de resumo
+            ws_resumo = workbook.add_worksheet("Resumo")
+            
+            # Título
+            ws_resumo.merge_range('A1:C1', titulo, titulo_formato)
+            ws_resumo.merge_range('A2:C2', subtitulo, workbook.add_format({'align': 'center'}))
+            ws_resumo.merge_range('A3:C3', f"Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M')}", workbook.add_format({'align': 'center'}))
+            
+            # Resumo financeiro
+            ws_resumo.write(5, 0, "Resumo Financeiro", workbook.add_format({'bold': True, 'font_size': 12}))
+            
+            ws_resumo.write(7, 0, "Tipo", cabecalho_formato)
+            ws_resumo.write(7, 1, "Valor", cabecalho_formato)
+            
+            ws_resumo.write(8, 0, "Total em Orçamentos", texto_formato)
+            ws_resumo.write(8, 1, total_orcamento, moeda_formato)
+            
+            ws_resumo.write(9, 0, "Total em Custos Reais", texto_formato)
+            ws_resumo.write(9, 1, total_custo, moeda_formato)
+            
+            ws_resumo.write(10, 0, "Saldo", texto_formato)
+            ws_resumo.write(10, 1, total_orcamento - total_custo, moeda_formato)
+            
+            # Adicionar planilha de detalhes
+            ws_detalhes = workbook.add_worksheet("Detalhes dos Pedidos")
+            
+            # Escrever cabeçalho
+            for col, value in enumerate(df.columns):
+                ws_detalhes.write(0, col, value, cabecalho_formato)
+                ws_detalhes.set_column(col, col, 15)  # Ajustar largura da coluna
+            
+            # Escrever dados
+            for row_idx, row in enumerate(df.values):
+                for col_idx, value in enumerate(row):
+                    # Aplicar formatação específica dependendo da coluna
+                    if df.columns[col_idx] in ['Orçamento Previsto (R$)', 'Custo Real (R$)', 'Diferença (R$)']:
+                        ws_detalhes.write(row_idx + 1, col_idx, float(value) if value else 0, moeda_formato)
+                    elif df.columns[col_idx] == 'Data de Entrega':
+                        # Data já está como string formatada
+                        ws_detalhes.write(row_idx + 1, col_idx, value, texto_formato)
+                    else:
+                        ws_detalhes.write(row_idx + 1, col_idx, value, texto_formato)
+            
+            # Fechar workbook
+            workbook.close()
+            
+            # Resetar o buffer para o início
+            buffer.seek(0)
+            
+            # Retornar o Excel como resposta
+            return StreamingResponse(
+                buffer,
+                media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                headers={"Content-Disposition": f"attachment; filename=relatorio_financeiro_{periodo}_{data_inicial.strftime('%Y%m%d')}.xlsx"}
+            )
+            
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="Formato inválido. Use 'pdf' ou 'excel'."
+            )
+            
+    except Exception as e:
+        logging.error(f"Erro ao gerar relatório financeiro: {e}")
+        logging.exception("Detalhes do erro:")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erro ao gerar relatório financeiro: {str(e)}"
         )

@@ -53,6 +53,11 @@ class PedidoCreate(BaseModel):
     historico: Optional[List[dict]] = None
     completionDate: Optional[date] = None
     setor: Optional[str] = None
+    # Novos campos para orçamento e custos
+    orcamento_previsto: Optional[float] = 0.0
+    custo_real: Optional[float] = 0.0
+    observacao_orcamento: Optional[str] = None
+    fornecedor: Optional[str] = None
 
     # Validando e convertendo a data corretamente
     @validator("deliveryDate", pre=True)
@@ -76,6 +81,18 @@ class PedidoCreate(BaseModel):
                 return datetime.fromisoformat(value).date()
             except ValueError:
                 raise ValueError("Formato de data de conclusão inválido. Esperado: yyyy-MM-dd.")
+        return value
+
+    # Validando valores numéricos para orçamento e custo
+    @validator("orcamento_previsto", "custo_real", pre=True)
+    def validate_valores(cls, value):
+        if value is None:
+            return 0.0
+        if isinstance(value, str) and value.strip():
+            try:
+                return float(value.replace(',', '.'))
+            except ValueError:
+                raise ValueError("Valor numérico inválido para orçamento ou custo.")
         return value
 
     class Config:
@@ -106,7 +123,7 @@ class PedidoHistoricoCreate(BaseModel):
 # Esquema para atividades
 class Atividade(BaseModel):
     id: Optional[str] = None
-    tipo: str  # criacao, edicao, conclusao, cancelamento, login, registro
+    tipo: str  # criacao, edicao, conclusao, cancelamento, login, registro, orcamento
     descricao: str
     usuario_nome: str
     data: datetime = Field(default_factory=datetime.now)
@@ -120,7 +137,7 @@ class Atividade(BaseModel):
 
 # Esquema para relatórios
 class RelatorioParams(BaseModel):
-    tipo: str  # pedidos, atividades
+    tipo: str  # pedidos, atividades, financeiro
     periodo: str  # diario, semanal, mensal, personalizado
     formato: str  # pdf, excel
     dataInicial: Optional[date] = None

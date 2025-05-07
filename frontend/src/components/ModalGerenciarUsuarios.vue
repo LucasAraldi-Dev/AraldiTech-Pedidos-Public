@@ -27,8 +27,8 @@
         </div>
         <div v-for="user in filteredUsers" :key="user._id" class="user-card">
           <div class="user-header">
-            <span class="user-type" :class="user.tipo_usuario === 'admin' ? 'admin-badge' : 'user-badge'">
-              {{ user.tipo_usuario === 'admin' ? 'ADMIN' : 'USUÁRIO' }}
+            <span class="user-type" :class="getUserTypeBadgeClass(user.tipo_usuario)">
+              {{ getUserTypeLabel(user.tipo_usuario) }}
             </span>
           </div>
           <h3 class="user-name">{{ user.nome }}</h3>
@@ -107,6 +107,7 @@
             <label for="editTipoUsuario">Tipo de Usuário</label>
             <select id="editTipoUsuario" v-model="editingUser.tipo_usuario" required>
               <option value="comum">Comum</option>
+              <option value="gestor">Gestor</option>
               <option value="admin">Administrador</option>
             </select>
           </div>
@@ -387,7 +388,28 @@ export default {
       this.hasLoadedData = false;
       // Manter o modo de demonstração até que novos dados sejam recebidos
       this.fetchUsers();
-    }
+    },
+    getUserTypeBadgeClass(tipoUsuario) {
+      switch(tipoUsuario) {
+        case 'admin':
+          return 'admin-badge';
+        case 'gestor':
+          return 'gestor-badge';
+        default:
+          return 'user-badge';
+      }
+    },
+    
+    getUserTypeLabel(tipoUsuario) {
+      switch(tipoUsuario) {
+        case 'admin':
+          return 'ADMIN';
+        case 'gestor':
+          return 'GESTOR';
+        default:
+          return 'USUÁRIO';
+      }
+    },
   }
 };
 </script>
@@ -488,6 +510,11 @@ h2 {
 
 .user-badge {
   background-color: #4caf50;
+  color: white;
+}
+
+.gestor-badge {
+  background-color: #9b59b6;
   color: white;
 }
 

@@ -4,9 +4,12 @@ import router from './router';
 import Toast from 'vue-toastification';  
 import 'vue-toastification/dist/index.css';  
 
+
 // Configuração do Axios de forma global (importação simplificada)
 import axios from 'axios';
-window.axios = axios;
+
+// Configuração global do axios
+axios.defaults.baseURL = 'http://localhost:8000/api';
 
 const app = createApp(App);
 

@@ -5,12 +5,14 @@ module.exports = defineConfig({
   transpileDependencies: true,
   devServer: {
     proxy: {
-      '/': {
-        target: 'http://192.168.1.5',
+      '/api': {
+        target: 'http://localhost:8000',
         changeOrigin: true,
-        ws: false, // Desativa suporte a WebSocket
-      },
-    },
+        pathRewrite: {
+          '^/api': ''
+        }
+      }
+    }
   },
   configureWebpack: {
     resolve: {

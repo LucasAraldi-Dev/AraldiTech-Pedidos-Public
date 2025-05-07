@@ -1,7 +1,7 @@
 <template>
   <footer>
     <div class="container">
-      <p>&copy; 2024 AraldiTech. Todos os direitos reservados.</p>
+      <p>&copy; 2025 AraldiTech. Todos os direitos reservados.</p>
       <ul class="footer-links">
         <li><a href="#">Política de Privacidade</a></li>
         <li><a href="#">Termos de Uso</a></li>
@@ -69,5 +69,60 @@ body {
 
 main {
   flex: 1; 
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+  footer {
+    padding: 15px 0;
+  }
+  
+  footer p {
+    font-size: 13px;
+  }
+  
+  .footer-links li a {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  footer {
+    padding: 12px 0;
+  }
+  
+  footer p {
+    font-size: 12px;
+  }
+  
+  .footer-links {
+    flex-direction: column;
+    gap: 5px;
+  }
+  
+  .footer-links li a {
+    font-size: 12px;
+  }
+}
+
+@media (min-width: 1367px) {
+  footer {
+    padding: 25px 0;
+  }
+  
+  footer .container {
+    max-width: 1500px;
+    margin: 0 auto;
+    flex-direction: row;
+    justify-content: space-between;
+  }
+  
+  footer p {
+    font-size: 16px;
+  }
+  
+  .footer-links li a {
+    font-size: 16px;
+  }
 }
 </style>

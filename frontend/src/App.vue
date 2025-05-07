@@ -70,5 +70,55 @@ html, body {
   body {
     overflow-x: hidden;
   }
+  
+  #app {
+    height: 100%;
+  }
+  
+  .content {
+    padding: 0 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  html, body {
+    font-size: 14px;
+  }
+  
+  .content {
+    padding: 0 5px;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  html, body {
+    font-size: 15px;
+  }
+  
+  .content {
+    padding: 0 15px;
+  }
+}
+
+@media (min-width: 1025px) and (max-width: 1366px) {
+  html, body {
+    font-size: 16px;
+  }
+  
+  .content {
+    max-width: 1280px;
+    margin: 0 auto;
+  }
+}
+
+@media (min-width: 1367px) {
+  html, body {
+    font-size: 18px;
+  }
+  
+  .content {
+    max-width: 1600px;
+    margin: 0 auto;
+  }
 }
 </style>

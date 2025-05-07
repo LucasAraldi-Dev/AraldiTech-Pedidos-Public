@@ -1,6 +1,23 @@
 # Changelog
 Todas as alterações notáveis deste projeto serão documentadas neste arquivo.
 
+## [0.8.0] - 2025-05-06
+### Adicionado
+- Dashboard refeito para melhor visualização das informações relacionadas ao sistema.
+- Relatório financeiro , baseado nos dados fornecidos pelos usuários ao concluirem os pedidos.
+
+### Melhorado
+- Fluxo de login refeito e melhorado para o usuário.
+- Fluxo de cadastro refeito também para melhor usabilidade do usuário.
+
+### Corrigido
+- Responsividade ajustada para melhor adaptação em variados tipos de tela.
+- Correção de segurança na área do login e cadastro.
+- Correção de segurança no log dos pedidos editados.
+- Correção dos modais de dashboard.
+- Pedidos concluidos no banco estavam sendo salvos em formatos diferentes,
+dificultando a visualização pelo dashboard.
+
 ## [0.7.0] - 2025-05-05
 ### Adicionado
 - Expansão dos setores disponíveis: Escritório, Fábrica de Ração, CPO, Granjas, Abatedouro, Transporte, Incubatório e Favorito.

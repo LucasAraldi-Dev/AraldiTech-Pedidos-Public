@@ -16,7 +16,7 @@ class Usuario(BaseModel):
     email: EmailStr
     senha: str
     setor: str = "Escritório"
-    tipo_usuario: str = "comum"  # novo campo para tipo de usuário (comum ou gestor)
+    tipo_usuario: str = "comum"  # comum, gestor ou admin
 
     class Config:
         arbitrary_types_allowed = True  
@@ -52,6 +52,13 @@ class Pedido(BaseModel):
     sender: Optional[str] = None
     conclusao_data: Optional[datetime] = None
     setor: Optional[str] = None  # Setor ao qual o pedido pertence
+    # Novos campos para orçamento e custos
+    orcamento_previsto: Optional[float] = 0.0  # Valor estimado para o pedido
+    custo_real: Optional[float] = 0.0  # Valor real gasto no pedido
+    observacao_orcamento: Optional[str] = None  # Observações sobre o orçamento
+    data_orcamento: Optional[datetime] = None  # Data de registro do orçamento
+    data_custo_real: Optional[datetime] = None  # Data de registro do custo real
+    fornecedor: Optional[str] = None  # Fornecedor escolhido
 
     class Config:
         json_encoders = {
@@ -97,7 +104,7 @@ class PedidoHistorico(BaseModel):
 # Modelo de atividade para o MongoDB
 class Atividade(BaseModel):
     id: Optional[str] = None
-    tipo: str  # criacao, edicao, conclusao, cancelamento, login, registro
+    tipo: str  # criacao, edicao, conclusao, cancelamento, login, registro, orcamento
     descricao: str
     usuario_nome: str
     data: datetime = Field(default_factory=datetime.now)

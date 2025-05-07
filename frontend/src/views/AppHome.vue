@@ -211,4 +211,96 @@ footer p {
     font-size: 14px;
   }
 }
+
+/* Responsividade */
+@media (max-width: 1200px) {
+  .hero-section {
+    padding: 80px 40px;
+  }
+  
+  .features-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .hero-section {
+    padding: 60px 20px;
+  }
+  
+  .hero-title {
+    font-size: 2.2rem;
+  }
+  
+  .hero-subtitle {
+    font-size: 1.2rem;
+  }
+  
+  .features-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  
+  .feature-card {
+    padding: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .hero-section {
+    padding: 40px 15px;
+  }
+  
+  .hero-title {
+    font-size: 1.8rem;
+  }
+  
+  .hero-subtitle {
+    font-size: 1rem;
+  }
+  
+  .hero-cta {
+    padding: 10px 20px;
+    font-size: 1rem;
+  }
+  
+  .feature-card {
+    padding: 15px;
+  }
+  
+  .feature-title {
+    font-size: 1.2rem;
+  }
+}
+
+@media (min-width: 1367px) {
+  .hero-section {
+    padding: 120px 80px;
+  }
+  
+  .hero-title {
+    font-size: 3.5rem;
+  }
+  
+  .hero-subtitle {
+    font-size: 1.8rem;
+  }
+  
+  .features-section {
+    padding: 80px;
+  }
+  
+  .features-grid {
+    max-width: 1600px;
+    margin: 0 auto;
+  }
+  
+  .feature-card {
+    padding: 40px;
+  }
+  
+  .feature-title {
+    font-size: 1.8rem;
+  }
+}
 </style>

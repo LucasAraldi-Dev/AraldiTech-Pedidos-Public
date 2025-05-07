@@ -133,6 +133,91 @@
               <option value="Cancelado">Cancelado</option>
             </select>
           </div>
+          
+          <!-- Novos campos para orçamento -->
+          <div class="separator full-width">
+            <h3 class="section-title">
+              <i class="material-icons">account_balance</i>
+              Informações de Orçamento
+            </h3>
+          </div>
+
+          <div class="form-group">
+            <label for="orderBudget">
+              <i class="material-icons">attach_money</i>
+              ORÇAMENTO PREVISTO (R$)
+            </label>
+            <input 
+              id="orderBudget" 
+              type="number" 
+              step="0.01" 
+              min="0"
+              v-model.number="orderBudget" 
+              placeholder="0.00"
+              @input="validateBudget"
+              :class="{ 'invalid': validationErrors.budget }"
+            />
+            <div class="input-note" v-if="validationErrors.budget">
+              {{ validationErrors.budget }}
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="orderRealCost">
+              <i class="material-icons">money</i>
+              CUSTO REAL (R$)
+            </label>
+            <input 
+              id="orderRealCost" 
+              type="number" 
+              step="0.01" 
+              min="0"
+              v-model.number="orderRealCost" 
+              placeholder="0.00"
+              @input="validateRealCost"
+              :class="{ 'invalid': validationErrors.realCost }"
+            />
+            <div class="input-note" v-if="validationErrors.realCost">
+              {{ validationErrors.realCost }}
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="orderSupplier">
+              <i class="material-icons">storefront</i>
+              FORNECEDOR
+            </label>
+            <input 
+              id="orderSupplier"
+              type="text" 
+              v-model="orderSupplier" 
+              placeholder="Nome do fornecedor" 
+            />
+          </div>
+
+          <div class="form-group full-width">
+            <label for="orderBudgetNotes">
+              <i class="material-icons">description</i>
+              OBSERVAÇÕES DO ORÇAMENTO
+            </label>
+            <textarea 
+              id="orderBudgetNotes" 
+              v-model="orderBudgetNotes" 
+              placeholder="Informações adicionais sobre orçamento e custos" 
+              rows="3"
+            ></textarea>
+          </div>
+
+          <!-- Status financeiro -->
+          <div class="form-group full-width" v-if="isDiffVisible">
+            <div class="financial-status" :class="financialStatusClass">
+              <i class="material-icons status-icon">{{ financialStatusIcon }}</i>
+              <div class="status-info">
+                <h4>{{ financialStatusText }}</h4>
+                <p>Diferença: R$ {{ budgetDifference.toFixed(2) }}</p>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Histórico de alterações -->
@@ -193,18 +278,25 @@ export default {
       orderNotes: "",
       orderSender: "",
       orderStatus: "Pendente",
+      // Novos campos para orçamento
+      orderBudget: 0,
+      orderRealCost: 0,
+      orderSupplier: "",
+      orderBudgetNotes: "",
       userEmail: null,
       userName: null,
       token: null,
       minDate: new Date().toISOString().split('T')[0],
       formattedMinDate: new Date().toLocaleDateString(),
       validationErrors: {
-        quantity: false,
-        deliveryDate: false
+        quantity: "",
+        deliveryDate: "",
+        budget: "",
+        realCost: ""
       },
       successMessage: false,
       historicoAlteracoes: [],
-      modificacoes: []
+      toast: useToast()
     };
   },
   mounted() {
@@ -236,8 +328,7 @@ export default {
     if (!this.token) {
       console.error("Usuário não autenticado.");
       this.$emit("close");
-      const toast = useToast();
-      toast.error("É necessário estar autenticado para editar pedidos.");
+      this.toast.error("É necessário estar autenticado para editar pedidos.");
     }
     
     // Inicializar dados do pedido quando o componente for montado
@@ -245,6 +336,29 @@ export default {
     
     // Carregar histórico de alterações
     this.carregarHistoricoAlteracoes();
+  },
+  computed: {
+    budgetDifference() {
+      return this.orderBudget - this.orderRealCost;
+    },
+    isDiffVisible() {
+      return this.orderBudget > 0 && this.orderRealCost > 0;
+    },
+    financialStatusClass() {
+      if (this.budgetDifference > 0) return 'status-under-budget';
+      if (this.budgetDifference < 0) return 'status-over-budget';
+      return 'status-on-budget';
+    },
+    financialStatusText() {
+      if (this.budgetDifference > 0) return 'Abaixo do orçamento';
+      if (this.budgetDifference < 0) return 'Acima do orçamento';
+      return 'Dentro do orçamento';
+    },
+    financialStatusIcon() {
+      if (this.budgetDifference > 0) return 'trending_down';
+      if (this.budgetDifference < 0) return 'trending_up';
+      return 'trending_flat';
+    }
   },
   watch: {
     pedido() {
@@ -271,6 +385,12 @@ export default {
         this.orderNotes = this.pedido.observacao || "";
         this.orderSender = this.pedido.sender || "";
         this.orderStatus = this.pedido.status || "Pendente";
+        
+        // Novos campos de orçamento
+        this.orderBudget = this.pedido.orcamento_previsto || 0;
+        this.orderRealCost = this.pedido.custo_real || 0;
+        this.orderSupplier = this.pedido.fornecedor || "";
+        this.orderBudgetNotes = this.pedido.observacao_orcamento || "";
       }
     },
     async carregarHistoricoAlteracoes() {
@@ -296,7 +416,7 @@ export default {
       // Validar quantidade
       if (this.orderQuantity < 1) {
         this.orderQuantity = 1;
-        this.validationErrors.quantity = true;
+        this.validationErrors.quantity = "A quantidade deve ser maior que zero";
         toast.warning("A quantidade deve ser maior que zero!");
         return;
       }
@@ -307,7 +427,7 @@ export default {
       today.setHours(0, 0, 0, 0);
       
       if (selectedDate < today) {
-        this.validationErrors.deliveryDate = true;
+        this.validationErrors.deliveryDate = "A data de entrega não pode ser anterior à data atual!";
         toast.warning("A data de entrega não pode ser anterior à data atual!");
         return;
       }
@@ -337,7 +457,11 @@ export default {
         deliveryDate: this.orderDeliveryDate,
         sender: this.orderSender,
         usuario_nome: this.userName || "Usuário do Sistema",
-        status: this.orderStatus
+        status: this.orderStatus,
+        orcamento_previsto: this.orderBudget,
+        custo_real: this.orderRealCost,
+        fornecedor: this.orderSupplier,
+        observacao_orcamento: this.orderBudgetNotes
       };
       
       console.log("Pedido original:", this.pedido);
@@ -346,25 +470,11 @@ export default {
       // Gerar histórico de alterações
       this.gerarHistoricoAlteracoes(payload);
       
-      if (this.modificacoes.length > 0) {
-        console.log("Alterações detectadas e serão registradas:", this.modificacoes);
-      } else {
-        console.log("Nenhuma alteração detectada para registrar");
-      }
-      
       try {
-        // Preparar payload completo com histórico
-        const payloadCompleto = {
-          ...payload,
-          historico: this.modificacoes
-        };
-        
-        console.log("Enviando dados para atualização:", payloadCompleto);
-        
         // Enviar alterações com histórico
         const response = await axios.put(
           `${process.env.VUE_APP_API_URL}/pedidos/${this.pedido.id}/com-historico`,
-          payloadCompleto,
+          payload,
           {
             headers: {
               Authorization: `Bearer ${this.token}`,
@@ -378,11 +488,6 @@ export default {
         // Mostrar notificação de sucesso
         toast.success("Pedido atualizado com sucesso!");
         
-        // Verificar explicitamente se o histórico foi atualizado
-        if (this.modificacoes.length > 0) {
-          toast.info(`${this.modificacoes.length} alterações registradas no histórico`);
-        }
-        
         // Emitir evento e fechar o modal
         this.$emit("update-order", { id: this.pedido.id, ...payload });
         this.closeForm();
@@ -393,111 +498,101 @@ export default {
       }
     },
     gerarHistoricoAlteracoes(novosDados) {
-      this.modificacoes = [];
+      // Verificar alterações significativas comparando os dados do pedido original com os novos dados
+      const registrosHistorico = [];
       
-      // Comparar dados atuais com originais e registrar mudanças
-      if (String(this.pedido.descricao) !== String(novosDados.descricao)) {
-        this.modificacoes.push({
+      // Verificar alteração na descrição
+      if (novosDados.descricao !== this.pedido.descricao) {
+        registrosHistorico.push({
           pedido_id: this.pedido.id,
           usuario_nome: this.userName,
           campo_alterado: "Descrição",
-          valor_anterior: String(this.pedido.descricao || ''),
-          valor_novo: String(novosDados.descricao || '')
+          valor_anterior: this.pedido.descricao || "Não definida",
+          valor_novo: novosDados.descricao
         });
       }
       
-      if (Number(this.pedido.quantidade) !== Number(novosDados.quantidade)) {
-        this.modificacoes.push({
+      // Verificar alteração na quantidade
+      if (novosDados.quantidade !== this.pedido.quantidade) {
+        registrosHistorico.push({
           pedido_id: this.pedido.id,
           usuario_nome: this.userName,
           campo_alterado: "Quantidade",
-          valor_anterior: String(this.pedido.quantidade || '0'),
-          valor_novo: String(novosDados.quantidade || '0')
+          valor_anterior: String(this.pedido.quantidade || 0),
+          valor_novo: String(novosDados.quantidade)
         });
       }
       
-      if (String(this.pedido.categoria) !== String(novosDados.categoria)) {
-        this.modificacoes.push({
+      // Verificar alteração na categoria
+      if (novosDados.categoria !== this.pedido.categoria) {
+        registrosHistorico.push({
           pedido_id: this.pedido.id,
           usuario_nome: this.userName,
           campo_alterado: "Categoria",
-          valor_anterior: String(this.pedido.categoria || ''),
-          valor_novo: String(novosDados.categoria || '')
+          valor_anterior: this.pedido.categoria || "Não definida",
+          valor_novo: novosDados.categoria
         });
       }
       
-      if (String(this.pedido.urgencia) !== String(novosDados.urgencia)) {
-        this.modificacoes.push({
+      // Verificar alteração na urgência
+      if (novosDados.urgencia !== this.pedido.urgencia) {
+        registrosHistorico.push({
           pedido_id: this.pedido.id,
           usuario_nome: this.userName,
           campo_alterado: "Urgência",
-          valor_anterior: String(this.pedido.urgencia || ''),
-          valor_novo: String(novosDados.urgencia || '')
+          valor_anterior: this.pedido.urgencia || "Padrão",
+          valor_novo: novosDados.urgencia
         });
       }
       
-      // Comparar datas de forma mais efetiva
-      const dataOriginal = new Date(this.pedido.deliveryDate || new Date()).toISOString().split('T')[0];
-      const dataNova = new Date(novosDados.deliveryDate || new Date()).toISOString().split('T')[0];
-      
-      if (dataOriginal !== dataNova) {
-        this.modificacoes.push({
-          pedido_id: this.pedido.id,
-          usuario_nome: this.userName,
-          campo_alterado: "Data de Entrega",
-          valor_anterior: this.formatarData(this.pedido.deliveryDate),
-          valor_novo: this.formatarData(novosDados.deliveryDate)
-        });
-      }
-      
-      // Comparar observações, tratando valores nulos ou vazios
-      const obsOriginal = String(this.pedido.observacao || '').trim();
-      const obsNova = String(novosDados.observacao || '').trim();
-      
-      if (obsOriginal !== obsNova) {
-        this.modificacoes.push({
-          pedido_id: this.pedido.id,
-          usuario_nome: this.userName,
-          campo_alterado: "Observação",
-          valor_anterior: obsOriginal || "Nenhuma",
-          valor_novo: obsNova || "Nenhuma"
-        });
-      }
-      
-      if (String(this.pedido.sender) !== String(novosDados.sender)) {
-        this.modificacoes.push({
-          pedido_id: this.pedido.id,
-          usuario_nome: this.userName,
-          campo_alterado: "Responsável",
-          valor_anterior: String(this.pedido.sender || ''),
-          valor_novo: String(novosDados.sender || '')
-        });
-      }
-      
-      if (String(this.pedido.status) !== String(novosDados.status)) {
-        this.modificacoes.push({
+      // Verificar alteração no status
+      if (novosDados.status !== this.pedido.status) {
+        registrosHistorico.push({
           pedido_id: this.pedido.id,
           usuario_nome: this.userName,
           campo_alterado: "Status",
-          valor_anterior: String(this.pedido.status || ''),
-          valor_novo: String(novosDados.status || '')
+          valor_anterior: this.pedido.status || "Pendente",
+          valor_novo: novosDados.status
         });
       }
       
-      // Garantir que temos pelo menos um registro se o usuário editou o pedido
-      if (this.modificacoes.length === 0) {
-        console.log("Nenhuma modificação detectada, mas o pedido foi salvo");
-        // Vamos registrar que o pedido foi verificado/revisado
-        this.modificacoes.push({
+      // Verificar alteração no orçamento previsto
+      if (novosDados.orcamento_previsto !== this.pedido.orcamento_previsto) {
+        registrosHistorico.push({
           pedido_id: this.pedido.id,
           usuario_nome: this.userName,
-          campo_alterado: "Revisão",
-          valor_anterior: "Pedido anterior",
-          valor_novo: "Pedido revisado"
+          campo_alterado: "Orçamento Previsto",
+          valor_anterior: `R$ ${parseFloat(this.pedido.orcamento_previsto || 0).toFixed(2)}`,
+          valor_novo: `R$ ${parseFloat(novosDados.orcamento_previsto).toFixed(2)}`
         });
       }
       
-      console.log("Modificações detectadas:", this.modificacoes);
+      // Verificar alteração no custo real
+      if (novosDados.custo_real !== this.pedido.custo_real) {
+        registrosHistorico.push({
+          pedido_id: this.pedido.id,
+          usuario_nome: this.userName,
+          campo_alterado: "Custo Real",
+          valor_anterior: `R$ ${parseFloat(this.pedido.custo_real || 0).toFixed(2)}`,
+          valor_novo: `R$ ${parseFloat(novosDados.custo_real).toFixed(2)}`
+        });
+      }
+      
+      // Verificar alteração no fornecedor
+      if (novosDados.fornecedor !== this.pedido.fornecedor) {
+        registrosHistorico.push({
+          pedido_id: this.pedido.id,
+          usuario_nome: this.userName,
+          campo_alterado: "Fornecedor",
+          valor_anterior: this.pedido.fornecedor || "Não definido",
+          valor_novo: novosDados.fornecedor || "Não definido"
+        });
+      }
+      
+      // Adicionar o histórico ao payload se houver alterações
+      if (registrosHistorico.length > 0) {
+        novosDados.historico = registrosHistorico;
+      }
     },
     closeForm() {
       this.$emit("close");
@@ -513,10 +608,9 @@ export default {
     },
     validateQuantity() {
       if (this.orderQuantity < 1) {
-        this.orderQuantity = 1;
-        this.validationErrors.quantity = true;
+        this.validationErrors.quantity = "A quantidade deve ser maior que zero";
       } else {
-        this.validationErrors.quantity = false;
+        this.validationErrors.quantity = "";
       }
     },
     validateDeliveryDate() {
@@ -525,6 +619,22 @@ export default {
       today.setHours(0, 0, 0, 0);
       
       this.validationErrors.deliveryDate = selectedDate < today;
+    },
+    validateBudget() {
+      if (this.orderBudget < 0) {
+        this.validationErrors.budget = "O orçamento não pode ser negativo";
+        this.orderBudget = 0;
+      } else {
+        this.validationErrors.budget = "";
+      }
+    },
+    validateRealCost() {
+      if (this.orderRealCost < 0) {
+        this.validationErrors.realCost = "O custo real não pode ser negativo";
+        this.orderRealCost = 0;
+      } else {
+        this.validationErrors.realCost = "";
+      }
     },
     formatarData(data) {
       if (!data) return "N/A";
@@ -948,5 +1058,62 @@ button i {
   button {
     margin-top: 10px;
   }
+}
+
+.section-title {
+  margin: 10px 0;
+  color: #eee;
+  font-size: 1.2em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.separator {
+  margin: 20px 0;
+  border-top: 1px solid #444;
+  padding-top: 15px;
+  width: 100%;
+}
+
+.financial-status {
+  display: flex;
+  align-items: center;
+  padding: 15px;
+  border-radius: 8px;
+  margin-top: 10px;
+  gap: 15px;
+}
+
+.status-icon {
+  font-size: 32px;
+}
+
+.status-info h4 {
+  margin: 0 0 5px 0;
+  font-size: 18px;
+}
+
+.status-info p {
+  margin: 0;
+  font-size: 16px;
+}
+
+.status-under-budget {
+  background-color: rgba(46, 204, 113, 0.2);
+  border: 1px solid #2ecc71;
+  color: #2ecc71;
+}
+
+.status-over-budget {
+  background-color: rgba(231, 76, 60, 0.2);
+  border: 1px solid #e74c3c;
+  color: #e74c3c;
+}
+
+.status-on-budget {
+  background-color: rgba(52, 152, 219, 0.2);
+  border: 1px solid #3498db;
+  color: #3498db;
 }
 </style>

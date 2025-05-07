@@ -5,7 +5,7 @@ import AppContato from '@/views/AppContato.vue';
 import AppAjuda from '@/views/AppAjuda.vue';
 import AppMenu from '@/views/AppMenu.vue';
 import AppMenuLayout from '@/views/AppMenuLayout.vue';
-import AppDashboard from '@/views/AppDashboard.vue';
+import AppLoading from '@/views/AppLoading.vue';
 import { isTokenValid } from '@/utils/isTokenValid';
 
 const routes = [
@@ -41,6 +41,20 @@ const routes = [
     component: AppAjuda,
   },
   {
+    path: '/loading',
+    name: 'Loading',
+    component: AppLoading,
+    beforeEnter: (to, from, next) => {
+      // Permitir acesso da página de login ou após uma autenticação bem-sucedida
+      const token = localStorage.getItem('access_token');
+      if (from.name === 'Login' || token) {
+        next();
+      } else {
+        next({ name: 'Login' });
+      }
+    }
+  },
+  {
     path: '/menu',
     component: AppMenuLayout,
     children: [
@@ -48,44 +62,6 @@ const routes = [
         path: '',
         name: 'Menu',
         component: AppMenu,
-      },
-      {
-        path: 'dashboard',
-        name: 'Dashboard',
-        component: AppDashboard,
-        beforeEnter: async (to, from, next) => {
-          console.log("Navegando para dashboard, verificando permissões...");
-          const token = localStorage.getItem('access_token');
-          
-          if (!token) {
-            console.log("Token não encontrado, redirecionando para login");
-            next({ name: 'Login' });
-            return;
-          }
-          
-          const isValid = await isTokenValid();
-          if (!isValid) {
-            console.log("Token inválido, redirecionando para login");
-            next({ name: 'Login' });
-            return;
-          }
-          
-          const user = JSON.parse(localStorage.getItem('user'));
-          if (!user) {
-            console.warn("Dados de usuário não encontrados no localStorage");
-            next({ name: 'Login' });
-            return;
-          }
-          
-          // Verifica se o usuário é gestor ou admin
-          if (user.tipo_usuario === 'gestor' || user.tipo_usuario === 'admin') {
-            console.log("Usuário autorizado, acessando dashboard");
-            next();
-          } else {
-            console.warn("Usuário não tem permissão para acessar o dashboard");
-            next({ name: 'Menu' });
-          }
-        },
       },
     ],
     beforeEnter: async (to, from, next) => {
