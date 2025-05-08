@@ -120,6 +120,31 @@
             <input id="orderSender" type="text" v-model="orderSender" required />
           </div>
 
+          <div class="form-group">
+            <label for="orderSenderSector">
+              <i class="material-icons">business</i>
+              SETOR DO RESPONSÁVEL
+            </label>
+            <select 
+              id="orderSenderSector" 
+              v-model="orderSenderSector" 
+              :disabled="!isAdminOrGestor"
+              required 
+            >
+              <option value="Escritório">Escritório</option>
+              <option value="Fábrica de Ração">Fábrica de Ração</option>
+              <option value="CPO">CPO</option>
+              <option value="Granjas">Granjas</option>
+              <option value="Abatedouro">Abatedouro</option>
+              <option value="Transporte">Transporte</option>
+              <option value="Incubatório">Incubatório</option>
+              <option value="Favorito">Favorito</option>
+            </select>
+            <div class="input-note" v-if="!isAdminOrGestor">
+              O setor é definido pelo sistema e só pode ser alterado por administradores ou gestores
+            </div>
+          </div>
+
           <div class="form-group" v-if="orderStatus">
             <label for="orderStatus">
               <i class="material-icons">offline_pin</i>
@@ -275,6 +300,7 @@ export default {
       orderDeliveryDate: new Date().toISOString().split('T')[0],
       orderNotes: "",
       orderSender: "",
+      orderSenderSector: "",
       orderStatus: "Pendente",
       // Novos campos para orçamento
       orderBudget: 0,
@@ -380,6 +406,7 @@ export default {
         
         this.orderNotes = this.pedido.observacao || "";
         this.orderSender = this.pedido.sender || "";
+        this.orderSenderSector = this.pedido.setor || "";
         this.orderStatus = this.pedido.status || "Pendente";
         
         // Novos campos de orçamento
@@ -441,6 +468,7 @@ export default {
         observacao: this.orderNotes,
         deliveryDate: this.orderDeliveryDate,
         sender: this.orderSender,
+        setor: this.orderSenderSector,
         usuario_nome: this.userName || "Usuário do Sistema",
         status: this.orderStatus,
         orcamento_previsto: this.orderBudget,
@@ -571,6 +599,17 @@ export default {
           campo_alterado: "Fornecedor",
           valor_anterior: this.pedido.fornecedor || "Não definido",
           valor_novo: novosDados.fornecedor || "Não definido"
+        });
+      }
+      
+      // Verificar alteração no setor do responsável
+      if (novosDados.setor !== this.pedido.setor) {
+        registrosHistorico.push({
+          pedido_id: this.pedido.id,
+          usuario_nome: this.userName,
+          campo_alterado: "Setor do Responsável",
+          valor_anterior: this.pedido.setor || "Não definido",
+          valor_novo: novosDados.setor || "Não definido"
         });
       }
       

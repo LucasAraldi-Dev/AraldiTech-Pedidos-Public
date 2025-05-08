@@ -208,15 +208,23 @@
               <i class="material-icons">business</i>
               SETOR DO RESPONSÁVEL
             </label>
-            <input 
+            <select 
               id="orderSenderSector" 
-              type="text" 
               v-model="orderSenderSector" 
               :disabled="!isAdminOrGestor"
               required 
-            />
+            >
+              <option value="Escritório">Escritório</option>
+              <option value="Fábrica de Ração">Fábrica de Ração</option>
+              <option value="CPO">CPO</option>
+              <option value="Granjas">Granjas</option>
+              <option value="Abatedouro">Abatedouro</option>
+              <option value="Transporte">Transporte</option>
+              <option value="Incubatório">Incubatório</option>
+              <option value="Favorito">Favorito</option>
+            </select>
             <div class="input-note" v-if="!isAdminOrGestor">
-              Seu setor é aplicado automaticamente
+              O setor é definido automaticamente com base no seu perfil
             </div>
           </div>
 
@@ -395,7 +403,7 @@ export default {
         deliveryDate: new Date().toISOString(), // Data e hora completa atual
         observacao: this.orderNotes || "",
         sender: this.orderSender,
-        senderSector: this.orderSenderSector,
+        setor: this.orderSenderSector,
         usuario_nome: this.userName || "Usuário do Sistema",
         file: this.orderFileBase64 || null,
         status: "Pendente",

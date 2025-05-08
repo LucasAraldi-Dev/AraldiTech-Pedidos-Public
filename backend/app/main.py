@@ -161,12 +161,19 @@ async def criar_pedido(pedido: schemas.PedidoCreate, db=Depends(database.get_db)
             
         # Obter o setor do usuário do token
         setor_usuario = current_user.get("setor", "Escritório")
+        
+        # Verificar se o usuário é admin ou gestor
+        is_admin = current_user.get("tipo_usuario") == "admin"
+        is_gestor = current_user.get("tipo_usuario") == "gestor"
             
         logging.info(f"Usuário autenticado: {usuario_nome}, Setor: {setor_usuario}")
         
-        # Sobrescreve o campo usuario_nome e setor, ignorando o enviado pelo cliente
+        # Sobrescreve o campo usuario_nome, ignorando o enviado pelo cliente
         pedido_dict["usuario_nome"] = usuario_nome
-        pedido_dict["setor"] = setor_usuario
+        
+        # Sobrescreve o campo setor apenas se não for admin ou gestor
+        if not (is_admin or is_gestor):
+            pedido_dict["setor"] = setor_usuario
 
         # Assegura que a data do pedido seja a data e hora atual
         pedido_dict["deliveryDate"] = datetime.now()
@@ -289,8 +296,9 @@ async def atualizar_pedido(pedido_id: int, pedido: schemas.PedidoCreate, db=Depe
         # Sobrescreve o campo usuario_nome, ignorando o enviado pelo cliente
         update_data["usuario_nome"] = usuario_nome
         
-        # Manter o setor original do pedido, não permitindo alteração
-        update_data["setor"] = pedido_atual.get("setor", setor_usuario)
+        # Manter o setor original do pedido, exceto se for admin ou gestor
+        if not (is_admin or is_gestor):
+            update_data["setor"] = pedido_atual.get("setor", setor_usuario)
         
         # Manter a data original do pedido, não permitindo alteração
         if "deliveryDate" in update_data:
@@ -481,8 +489,9 @@ async def atualizar_pedido_com_historico(
         # Sobrescreve o campo usuario_nome com o usuário autenticado
         update_data["usuario_nome"] = usuario_nome
         
-        # Manter o setor original do pedido, não permitindo alteração
-        update_data["setor"] = pedido_atual.get("setor", setor_usuario)
+        # Manter o setor original do pedido, exceto se for admin ou gestor
+        if not (is_admin or is_gestor):
+            update_data["setor"] = pedido_atual.get("setor", setor_usuario)
         
         # Manter a data original do pedido, não permitindo alteração
         if "deliveryDate" in update_data:
