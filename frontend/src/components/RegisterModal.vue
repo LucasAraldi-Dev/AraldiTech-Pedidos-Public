@@ -278,12 +278,37 @@ export default {
         await new Promise(resolve => setTimeout(resolve, 1500));
         
         // Envia os dados para o componente pai para efetuar o cadastro (sem fechar o modal)
-        emit("signup", userData);
-        
-        // Mostra tela de sucesso (sem exibir toast)
-        isRegistering.value = false;
-        registerSuccess.value = true;
-        
+        // Aguarda o retorno do evento signup para verificar se ocorreu algum erro
+        try {
+          // Emite o evento signup e aguarda resposta
+          await new Promise((resolve, reject) => {
+            // Cria um ouvinte de evento único para resposta de cadastro
+            const handleSignupResponse = (success, error) => {
+              if (success) {
+                resolve(true);
+              } else {
+                reject(error || new Error("Falha ao cadastrar usuário"));
+              }
+            };
+            
+            // Emite o evento com o callback para resposta
+            emit("signup", userData, handleSignupResponse);
+            
+            // Timeout para caso não haja resposta em 5 segundos
+            setTimeout(() => {
+              reject(new Error("Timeout ao tentar cadastrar usuário"));
+            }, 5000);
+          });
+          
+          // Se chegou aqui, o cadastro foi bem sucedido
+          isRegistering.value = false;
+          registerSuccess.value = true;
+        } catch (error) {
+          // Erro específico do cadastro
+          console.error("Erro na resposta do cadastro:", error);
+          isRegistering.value = false;
+          showDatabaseError(error.message);
+        }
       } catch (error) {
         console.error("Erro ao processar cadastro:", error);
         isRegistering.value = false;
@@ -352,6 +377,14 @@ export default {
       errorTitle.value = "Erro no cadastro";
       errorMessage.value = "Ocorreu um erro durante o processo de cadastro.";
       errorHelp.value = "Verifique suas informações e tente novamente. Se o problema persistir, entre em contato com o suporte.";
+    };
+    
+    const showDatabaseError = (message) => {
+      registerError.value = true;
+      errorType.value = "database";
+      errorTitle.value = "Erro de conexão";
+      errorMessage.value = message || "Não foi possível conectar ao banco de dados.";
+      errorHelp.value = "Verifique sua conexão com a internet e tente novamente. Se o problema persistir, contate o administrador do sistema.";
     };
     
     // Função para reiniciar o processo de cadastro

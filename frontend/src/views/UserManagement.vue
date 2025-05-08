@@ -288,7 +288,7 @@ export default {
           this.toast.success('Usuário atualizado com sucesso!');
         } else {
           await axios.post(
-            `${process.env.VUE_APP_API_URL}/usuarios`,
+            `${process.env.VUE_APP_API_URL}/usuarios/`,
             userData,
             {
               headers: { Authorization: `Bearer ${authService.getToken()}` }

@@ -82,23 +82,21 @@
           <div class="form-group">
             <label for="orderDeliveryDate">
               <i class="material-icons">event</i>
-              DATA DE ENTREGA
+              DATA DO PEDIDO
             </label>
             <div class="date-input-container">
               <input 
                 id="orderDeliveryDate" 
                 type="date" 
                 v-model="orderDeliveryDate" 
-                :min="minDate"
+                disabled
                 required 
                 class="date-picker"
-                :class="{ 'invalid': validationErrors.deliveryDate }"
-                @change="validateDeliveryDate"
               />
               <i class="material-icons date-icon">calendar_today</i>
             </div>
             <div class="input-note">
-              Data mínima: hoje ({{ formattedMinDate }})
+              A data do pedido não pode ser alterada
             </div>
           </div>
 
@@ -285,12 +283,10 @@ export default {
       orderBudgetNotes: "",
       userEmail: null,
       userName: null,
+      userType: null,
       token: null,
-      minDate: new Date().toISOString().split('T')[0],
-      formattedMinDate: new Date().toLocaleDateString(),
       validationErrors: {
         quantity: "",
-        deliveryDate: "",
         budget: "",
         realCost: ""
       },
@@ -300,17 +296,14 @@ export default {
     };
   },
   mounted() {
-    // Inicializar data mínima
-    const today = new Date();
-    this.minDate = today.toISOString().split('T')[0];
-    this.formattedMinDate = today.toLocaleDateString();
-    
     // Obter informações do usuário do localStorage
     const userStr = localStorage.getItem("user");
     if (userStr) {
       try {
         const userObj = JSON.parse(userStr);
         this.userName = userObj.nome;
+        this.userType = userObj.tipo_usuario;
+        console.log("Tipo de usuário:", this.userType);
       } catch (e) {
         console.error("Erro ao parsear dados do usuário:", e);
       }
@@ -358,6 +351,9 @@ export default {
       if (this.budgetDifference > 0) return 'trending_down';
       if (this.budgetDifference < 0) return 'trending_up';
       return 'trending_flat';
+    },
+    isAdminOrGestor() {
+      return this.userType === "admin" || this.userType === "gestor";
     }
   },
   watch: {
@@ -418,17 +414,6 @@ export default {
         this.orderQuantity = 1;
         this.validationErrors.quantity = "A quantidade deve ser maior que zero";
         toast.warning("A quantidade deve ser maior que zero!");
-        return;
-      }
-      
-      // Validar data de entrega
-      const selectedDate = new Date(this.orderDeliveryDate);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      
-      if (selectedDate < today) {
-        this.validationErrors.deliveryDate = "A data de entrega não pode ser anterior à data atual!";
-        toast.warning("A data de entrega não pode ser anterior à data atual!");
         return;
       }
       
@@ -613,13 +598,6 @@ export default {
         this.validationErrors.quantity = "";
       }
     },
-    validateDeliveryDate() {
-      const selectedDate = new Date(this.orderDeliveryDate);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      
-      this.validationErrors.deliveryDate = selectedDate < today;
-    },
     validateBudget() {
       if (this.orderBudget < 0) {
         this.validationErrors.budget = "O orçamento não pode ser negativo";
@@ -638,7 +616,25 @@ export default {
     },
     formatarData(data) {
       if (!data) return "N/A";
-      return new Date(data).toLocaleDateString('pt-BR');
+      
+      try {
+        const d = new Date(data);
+        
+        // Verificar se a data é válida
+        if (isNaN(d.getTime())) {
+          console.warn(`Data inválida: ${data}`);
+          return 'Data inválida';
+        }
+        
+        return d.toLocaleDateString('pt-BR', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric'
+        });
+      } catch (error) {
+        console.error(`Erro ao formatar data: ${data}`, error);
+        return 'Erro de formato';
+      }
     }
   },
 };

@@ -18,7 +18,7 @@
         <p><strong>QUANTIDADE:</strong> {{ pedido.quantidade || 0 }}</p>
         <p><strong>URGÊNCIA:</strong> {{ (pedido.urgencia || 'Normal').toUpperCase() }}</p>
         <p><strong>CATEGORIA:</strong> {{ (pedido.categoria || 'Não categorizado').toUpperCase() }}</p>
-        <p><strong>DATA DE ENTREGA:</strong> {{ formatDate(pedido.deliveryDate || new Date()).toUpperCase() }}</p>
+        <p><strong>DATA DO PEDIDO:</strong> {{ formatDate(pedido.deliveryDate || new Date()).toUpperCase() }}</p>
         <p v-if="pedido.status === 'Concluído'"><strong>DATA DE CONCLUSÃO:</strong> {{ formatDate(pedido.conclusao_data || new Date()).toUpperCase() }}</p>
         <p><strong>OBSERVAÇÃO:</strong> {{ pedido.observacao ? pedido.observacao.toUpperCase() : "NENHUMA" }}</p>
         <p><strong>RESPONSÁVEL:</strong> {{ (pedido.sender || 'Não informado').toUpperCase() }}</p>
@@ -156,13 +156,14 @@ export default {
           return 'Data inválida';
         }
         
-        return d.toLocaleDateString("pt-BR", {
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric",
-          hour: "2-digit",
-          minute: "2-digit"
-        });
+        return new Intl.DateTimeFormat('pt-BR', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false  // Garantir formato 24h
+        }).format(d);
       } catch (error) {
         console.error(`Erro ao formatar data: ${dateTime}`, error);
         return 'Erro de formato';

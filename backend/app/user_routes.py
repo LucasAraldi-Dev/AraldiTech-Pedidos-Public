@@ -16,6 +16,55 @@ def parse_obj_id(doc):
         doc['_id'] = str(doc['_id']) 
     return doc
 
+# Rota para criar um novo usuário
+@router.post("/usuarios/", response_model=dict)
+async def create_user(user: schemas.UsuarioCreate, db=Depends(database.get_db)):
+    try:
+        # Criptografar a senha
+        user_dict = user.dict()
+        user_dict["senha"] = pwd_context.hash(user_dict["senha"])
+        
+        # Verificar se já existe usuário com mesmo username ou email
+        existing_user = await db["users"].find_one({"$or": [
+            {"username": user_dict["username"]},
+            {"email": user_dict["email"]}
+        ]})
+        
+        if existing_user:
+            if existing_user["username"] == user_dict["username"]:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Nome de usuário já está em uso"
+                )
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="E-mail já está em uso"
+                )
+        
+        # Definir tipo de usuário como comum por padrão
+        user_dict["tipo_usuario"] = "comum"
+        
+        # Inserir no banco de dados
+        result = await db["users"].insert_one(user_dict)
+        
+        # Obter o usuário recém-criado
+        new_user = await db["users"].find_one({"_id": result.inserted_id})
+        
+        # Log de criação de usuário
+        logging.info(f"Usuário criado com sucesso: {user_dict['username']}")
+        
+        return parse_obj_id(new_user)
+    except HTTPException as e:
+        # Repassar exceções HTTP
+        raise e
+    except Exception as e:
+        logging.error(f"Erro ao criar usuário: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erro ao criar usuário: {str(e)}"
+        )
+
 # Rota para listar todos os usuários (apenas para admins)
 @router.get("/usuarios", response_model=List[dict])
 async def list_users(db=Depends(database.get_db), current_user=Depends(get_current_user)):

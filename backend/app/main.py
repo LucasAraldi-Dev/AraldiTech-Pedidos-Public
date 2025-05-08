@@ -18,9 +18,13 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
 from reportlab.lib.styles import getSampleStyleSheet
 import xlsxwriter
 
+# Importar e incluir o router de usuários
+from .user_routes import router as user_router
+
 logging.basicConfig(level=logging.INFO)
 
 app = FastAPI()
+app.include_router(user_router)
 
 # Configuração de CORS
 origins = [
@@ -81,26 +85,6 @@ async def registrar_atividade(db, tipo, descricao, usuario_nome, pedido_id=None)
     except Exception as e:
         logging.error(f"Erro ao registrar atividade: {e}")
         # Não lançamos exceção para não interromper o fluxo principal
-
-# Rota para criação de usuário
-@app.post("/usuarios/", response_model=schemas.Usuario)
-async def create_user(user: schemas.UsuarioCreate, db=Depends(database.get_db)):
-    try:
-        new_user = await crud.create_user(db=db, user=user)
-        logging.info(f"Usuário criado com sucesso: {new_user}")
-        
-        # Registra atividade de registro de usuário
-        await registrar_atividade(
-            db,
-            tipo="registro",
-            descricao=f"Novo usuário '{new_user['nome']}' registrado como {new_user['tipo_usuario']}",
-            usuario_nome="Sistema" # Aqui poderia ser o usuário admin que criou, mas depende da lógica do sistema
-        )
-        
-        return new_user
-    except ValueError as e:
-        logging.error(f"Erro ao criar usuário: {e}")
-        raise HTTPException(status_code=400, detail=str(e))
 
 # Rota para login e geração de token
 @app.post("/token", response_model=schemas.Token)
@@ -184,9 +168,8 @@ async def criar_pedido(pedido: schemas.PedidoCreate, db=Depends(database.get_db)
         pedido_dict["usuario_nome"] = usuario_nome
         pedido_dict["setor"] = setor_usuario
 
-        # Converte deliveryDate para datetime
-        if isinstance(pedido.deliveryDate, date):
-            pedido_dict["deliveryDate"] = datetime.combine(pedido.deliveryDate, datetime.min.time())
+        # Assegura que a data do pedido seja a data e hora atual
+        pedido_dict["deliveryDate"] = datetime.now()
 
         # Insere o pedido no banco
         if pedido_dict.get('file'):
@@ -309,13 +292,11 @@ async def atualizar_pedido(pedido_id: int, pedido: schemas.PedidoCreate, db=Depe
         # Manter o setor original do pedido, não permitindo alteração
         update_data["setor"] = pedido_atual.get("setor", setor_usuario)
         
-        # Processar a data de entrega
+        # Manter a data original do pedido, não permitindo alteração
         if "deliveryDate" in update_data:
-            if isinstance(update_data["deliveryDate"], str):
-                update_data["deliveryDate"] = validate_and_convert_date(update_data["deliveryDate"])
-            elif isinstance(update_data["deliveryDate"], date):
-                update_data["deliveryDate"] = datetime.combine(update_data["deliveryDate"], datetime.min.time())
-        
+            del update_data["deliveryDate"]
+
+            
         # Processar a data de conclusão
         if "completionDate" in update_data:
             logging.info(f"Processando data de conclusão: {update_data['completionDate']}")
@@ -503,19 +484,9 @@ async def atualizar_pedido_com_historico(
         # Manter o setor original do pedido, não permitindo alteração
         update_data["setor"] = pedido_atual.get("setor", setor_usuario)
         
-        # Corrigir o nome do usuário em cada entrada do histórico
-        if historico and isinstance(historico, list):
-            for item in historico:
-                if isinstance(item, dict):
-                    # Sobrescrever o nome do usuário com o do token
-                    item["usuario_nome"] = usuario_nome
-        
-        # Conversão de datas
+        # Manter a data original do pedido, não permitindo alteração
         if "deliveryDate" in update_data:
-            if isinstance(update_data["deliveryDate"], str):
-                update_data["deliveryDate"] = validate_and_convert_date(update_data["deliveryDate"])
-            elif isinstance(update_data["deliveryDate"], date):
-                update_data["deliveryDate"] = datetime.combine(update_data["deliveryDate"], datetime.min.time())
+            del update_data["deliveryDate"]
         
         # Processar a data de conclusão
         if "completionDate" in update_data:
@@ -536,6 +507,13 @@ async def atualizar_pedido_com_historico(
             
             # Remover o campo completionDate original
             del update_data["completionDate"]
+        
+        # Corrigir o nome do usuário em cada entrada do histórico
+        if historico and isinstance(historico, list):
+            for item in historico:
+                if isinstance(item, dict):
+                    # Sobrescrever o nome do usuário com o do token
+                    item["usuario_nome"] = usuario_nome
         
         # Renomear 'file' para 'anexo'
         if 'file' in update_data:
@@ -694,82 +672,6 @@ async def obter_historico_pedido(
     except Exception as e:
         logging.error(f"Erro ao buscar histórico do pedido: {e}")
         raise HTTPException(status_code=500, detail=f"Erro ao buscar histórico: {str(e)}")
-
-# Rota para listar usuários (apenas para administradores)
-@app.get("/usuarios")
-async def listar_usuarios(db=Depends(database.get_db), current_user=Depends(get_current_user)):
-    try:
-        # Verifica se o usuário atual é um administrador
-        if current_user.get("tipo_usuario") != "admin":
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Acesso permitido apenas para administradores"
-            )
-        
-        # Busca todos os usuários no banco de dados
-        users = await db["users"].find().to_list(None)
-        
-        # Converte ObjectId para string e remove senhas por segurança
-        for user in users:
-            user["_id"] = str(user["_id"])
-            if "senha" in user:
-                del user["senha"]
-        
-        logging.info(f"Usuários encontrados: {len(users)}")
-        return users
-    except Exception as e:
-        logging.error(f"Erro ao listar usuários: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Erro ao listar usuários"
-        )
-
-# Rota para atualizar usuário (apenas para administradores)
-@app.put("/usuarios/{user_id}")
-async def atualizar_usuario(
-    user_id: str, 
-    user_update: dict, 
-    current_user=Depends(get_current_user),
-    db=Depends(database.get_db)
-):
-    try:
-        # Verifica se o usuário atual é um administrador
-        if current_user.get("tipo_usuario") != "admin":
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Acesso permitido apenas para administradores"
-            )
-        
-        # Remove campos que não devem ser atualizados
-        if "_id" in user_update:
-            del user_update["_id"]
-        
-        # Se houver alteração de senha, faz o hash
-        if user_update.get("senha"):
-            user_update["senha"] = auth.hash_password(user_update["senha"])
-        
-        logging.info(f"Atualizando usuário: {user_id}")
-        
-        # Atualiza o usuário
-        result = await db["users"].update_one(
-            {"_id": ObjectId(user_id)},
-            {"$set": user_update}
-        )
-        
-        if result.matched_count == 0:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Usuário não encontrado"
-            )
-        
-        logging.info(f"Usuário atualizado com sucesso: {user_id}")
-        return {"message": "Usuário atualizado com sucesso"}
-    except Exception as e:
-        logging.error(f"Erro ao atualizar usuário: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Erro ao atualizar usuário: {str(e)}"
-        )
 
 # Endpoint para listar atividades
 @app.get("/atividades/", response_model=List[models.Atividade])

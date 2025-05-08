@@ -1,6 +1,12 @@
 # Changelog
 Todas as alterações notáveis deste projeto serão documentadas neste arquivo.
 
+## [0.8.1] - 2025-05-10
+### Corrigido
+- Correção no modal de cadastro de usuário que permitia cadastro mesmo sem conexão com o banco de dados, agora mostrando o erro corretamente.
+- Correção no campo de data na edição de pedidos, que agora permanece com a data original e só pode ser editado por administradores.
+- Adicionado campo de setor do responsável no modal de criação de pedido, sendo preenchido automaticamente com o setor do usuário logado e podendo ser editado apenas por administradores ou gestores.
+
 ## [0.8.0] - 2025-05-06
 ### Adicionado
 - Dashboard refeito para melhor visualização das informações relacionadas ao sistema.

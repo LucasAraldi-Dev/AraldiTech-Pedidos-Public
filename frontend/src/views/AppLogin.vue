@@ -270,29 +270,36 @@ export default {
       // e sincronizar quando a conexão voltar
     };
 
-    const handleSignup = async (userData) => {
+    const handleSignup = async (userData, callback) => {
       try {
-        await axios.post(`${process.env.VUE_APP_API_URL}/usuarios/`, {
-          ...userData,
-          tipo_usuario: "comum",
-        });
-
-        // Após o cadastro, armazenar o modelo do usuário
-        const userModel = {
-          nome: userData.nome,
-          tipo_usuario: "comum",
-          username: userData.username
-        };
-        localStorage.setItem("user", JSON.stringify(userModel));
-
+        const response = await axios.post(
+          `${process.env.VUE_APP_API_URL}/usuarios/`,
+          userData
+        );
+        
+        console.log("Usuário cadastrado com sucesso:", response.data);
+        
+        // Chamar o callback com sucesso se existir
+        if (typeof callback === 'function') {
+          callback(true);
+        }
+        
         // Não exibir toast aqui, já que o card de sucesso no RegisterModal 
         // mostrará as informações do usuário cadastrado
         // O modal permanecerá aberto até que o usuário escolha fechá-lo
         // ou clicar em "Fazer Login"
       } catch (error) {
-        console.error(error);
-        toast.error("Erro ao cadastrar usuário. Por favor, tente novamente.");
-        isModalOpen.value = false; // Fecha o modal apenas em caso de erro
+        console.error("Erro ao cadastrar usuário:", error);
+        
+        // Chamar o callback com erro se existir
+        if (typeof callback === 'function') {
+          const errorMessage = error.response?.data?.detail || "Erro na conexão com o servidor";
+          callback(false, new Error(errorMessage));
+        }
+        
+        // Exibir mensagem de erro usando toast
+        toast.error(error.response?.data?.detail || "Erro ao cadastrar usuário. Por favor, tente novamente.");
+        // Não fechar o modal em caso de erro para permitir nova tentativa
       }
     };
 

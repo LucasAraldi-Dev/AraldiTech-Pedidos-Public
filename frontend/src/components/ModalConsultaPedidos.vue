@@ -38,7 +38,7 @@
             </p>
             <p>
               <i class="material-icons">event</i>
-              <strong>Entrega:</strong> {{ formatDate(order.deliveryDate) }}
+              <strong>Data do Pedido:</strong> {{ formatDate(order.deliveryDate) }}
             </p>
             <p v-if="order.status.toUpperCase() === 'CONCLUÍDO' && order.conclusao_data">
               <i class="material-icons">event_available</i>
@@ -115,7 +115,7 @@
           </p>
           <p>
             <i class="material-icons">event</i>
-            <strong>Entrega:</strong> {{ formatDate(selectedOrder.deliveryDate) }}
+            <strong>Data do Pedido:</strong> {{ formatDate(selectedOrder.deliveryDate) }}
           </p>
           <p>
             <i class="material-icons">event_available</i>
@@ -230,7 +230,26 @@ export default {
       return window.innerWidth <= 768 ? 2 : 6;
     },
     formatDate(date) {
-      return new Date(date).toLocaleDateString();
+      if (!date) return 'Data não informada';
+      
+      try {
+        const d = new Date(date);
+        
+        // Verificar se a data é válida
+        if (isNaN(d.getTime())) {
+          console.warn(`Data inválida: ${date}`);
+          return 'Data inválida';
+        }
+        
+        return d.toLocaleDateString('pt-BR', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric'
+        });
+      } catch (error) {
+        console.error(`Erro ao formatar data: ${date}`, error);
+        return 'Erro de formato';
+      }
     },
     // Exibe o modal de confirmação com os detalhes do pedido
     showConfirmModal(order) {

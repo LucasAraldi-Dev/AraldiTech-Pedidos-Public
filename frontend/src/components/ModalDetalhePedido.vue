@@ -116,20 +116,51 @@ export default {
     
     formatarData(dataString) {
       if (!dataString) return 'Data não informada';
-      const data = new Date(dataString);
-      return data.toLocaleDateString('pt-BR');
+      
+      try {
+        const data = new Date(dataString);
+        
+        // Verificar se a data é válida
+        if (isNaN(data.getTime())) {
+          console.warn(`Data inválida: ${dataString}`);
+          return 'Data inválida';
+        }
+        
+        return data.toLocaleDateString('pt-BR', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric'
+        });
+      } catch (error) {
+        console.error(`Erro ao formatar data: ${dataString}`, error);
+        return 'Erro de formato';
+      }
     },
     
     formatarDataHora(dataString) {
-      if (!dataString) return '';
-      const data = new Date(dataString);
-      return data.toLocaleDateString('pt-BR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
+      if (!dataString) return 'Data não informada';
+      
+      try {
+        const data = new Date(dataString);
+        
+        // Verificar se a data é válida
+        if (isNaN(data.getTime())) {
+          console.warn(`Data/hora inválida: ${dataString}`);
+          return 'Data/hora inválida';
+        }
+        
+        return new Intl.DateTimeFormat('pt-BR', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false
+        }).format(data);
+      } catch (error) {
+        console.error(`Erro ao formatar data/hora: ${dataString}`, error);
+        return 'Erro de formato';
+      }
     },
     
     async carregarHistorico() {
