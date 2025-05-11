@@ -89,14 +89,14 @@
                 id="orderDeliveryDate" 
                 type="date" 
                 v-model="orderDeliveryDate" 
-                disabled
+                :disabled="!isAdmin"
                 required 
                 class="date-picker"
               />
               <i class="material-icons date-icon">calendar_today</i>
             </div>
             <div class="input-note">
-              A data do pedido não pode ser alterada
+              {{ isAdmin ? 'Como administrador, você pode alterar a data do pedido' : 'A data do pedido só pode ser alterada por administradores' }}
             </div>
           </div>
 
@@ -380,6 +380,9 @@ export default {
     },
     isAdminOrGestor() {
       return this.userType === "admin" || this.userType === "gestor";
+    },
+    isAdmin() {
+      return this.userType === "admin";
     }
   },
   watch: {
@@ -522,6 +525,21 @@ export default {
           campo_alterado: "Descrição",
           valor_anterior: this.pedido.descricao || "Não definida",
           valor_novo: novosDados.descricao
+        });
+      }
+      
+      // Verificar alteração na data do pedido (apenas para admins)
+      if (this.isAdmin && novosDados.deliveryDate !== this.pedido.deliveryDate) {
+        // Formatar as datas para exibição
+        const dataAnterior = this.formatarData(this.pedido.deliveryDate);
+        const dataNova = this.formatarData(novosDados.deliveryDate);
+        
+        registrosHistorico.push({
+          pedido_id: this.pedido.id,
+          usuario_nome: this.userName,
+          campo_alterado: "Data do Pedido",
+          valor_anterior: dataAnterior || "Não definida",
+          valor_novo: dataNova
         });
       }
       

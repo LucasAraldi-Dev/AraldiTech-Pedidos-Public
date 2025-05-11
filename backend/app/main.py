@@ -300,11 +300,24 @@ async def atualizar_pedido(pedido_id: int, pedido: schemas.PedidoCreate, db=Depe
         if not (is_admin or is_gestor):
             update_data["setor"] = pedido_atual.get("setor", setor_usuario)
         
-        # Manter a data original do pedido, não permitindo alteração
+        # Manter a data original do pedido, permitindo alteração apenas para administradores
         if "deliveryDate" in update_data:
-            del update_data["deliveryDate"]
+            if not is_admin:
+                logging.info(f"Usuário não é admin, mantendo a data original do pedido: {pedido_atual.get('deliveryDate')}")
+                del update_data["deliveryDate"]
+            else:
+                logging.info(f"Admin alterando a data do pedido para: {update_data['deliveryDate']}")
+                # Se for admin, registrar a alteração no histórico
+                hist_data_date = {
+                    "pedido_id": pedido_id,
+                    "usuario_nome": usuario_nome,
+                    "campo_alterado": "Data do Pedido",
+                    "valor_anterior": pedido_atual.get('deliveryDate').strftime("%d/%m/%Y") if pedido_atual.get('deliveryDate') else "Não definida",
+                    "valor_novo": update_data["deliveryDate"].strftime("%d/%m/%Y") if isinstance(update_data["deliveryDate"], datetime) else str(update_data["deliveryDate"]),
+                    "data_edicao": datetime.now()
+                }
+                await db["pedido_historico"].insert_one(hist_data_date)
 
-            
         # Processar a data de conclusão
         if "completionDate" in update_data:
             logging.info(f"Processando data de conclusão: {update_data['completionDate']}")
@@ -493,9 +506,23 @@ async def atualizar_pedido_com_historico(
         if not (is_admin or is_gestor):
             update_data["setor"] = pedido_atual.get("setor", setor_usuario)
         
-        # Manter a data original do pedido, não permitindo alteração
+        # Manter a data original do pedido, permitindo alteração apenas para administradores
         if "deliveryDate" in update_data:
-            del update_data["deliveryDate"]
+            if not is_admin:
+                logging.info(f"Usuário não é admin, mantendo a data original do pedido: {pedido_atual.get('deliveryDate')}")
+                del update_data["deliveryDate"]
+            else:
+                logging.info(f"Admin alterando a data do pedido para: {update_data['deliveryDate']}")
+                # Se for admin, registrar a alteração no histórico
+                hist_data_date = {
+                    "pedido_id": pedido_id,
+                    "usuario_nome": usuario_nome,
+                    "campo_alterado": "Data do Pedido",
+                    "valor_anterior": pedido_atual.get('deliveryDate').strftime("%d/%m/%Y") if pedido_atual.get('deliveryDate') else "Não definida",
+                    "valor_novo": update_data["deliveryDate"].strftime("%d/%m/%Y") if isinstance(update_data["deliveryDate"], datetime) else str(update_data["deliveryDate"]),
+                    "data_edicao": datetime.now()
+                }
+                await db["pedido_historico"].insert_one(hist_data_date)
         
         # Processar a data de conclusão
         if "completionDate" in update_data:

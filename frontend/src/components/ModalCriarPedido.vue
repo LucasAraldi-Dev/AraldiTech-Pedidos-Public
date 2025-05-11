@@ -119,14 +119,14 @@
                 id="orderDeliveryDate" 
                 type="date" 
                 v-model="orderDeliveryDate" 
-                disabled
+                :disabled="!isAdmin"
                 required 
                 class="date-picker"
               />
               <i class="material-icons date-icon">calendar_today</i>
             </div>
             <div class="input-note">
-              Data e hora atual (preenchido automaticamente)
+              {{ isAdmin ? 'Como administrador, você pode alterar a data do pedido' : 'A data do pedido é preenchida automaticamente' }}
             </div>
           </div>
 
@@ -304,6 +304,9 @@ export default {
   computed: {
     isAdminOrGestor() {
       return this.userType === "admin" || this.userType === "gestor";
+    },
+    isAdmin() {
+      return this.userType === "admin";
     }
   },
   mounted() {
@@ -400,7 +403,7 @@ export default {
         quantidade: this.orderQuantity,
         categoria: this.orderCategory,
         urgencia: this.orderUrgency,
-        deliveryDate: new Date().toISOString(), // Data e hora completa atual
+        deliveryDate: new Date().toISOString(), // Sempre usa a data e hora atual, ignorando o valor do input
         observacao: this.orderNotes || "",
         sender: this.orderSender,
         setor: this.orderSenderSector,

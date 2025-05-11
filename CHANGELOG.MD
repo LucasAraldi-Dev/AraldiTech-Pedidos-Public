@@ -1,6 +1,12 @@
 # Changelog
 Todas as alterações notáveis deste projeto serão documentadas neste arquivo.
 
+## [0.8.2] - 2025-05-15
+### Alterado
+- Terminologia mais clara: campo "Data de Entrega" renomeado para "Data do Pedido" em toda a aplicação para maior consistência.
+- Controle de acesso aprimorado: agora apenas administradores podem alterar a data do pedido, enquanto usuários comuns visualizam o campo desabilitado.
+- Mensagens informativas adicionadas para indicar as permissões relacionadas à data do pedido.
+
 ## [0.8.1] - 2025-05-10
 ### Corrigido
 - Correção no modal de cadastro de usuário que permitia cadastro mesmo sem conexão com o banco de dados, agora mostrando o erro corretamente.

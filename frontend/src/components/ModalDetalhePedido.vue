@@ -36,7 +36,7 @@
           </div>
           
           <div class="detail-row">
-            <div class="detail-label">Data de Entrega:</div>
+            <div class="detail-label">Data do Pedido:</div>
             <div class="detail-value">{{ formatarData(pedido.deliveryDate) }}</div>
           </div>
           
