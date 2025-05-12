@@ -1,7 +1,7 @@
 # Changelog
 Todas as alterações notáveis deste projeto serão documentadas neste arquivo.
 
-## [0.8.3] - 2025-05-15
+## [0.8.3] - 2025-05-12
 ### Adicionado
 - **Tutorial Interativo**: Implementado sistema de tutorial passo a passo para novos usuários, apresentado automaticamente após o primeiro login.
 - **Botão de Ajuda**: Novo botão no menu principal para acesso rápido ao suporte e tutorial.
