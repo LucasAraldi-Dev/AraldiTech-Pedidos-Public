@@ -17,6 +17,8 @@ class Usuario(BaseModel):
     senha: str
     setor: str = "Escritório"
     tipo_usuario: str = "comum"  # comum, gestor ou admin
+    termsAcceptance: Optional[dict] = None  # Informações de aceite dos termos
+    termsAcceptanceDate: Optional[datetime] = None  # Data de aceitação dos termos
 
     class Config:
         arbitrary_types_allowed = True  

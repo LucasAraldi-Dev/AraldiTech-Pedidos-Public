@@ -2,7 +2,7 @@
   <header>
     <div class="container">
       <router-link to="/" class="logo-link">
-        <img src="./favicon_logo_branco.png" alt="Logo AraldiTech" class="logo" />
+        <img src="../assets/logo.png" alt="Logo AraldiTech" class="logo" onerror="this.src='favicon.ico'" />
       </router-link>
       
       <!-- Botão hamburger para menu mobile -->
@@ -15,8 +15,8 @@
       <nav :class="{ 'is-active': menuActive }">
         <ul>
           <li><router-link to="/">Início</router-link></li>
-          <li><router-link to="/contato">Contato </router-link></li>
-          <li><router-link to="/ajuda">Ajuda </router-link></li>
+          <li><router-link to="/contato">Contato</router-link></li>
+          <li><router-link to="/ajuda">Ajuda</router-link></li>
         </ul>
       </nav>
     </div>
@@ -41,12 +41,17 @@ export default {
 
 <style scoped>
 header {
-  background-color: #333;
-  padding: 20px 0;
-  position: relative;
+  background-color: #2c2c2c;
+  padding: 15px 0;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  border-bottom: 1px solid #444;
+  z-index: 100;
 }
 
-header .container {
+.container {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -56,8 +61,12 @@ header .container {
 }
 
 .logo {
-  width: 150px;
+  width: 140px;
   height: auto;
+}
+
+.logo-link {
+  display: block;
 }
 
 .menu-toggle {
@@ -67,7 +76,7 @@ header .container {
   width: 30px;
   height: 21px;
   cursor: pointer;
-  z-index: 10;
+  z-index: 150;
 }
 
 .menu-toggle span {
@@ -90,18 +99,39 @@ nav ul li {
 }
 
 nav ul li a {
-  color: #fff;
+  color: #ccc;
   text-decoration: none;
   font-weight: bold;
   padding: 10px 15px;
-  transition: color 0.3s ease;
+  transition: color 0.3s ease, background-color 0.3s ease;
+  border-radius: 6px;
 }
 
 nav ul li a:hover {
-  color: #ccc;
+  color: #fff;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+nav ul li a.router-link-active {
+  color: #66ccff;
 }
 
 /* Responsividade */
+@media (max-width: 1024px) {
+  .logo {
+    width: 130px;
+  }
+  
+  nav ul {
+    gap: 15px;
+  }
+  
+  nav ul li a {
+    padding: 8px 12px;
+    font-size: 15px;
+  }
+}
+
 @media (max-width: 768px) {
   .menu-toggle {
     display: flex;
@@ -113,10 +143,10 @@ nav ul li a:hover {
     right: -100%;
     width: 70%;
     height: 100vh;
-    background-color: #222;
+    background-color: #2c2c2c;
     padding-top: 80px;
     transition: right 0.3s ease;
-    z-index: 9;
+    z-index: 90;
     box-shadow: -5px 0 15px rgba(0, 0, 0, 0.3);
   }
   
@@ -127,7 +157,7 @@ nav ul li a:hover {
   nav ul {
     flex-direction: column;
     align-items: center;
-    gap: 15px;
+    gap: 10px;
   }
   
   nav ul li {
@@ -137,22 +167,38 @@ nav ul li a:hover {
   
   nav ul li a {
     display: block;
-    padding: 15px;
-    font-size: 18px;
+    padding: 12px;
+    font-size: 16px;
+    width: 90%;
+    margin: 0 auto;
   }
 }
 
 @media (max-width: 480px) {
   .logo {
-    width: 120px;
+    width: 110px;
   }
   
-  header .container {
+  .container {
     padding: 0 15px;
   }
   
   nav {
     width: 80%;
+  }
+  
+  header {
+    padding: 10px 0;
+  }
+
+  .menu-toggle {
+    width: 26px;
+    height: 19px;
+  }
+  
+  nav ul li a {
+    font-size: 15px;
+    padding: 10px;
   }
 }
 
@@ -161,33 +207,13 @@ nav ul li a:hover {
     width: 100px;
   }
   
-  header .container {
+  .container {
     padding: 0 10px;
   }
   
   nav ul li a {
-    font-size: 16px;
-    padding: 12px;
-  }
-}
-
-@media (min-width: 769px) and (max-width: 1023px) {
-  header .container {
-    max-width: 900px;
-  }
-  
-  nav ul {
-    gap: 15px;
-  }
-  
-  nav ul li a {
-    padding: 8px 12px;
-  }
-}
-
-@media (min-width: 1024px) and (max-width: 1366px) {
-  header .container {
-    max-width: 1150px;
+    font-size: 14px;
+    padding: 8px;
   }
 }
 </style>

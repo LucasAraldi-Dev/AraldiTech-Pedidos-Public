@@ -6,6 +6,17 @@ Todas as alterações notáveis deste projeto serão documentadas neste arquivo.
 - Terminologia mais clara: campo "Data de Entrega" renomeado para "Data do Pedido" em toda a aplicação para maior consistência.
 - Controle de acesso aprimorado: agora apenas administradores podem alterar a data do pedido, enquanto usuários comuns visualizam o campo desabilitado.
 - Mensagens informativas adicionadas para indicar as permissões relacionadas à data do pedido.
+- Fluxo de login otimizado: eliminada a tela de carregamento do sistema após o login, redirecionando o usuário diretamente para o menu principal, tornando a navegação mais rápida e direta.
+- **Tratamento de erros aprimorado**: mensagens de erro mais específicas e contextuais no processo de cadastro de usuários, com identificação precisa de erros como e-mail ou nome de usuário já existentes.
+
+### Adicionado
+- Design modernizado para página inicial (AppHome) seguindo o padrão visual do sistema.
+- Reformulação da página de contato (AppContato) com novos campos e layout responsivo.
+- Nova central de ajuda (AppAjuda) com perguntas frequentes interativas.
+- Política de Privacidade e Termos de Uso acessíveis pelo rodapé da aplicação.
+- Modais interativos para exibição das políticas legais sem redirecionamento.
+- **Sistema de Aceitação de Termos**: Implementado modal de aceitação obrigatória dos Termos de Serviço durante o cadastro, com registro de data, hora e metadados do aceite.
+- **Controle de Conformidade Legal**: Armazenamento e controle das informações de aceite de termos para fins legais e de auditoria.
 
 ## [0.8.1] - 2025-05-10
 ### Corrigido
@@ -15,13 +26,12 @@ Todas as alterações notáveis deste projeto serão documentadas neste arquivo.
 
 ## [0.8.0] - 2025-05-06
 ### Adicionado
-- Dashboard refeito para melhor visualização das informações relacionadas ao sistema.
 - Relatório financeiro , baseado nos dados fornecidos pelos usuários ao concluirem os pedidos.
 
 ### Melhorado
 - Fluxo de login refeito e melhorado para o usuário.
 - Fluxo de cadastro refeito também para melhor usabilidade do usuário.
-
+- Dashboard refeito para melhor visualização das informações relacionadas ao sistema.
 ### Corrigido
 - Responsividade ajustada para melhor adaptação em variados tipos de tela.
 - Correção de segurança na área do login e cadastro.

@@ -1,10 +1,42 @@
 <template>
-  <main>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
-    <section class="intro">
-      <h1>AraldiTech  Pedidos</h1>
-      <p>Faça login para acessar seu painel de controle.</p>
-      <router-link to="/login" class="btn-login" id="loginbtn">Entrar</router-link>
+  <main class="home-page">
+    <section class="welcome-section">
+      <div class="logo-container">
+        <img src="../assets/logo.png" alt="AraldiTech" class="logo" onerror="this.src='favicon.ico'">
+      </div>
+      <h1>AraldiTech Pedidos</h1>
+      <p>Gerencie seus pedidos de forma rápida e eficiente</p>
+      
+      <div class="action-buttons">
+        <router-link to="/login" class="btn-primary">Entrar</router-link>
+        <router-link to="/contato" class="btn-secondary">Contato</router-link>
+      </div>
+      
+      <div class="features">
+        <div class="feature-card">
+          <div class="feature-icon">
+            <i class="fas fa-clipboard-list"></i>
+          </div>
+          <h3>Gerenciamento</h3>
+          <p>Controle todos os seus pedidos em um só lugar</p>
+        </div>
+        
+        <div class="feature-card">
+          <div class="feature-icon">
+            <i class="fas fa-chart-bar"></i>
+          </div>
+          <h3>Relatórios</h3>
+          <p>Analise seus dados com relatórios detalhados</p>
+        </div>
+        
+        <div class="feature-card">
+          <div class="feature-icon">
+            <i class="fas fa-users"></i>
+          </div>
+          <h3>Colaboração</h3>
+          <p>Trabalhe em equipe com diferentes níveis de acesso</p>
+        </div>
+      </div>
     </section>
   </main>
 </template>
@@ -16,291 +48,155 @@ export default {
 </script>
 
 <style scoped>
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-html, body {
-  height: 100%;
-  overflow: hidden; 
-}
-
-body {
-  font-family: 'Roboto', sans-serif; 
-  background-color: #fafafa;
-  color: #333333;
-  line-height: 1.6;
-}
-
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 20px;
-}
-
-header {
-  background-color: #333;
-  padding: 20px 0;
-}
-
-header .container {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.logo {
-  width: 150px;
-  height: auto;
-}
-
-nav ul {
-  list-style: none;
-  display: flex;
-}
-
-nav ul li {
-  margin-left: 20px;
-}
-
-nav ul li a {
-  color: #fff;
-  text-decoration: none;
-  font-weight: bold;
-}
-
-nav ul li a:hover {
-  color: #ccc;
-}
-
-main {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 80vh; 
-  background-color: #222;
-  color: #fff;
-}
-
-.intro {
-  text-align: center;
-}
-
-.intro h1 {
-  font-size: 48px;
+/* Componentes específicos desta página */
+.logo-container {
   margin-bottom: 20px;
 }
 
-.intro p {
-  font-size: 18px;
-  margin-bottom: 30px;
+.logo {
+  max-width: 180px;
+  height: auto;
 }
 
-.btn-login {
-  display: inline-block;
-  padding: 16px 32px;
-  font-size: 20px;
-  font-weight: bold;
-  color: #ffffff;
-  background: linear-gradient(145deg, #333, #555);
-  border: none;
-  border-radius: 12px;
-  text-decoration: none;
-  box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.4), inset 0px 4px 8px rgba(255, 255, 255, 0.1);
-  transition: all 0.3s ease, box-shadow 0.3s ease;
-  cursor: pointer;
-}
-
-.btn-login:hover {
-  background: linear-gradient(145deg, #555, #777);
-  box-shadow: 0px 10px 18px rgba(0, 0, 0, 0.5), inset 0px 4px 8px rgba(255, 255, 255, 0.15);
-  transform: translateY(-4px);
-}
-
-.btn-login:active {
-  background: linear-gradient(145deg, #222, #444);
-  box-shadow: inset 0px 6px 10px rgba(0, 0, 0, 0.6);
-}
-
-
-footer {
-  background-color: #333;
-  padding: 20px 0;
-  color: #fff;
-}
-
-footer .container {
+.welcome-section {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
+  justify-content: center;
   align-items: center;
+  text-align: center;
+  padding: 40px 20px;
 }
 
-footer p {
-  margin: 0;
+/* Os estilos de h1 e p estão definidos globalmente, apenas sobrescrevendo o específico */
+h1 {
+  font-size: 42px;
 }
 
-.footer-links {
-  list-style: none;
+p {
+  font-size: 18px;
+  max-width: 600px;
+}
+
+.action-buttons {
   display: flex;
+  gap: 20px;
+  margin-bottom: 50px;
 }
 
-.footer-links li {
-  margin-left: 20px;
+/* Botões já estão no estilo global, removidos daqui */
+
+.features {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 25px;
+  width: 100%;
+  max-width: 1000px;
 }
 
-.footer-links li a {
+.feature-card {
+  background: linear-gradient(145deg, #3b3b3b, #2c2c2c);
+  padding: 30px 20px;
+  border-radius: 12px;
+  box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.3);
+  flex: 1;
+  min-width: 250px;
+  max-width: 300px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.feature-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0px 12px 20px rgba(0, 0, 0, 0.4);
+}
+
+.feature-icon {
+  font-size: 38px;
+  margin-bottom: 16px;
   color: #fff;
-  text-decoration: none;
 }
 
-.footer-links li a:hover {
-  color: #ccc;
+.feature-card h3 {
+  font-size: 22px;
+  margin-bottom: 12px;
+  color: #fff;
 }
 
-/* Responsividade para diferentes dispositivos */
-/* Tablets e telas menores (1024x768) */
-@media (max-width: 1024px) {
-  .intro h1 {
-    font-size: 42px;
-  }
-  
-  .intro p {
-    font-size: 16px;
-  }
-  
-  .btn-login {
-    padding: 14px 28px;
-    font-size: 18px;
-  }
-}
-
-/* Tablets e dispositivos médios */
-@media (max-width: 768px) {
-  .intro h1 {
-    font-size: 36px;
-    margin-bottom: 15px;
-  }
-  
-  .intro p {
-    font-size: 15px;
-    margin-bottom: 25px;
-  }
-  
-  .btn-login {
-    padding: 12px 24px;
-    font-size: 16px;
-  }
-}
-
-/* Dispositivos móveis */
-@media (max-width: 480px) {
-  .intro h1 {
-    font-size: 28px;
-    margin-bottom: 12px;
-  }
-  
-  .intro p {
-    font-size: 14px;
-    margin-bottom: 20px;
-  }
-  
-  .btn-login {
-    padding: 10px 20px;
-    font-size: 14px;
-  }
+.feature-card p {
+  font-size: 15px;
+  color: #aaa;
+  margin-bottom: 0;
 }
 
 /* Responsividade */
-@media (max-width: 1200px) {
-  .hero-section {
-    padding: 80px 40px;
+@media (max-width: 1024px) {
+  h1 {
+    font-size: 38px;
   }
   
-  .features-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (max-width: 768px) {
-  .hero-section {
-    padding: 60px 20px;
-  }
-  
-  .hero-title {
-    font-size: 2.2rem;
-  }
-  
-  .hero-subtitle {
-    font-size: 1.2rem;
-  }
-  
-  .features-grid {
-    grid-template-columns: 1fr;
+  .features {
     gap: 20px;
   }
   
   .feature-card {
-    padding: 20px;
+    min-width: 220px;
+  }
+}
+
+@media (max-width: 768px) {
+  h1 {
+    font-size: 36px;
+  }
+  
+  p {
+    font-size: 16px;
+  }
+  
+  .action-buttons {
+    flex-direction: column;
+    gap: 15px;
+    width: 100%;
+    max-width: 300px;
+  }
+  
+  .btn-primary, .btn-secondary {
+    width: 100%;
+    text-align: center;
+  }
+  
+  .features {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .feature-card {
+    width: 100%;
   }
 }
 
 @media (max-width: 480px) {
-  .hero-section {
-    padding: 40px 15px;
+  h1 {
+    font-size: 28px;
   }
   
-  .hero-title {
-    font-size: 1.8rem;
-  }
-  
-  .hero-subtitle {
-    font-size: 1rem;
-  }
-  
-  .hero-cta {
-    padding: 10px 20px;
-    font-size: 1rem;
+  p {
+    font-size: 15px;
   }
   
   .feature-card {
-    padding: 15px;
+    padding: 20px 15px;
   }
   
-  .feature-title {
-    font-size: 1.2rem;
-  }
-}
-
-@media (min-width: 1367px) {
-  .hero-section {
-    padding: 120px 80px;
+  .feature-icon {
+    font-size: 32px;
   }
   
-  .hero-title {
-    font-size: 3.5rem;
+  .feature-card h3 {
+    font-size: 18px;
   }
   
-  .hero-subtitle {
-    font-size: 1.8rem;
-  }
-  
-  .features-section {
-    padding: 80px;
-  }
-  
-  .features-grid {
-    max-width: 1600px;
-    margin: 0 auto;
-  }
-  
-  .feature-card {
-    padding: 40px;
-  }
-  
-  .feature-title {
-    font-size: 1.8rem;
+  .feature-card p {
+    font-size: 14px;
   }
 }
 </style>

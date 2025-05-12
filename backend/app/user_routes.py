@@ -45,6 +45,32 @@ async def create_user(user: schemas.UsuarioCreate, db=Depends(database.get_db)):
         # Definir tipo de usuário como comum por padrão
         user_dict["tipo_usuario"] = "comum"
         
+        # Processar informações do aceite dos termos
+        if "termsAcceptance" in user_dict and user_dict["termsAcceptance"]:
+            # Armazenar data de aceitação dos termos explicitamente
+            if "timestamp" in user_dict["termsAcceptance"]:
+                try:
+                    # Converter o timestamp ISO para objeto datetime
+                    user_dict["termsAcceptanceDate"] = datetime.fromisoformat(
+                        user_dict["termsAcceptance"]["timestamp"].replace("Z", "+00:00")
+                    )
+                except ValueError:
+                    # Se não for possível converter, usar a data atual
+                    user_dict["termsAcceptanceDate"] = datetime.now()
+            else:
+                user_dict["termsAcceptanceDate"] = datetime.now()
+                
+            # Adicionar IP do usuário se não estiver presente
+            if "ip" not in user_dict["termsAcceptance"]:
+                # Nota: Em uma implementação real, você obteria o IP do cliente
+                user_dict["termsAcceptance"]["ip"] = "not_captured"
+        else:
+            # Se não houver informações de aceite de termos, não criar o usuário
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="É necessário aceitar os Termos de Serviço para criar uma conta"
+            )
+        
         # Inserir no banco de dados
         result = await db["users"].insert_one(user_dict)
         
@@ -52,7 +78,7 @@ async def create_user(user: schemas.UsuarioCreate, db=Depends(database.get_db)):
         new_user = await db["users"].find_one({"_id": result.inserted_id})
         
         # Log de criação de usuário
-        logging.info(f"Usuário criado com sucesso: {user_dict['username']}")
+        logging.info(f"Usuário criado com sucesso: {user_dict['username']} - Termos aceitos em: {user_dict.get('termsAcceptanceDate')}")
         
         return parse_obj_id(new_user)
     except HTTPException as e:

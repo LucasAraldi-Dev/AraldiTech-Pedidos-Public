@@ -41,6 +41,32 @@ const routes = [
     component: AppAjuda,
   },
   {
+    path: '/politica-privacidade',
+    name: 'PoliticaPrivacidade',
+    component: AppHome,
+    beforeEnter: (to, from, next) => {
+      // Abrir modal de política de privacidade via evento global
+      next(false); // Impede a navegação
+      // Uso de setTimeout para garantir que a emissão do evento aconteça após o cancelamento da navegação
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('show-privacy-policy'));
+      }, 100);
+    }
+  },
+  {
+    path: '/termos-uso',
+    name: 'TermosUso',
+    component: AppHome,
+    beforeEnter: (to, from, next) => {
+      // Abrir modal de termos de uso via evento global
+      next(false); // Impede a navegação
+      // Uso de setTimeout para garantir que a emissão do evento aconteça após o cancelamento da navegação
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('show-terms'));
+      }, 100);
+    }
+  },
+  {
     path: '/loading',
     name: 'Loading',
     component: AppLoading,

@@ -10,6 +10,7 @@ class UsuarioCreate(BaseModel):
     senha: str
     setor: str
     tipo_usuario: Optional[str] = "comum"  # tipo de usuário fixo como "comum" por padrão
+    termsAcceptance: Optional[dict] = None  # dados de aceitação dos termos de serviço
 
     class Config:
         arbitrary_types_allowed = True  

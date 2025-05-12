@@ -109,6 +109,10 @@
               </div>
             </div>
 
+            <div class="terms-info">
+              <p>Ao clicar em "Cadastrar", você concorda com nossos <span class="terms-link">Termos de Serviço</span> e <span class="terms-link">Política de Privacidade</span>.</p>
+            </div>
+
             <div class="action-buttons">
               <button type="submit" class="submit-button" :disabled="!isFormValid">Cadastrar</button>
               <button type="button" class="cancel-button" @click="closeModal">Cancelar</button>
@@ -183,15 +187,26 @@
       </div>
     </div>
   </transition>
+  
+  <!-- Modal de Termos de Serviço -->
+  <TermsOfServiceModal 
+    :show="showTermsModal" 
+    @accept-terms="handleTermsAccepted" 
+    @decline-terms="handleTermsDeclined" 
+  />
 </template>
 
 <script>
 import { useToast } from 'vue-toastification';
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
+import TermsOfServiceModal from './TermsOfServiceModal.vue';
 
 export default {
   props: {
     isModalOpen: Boolean,
+  },
+  components: {
+    TermsOfServiceModal
   },
   emits: ['close-modal', 'signup', 'go-to-login'],
   setup(props, { emit }) {
@@ -211,6 +226,10 @@ export default {
     const registerError = ref(false);
     const currentStep = ref(0);
     const statusMessage = ref("");
+    
+    // Estado para o modal de termos de serviço
+    const showTermsModal = ref(false);
+    const termsAcceptance = ref(null);
     
     // Estados para tratamento de erros
     const errorType = ref("");
@@ -246,6 +265,25 @@ export default {
         return;
       }
       
+      // Mostrar o modal de termos de serviço antes de prosseguir
+      showTermsModal.value = true;
+    };
+    
+    // Callback quando os termos são aceitos
+    const handleTermsAccepted = (termsData) => {
+      showTermsModal.value = false;
+      termsAcceptance.value = termsData;
+      proceedWithRegistration();
+    };
+    
+    // Callback quando os termos são recusados
+    const handleTermsDeclined = () => {
+      showTermsModal.value = false;
+      toast.error("É necessário aceitar os Termos de Serviço para criar uma conta");
+    };
+    
+    // Continuar com o processo de cadastro após aceitar os termos
+    const proceedWithRegistration = async () => {
       isRegistering.value = true;
       currentStep.value = 1;
       statusMessage.value = "Validando suas informações...";
@@ -268,6 +306,8 @@ export default {
           email: signupEmail.value,
           senha: signupPassword.value,
           setor: setor.value,
+          // Incluir informações do aceite dos termos
+          termsAcceptance: termsAcceptance.value
         };
         
         // Passo 3: Configurando perfil
@@ -277,8 +317,7 @@ export default {
         // Simulação de configuração de perfil (1.5 segundos)
         await new Promise(resolve => setTimeout(resolve, 1500));
         
-        // Envia os dados para o componente pai para efetuar o cadastro (sem fechar o modal)
-        // Aguarda o retorno do evento signup para verificar se ocorreu algum erro
+        // Envia os dados para o componente pai para efetuar o cadastro
         try {
           // Emite o evento signup e aguarda resposta
           await new Promise((resolve, reject) => {
@@ -382,9 +421,34 @@ export default {
     const showDatabaseError = (message) => {
       registerError.value = true;
       errorType.value = "database";
-      errorTitle.value = "Erro de conexão";
-      errorMessage.value = message || "Não foi possível conectar ao banco de dados.";
-      errorHelp.value = "Verifique sua conexão com a internet e tente novamente. Se o problema persistir, contate o administrador do sistema.";
+      
+      // Identificar tipos de erros específicos através das mensagens recebidas
+      if (message && message.includes("Nome de usuário já está em uso")) {
+        errorTitle.value = "Nome de usuário indisponível";
+        errorMessage.value = "Este nome de usuário já está cadastrado no sistema.";
+        errorHelp.value = "Por favor, escolha um nome de usuário diferente e tente novamente.";
+      } 
+      else if (message && message.includes("E-mail já está em uso")) {
+        errorTitle.value = "E-mail já cadastrado";
+        errorMessage.value = "Este endereço de e-mail já está associado a uma conta.";
+        errorHelp.value = "Se este e-mail é seu, tente fazer login ou recuperar sua senha. Caso contrário, utilize outro e-mail.";
+      }
+      else if (message && message.includes("Timeout")) {
+        errorTitle.value = "Tempo de conexão esgotado";
+        errorMessage.value = "O servidor demorou muito para responder.";
+        errorHelp.value = "Verifique sua conexão com a internet e tente novamente. Se o problema persistir, o servidor pode estar sobrecarregado.";
+      }
+      else if (message && message.includes("Network Error")) {
+        errorTitle.value = "Erro de conexão";
+        errorMessage.value = "Não foi possível estabelecer conexão com o servidor.";
+        errorHelp.value = "Verifique sua conexão com a internet e tente novamente.";
+      }
+      else {
+        // Erro genérico de banco de dados
+        errorTitle.value = "Erro no processamento";
+        errorMessage.value = message || "Ocorreu um erro ao processar seu cadastro.";
+        errorHelp.value = "Por favor, tente novamente. Se o problema persistir, entre em contato com o suporte técnico.";
+      }
     };
     
     // Função para reiniciar o processo de cadastro
@@ -406,6 +470,14 @@ export default {
     const closeModal = () => {
       emit("close-modal");
     };
+    
+    // Resetar o estado quando o modal é fechado
+    watch(() => props.isModalOpen, (newValue) => {
+      if (!newValue) {
+        termsAcceptance.value = null;
+        showTermsModal.value = false;
+      }
+    });
     
     return {
       // Campos do formulário
@@ -429,6 +501,11 @@ export default {
       passwordStrength,
       passwordStrengthMessage,
       passwordsMatch,
+      
+      // Estado do modal de termos
+      showTermsModal,
+      handleTermsAccepted,
+      handleTermsDeclined,
       
       // Computed properties
       passwordStrengthClass,
@@ -1115,5 +1192,23 @@ h2 {
   .input-icon {
     left: 10px;
   }
+}
+
+/* Estilos para a informação de termos */
+.terms-info {
+  margin: 15px 0;
+  font-size: 14px;
+  color: #aaa;
+  text-align: center;
+}
+
+.terms-link {
+  color: #66ccff;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.terms-link:hover {
+  color: #99ddff;
 }
 </style>

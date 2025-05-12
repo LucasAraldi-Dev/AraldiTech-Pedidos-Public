@@ -165,19 +165,12 @@ export default {
         localStorage.setItem("token_type", token_type);
         localStorage.setItem("tipo_usuario", tipo_usuario || "comum");
         
-        // Passo 3: Carregando informações do usuário
-        currentStep.value = 3;
-        statusMessage.value = "Preparando seu ambiente...";
-        
         // Armazenando o modelo completo do usuário
         const userModel = {
           nome: nome,
           tipo_usuario: tipo_usuario || "comum",
           username: username.value
         };
-        
-        // Simular um tempo de carregamento (2 segundos)
-        await new Promise(resolve => setTimeout(resolve, 2000));
         
         console.log("Modelo de usuário a ser salvo:", userModel);
         localStorage.setItem("user", JSON.stringify(userModel));
@@ -187,11 +180,10 @@ export default {
         isLoggingIn.value = false;
         loginSuccess.value = true;
         
-        // Redirecionar após 3 segundos
+        // Redirecionar diretamente para o Menu em vez da tela de carregamento
         setTimeout(() => {
           try {
-            // Redirecionar para a tela de carregamento
-            window.location.href = '/#/loading';
+            window.location.href = '/#/menu';
           } catch (navError) {
             console.error("Erro durante navegação:", navError);
             window.location.href = '/';
