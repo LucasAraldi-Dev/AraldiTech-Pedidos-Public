@@ -101,12 +101,24 @@ async def login_for_access_token(form_data: schemas.LoginRequest, db=Depends(dat
     logging.info(f"Tipo de usuário encontrado: {user.get('tipo_usuario', 'Não encontrado')}")
     logging.info(f"Setor do usuário: {user.get('setor', 'Não encontrado')}")
     
+    # Verificar se é o primeiro login do usuário
+    is_primeiro_login = user.get("primeiro_login", True)
+    
+    # Se for o primeiro login, atualizar no banco de dados
+    if is_primeiro_login:
+        logging.info(f"Primeiro login do usuário: {user['username']}")
+        await db["users"].update_one(
+            {"username": user["username"]},
+            {"$set": {"primeiro_login": False}}
+        )
+    
     response_data = {
         "access_token": access_token, 
         "token_type": "bearer", 
         "nome": user["nome"],
         "tipo_usuario": user.get("tipo_usuario", "comum"),  # Define "comum" como padrão se não existir
-        "setor": user.get("setor", "Escritório")  # Define "Escritório" como padrão se não existir
+        "setor": user.get("setor", "Escritório"),  # Define "Escritório" como padrão se não existir
+        "primeiro_login": is_primeiro_login  # Adiciona a informação se é o primeiro login
     }
     
     # Registra a atividade de login

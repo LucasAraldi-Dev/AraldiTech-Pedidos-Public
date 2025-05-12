@@ -157,8 +157,9 @@ export default {
 
         console.log("Resposta completa do login:", response.data);
         
-        const { access_token, token_type, nome, tipo_usuario } = response.data;
+        const { access_token, token_type, nome, tipo_usuario, primeiro_login } = response.data;
         console.log("Tipo de usuário recebido:", tipo_usuario);
+        console.log("Primeiro login:", primeiro_login);
         
         // Armazenar informações de autenticação
         localStorage.setItem("access_token", access_token);
@@ -169,21 +170,29 @@ export default {
         const userModel = {
           nome: nome,
           tipo_usuario: tipo_usuario || "comum",
-          username: username.value
+          username: username.value,
+          primeiro_login: primeiro_login
         };
         
         console.log("Modelo de usuário a ser salvo:", userModel);
         localStorage.setItem("user", JSON.stringify(userModel));
         console.log("LocalStorage após salvar:", localStorage.getItem("user"));
 
+        // Verificar se é a primeira vez que o usuário faz login
+        const shouldShowTutorial = userModel.tipo_usuario === 'comum' && primeiro_login;
+
         // Mostrar tela de sucesso
         isLoggingIn.value = false;
         loginSuccess.value = true;
         
-        // Redirecionar diretamente para o Menu em vez da tela de carregamento
+        // Redirecionar para o Menu com parâmetro para abrir o tutorial (se necessário)
         setTimeout(() => {
           try {
-            window.location.href = '/#/menu';
+            if (shouldShowTutorial) {
+              window.location.href = '/#/menu?firstLogin=true';
+            } else {
+              window.location.href = '/#/menu';
+            }
           } catch (navError) {
             console.error("Erro durante navegação:", navError);
             window.location.href = '/';

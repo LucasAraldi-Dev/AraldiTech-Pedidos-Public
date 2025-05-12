@@ -33,6 +33,10 @@
       >
         Gerenciar Usuários
       </button>
+      <!-- Botão de Ajuda para todos os usuários -->
+      <button class="menu-btn help-btn" @click="openHelp">
+        Ajuda
+      </button>
       <button class="menu-btn logout-btn" @click="logout">Sair</button>
     </div>
 
@@ -63,6 +67,10 @@
         @click="openUserManagementModal"
       >
         Gerenciar Usuários
+      </button>
+      <!-- Botão de Ajuda para todos os usuários -->
+      <button class="menu-btn help-btn" @click="openHelp">
+        Ajuda
       </button>
       <button class="menu-btn close-menu-btn" @click="toggleMenu">Fechar Menu</button>
       <button class="menu-btn logout-btn" @click="logout">Sair</button>
@@ -132,6 +140,13 @@
       :isOpen="isDashboardOpen"
       @close="closeDashboard"
     />
+
+    <!-- Modal de Tutorial -->
+    <TutorialModal
+      v-if="isTutorialOpen"
+      :isOpen="isTutorialOpen"
+      @close="closeTutorial"
+    />
   </div>
 </template>
 
@@ -143,6 +158,7 @@ import ModalImprimirPedido from '@/components/ModalImprimirPedido.vue';
 import ModalGerenciarUsuarios from '@/components/ModalGerenciarUsuarios.vue';
 import ModalRelatorioFinanceiro from '@/components/ModalRelatorioFinanceiro.vue';
 import ModalDashboard from '@/components/ModalDashboard.vue';
+import TutorialModal from '@/components/TutorialModal.vue';
 import html2canvas from "html2canvas";
 // Importação modificada para evitar o erro de 'module is not defined'
 import * as axiosModule from "axios";
@@ -162,6 +178,7 @@ export default {
     ModalGerenciarUsuarios,
     ModalRelatorioFinanceiro,
     ModalDashboard,
+    TutorialModal,
   },
   data() {
     return {
@@ -173,6 +190,7 @@ export default {
       isFinancialReportOpen: false,
       isUserManagementOpen: false,
       isMenuOpen: false,
+      isTutorialOpen: false,
       isMobile: false,
       pedidoCriado: null,
       selectedOrder: null,
@@ -196,6 +214,7 @@ export default {
     console.log("Token presente:", token ? "Sim" : "Não");
     console.log("Usuário presente:", user ? "Sim" : "Não");
     console.log("Tipo de usuário:", user?.tipo_usuario);
+    console.log("Primeiro login:", user?.primeiro_login ? "Sim" : "Não");
     
     if (!token || !user) {
       console.warn("Usuário não autenticado, redirecionando para login");
@@ -203,6 +222,20 @@ export default {
     } else {
       this.isAdmin = user.tipo_usuario === "admin";
       this.isGestor = user.tipo_usuario === "gestor" || user.tipo_usuario === "admin";
+      
+      // Verificar se é o primeiro login do usuário
+      const urlSearchParams = new URLSearchParams(window.location.search);
+      const isFirstLogin = urlSearchParams.get('firstLogin') === 'true';
+      
+      console.log("Parâmetro firstLogin:", isFirstLogin ? "Sim" : "Não");
+      console.log("Tipo de usuário:", user.tipo_usuario);
+      
+      // Verificar se o tutorial deve ser exibido
+      if ((isFirstLogin || user.primeiro_login) && user.tipo_usuario === 'comum') {
+        console.log("Abrindo tutorial para novo usuário...");
+        // Se for o primeiro login de um usuário comum, mostrar o tutorial
+        this.openTutorial();
+      }
     }
   },
   unmounted() {
@@ -375,6 +408,54 @@ export default {
     closeFinancialReport() {
       this.isFinancialReportOpen = false;
     },
+    openHelp() {
+      // Se for um usuário comum, abrir o tutorial
+      const user = JSON.parse(localStorage.getItem("user"));
+      if (user && user.tipo_usuario === 'comum') {
+        this.openTutorial();
+      } else {
+        // Para outros tipos de usuário, redirecionar para a página de ajuda
+        this.$router.push({ name: "Ajuda" });
+      }
+      this.isMenuOpen = false;
+    },
+    openTutorial() {
+      this.isTutorialOpen = true;
+      this.isMenuOpen = false;
+    },
+    async closeTutorial() {
+      this.isTutorialOpen = false;
+      
+      try {
+        // Atualizar o campo primeiro_login no backend
+        const token = localStorage.getItem("access_token");
+        if (token) {
+          const response = await axios.put(
+            `${process.env.VUE_APP_API_URL}/usuarios/primeiro-login`,
+            {},
+            {
+              headers: { Authorization: `Bearer ${token}` }
+            }
+          );
+          
+          console.log("Primeiro login atualizado no backend:", response.data);
+          
+          // Atualizar também no localStorage
+          const user = JSON.parse(localStorage.getItem("user"));
+          if (user) {
+            user.primeiro_login = false;
+            localStorage.setItem("user", JSON.stringify(user));
+          }
+        }
+      } catch (error) {
+        console.error("Erro ao atualizar status de primeiro login:", error);
+      }
+      
+      // Limpar parâmetros da URL para não reabrir o tutorial em atualizações de página
+      const currentUrl = window.location.href;
+      const urlWithoutParams = currentUrl.split('?')[0];
+      window.history.replaceState({}, document.title, urlWithoutParams);
+    },
   },
 };
 </script>
@@ -428,15 +509,18 @@ export default {
 }
 
 .admin-btn {
-  background-color: #4a6da7; /* Azul escuro para indicar ações administrativas */
+  background-color: #FF5733;
+  border-color: #FF5733;
 }
 
 .admin-btn:hover {
-  background-color: #3a5d97;
+  background-color: #e64a2e;
+  border-color: #e64a2e;
 }
 
 .gestor-btn {
-  background-color: #555555; /* Cinza neutro para Dashboard */
+  background-color: #5bc0de;
+  border-color: #5bc0de;
 }
 
 .gestor-btn:hover {
@@ -848,6 +932,16 @@ export default {
 
 .activity-icon-finance {
   background-color: #9b59b6;
+}
+
+.help-btn {
+  background-color: #5cb85c;
+  border-color: #5cb85c;
+}
+
+.help-btn:hover {
+  background-color: #4cae4c;
+  border-color: #4cae4c;
 }
 
 @media (max-width: 768px) {

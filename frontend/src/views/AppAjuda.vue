@@ -8,6 +8,15 @@
       <h1>Central de Ajuda</h1>
       <p>Encontre as respostas para suas dúvidas mais frequentes</p>
       
+      <!-- Botão para iniciar/rever o tutorial (apenas para usuários comuns) -->
+      <div v-if="isCommonUser" class="tutorial-actions">
+        <button @click="startTutorial" class="btn-tutorial">
+          <span class="tutorial-icon">🎓</span>
+          Rever Tutorial Interativo
+        </button>
+        <p class="tutorial-tip">O tutorial irá mostrar passo a passo as principais funcionalidades do sistema.</p>
+      </div>
+      
       <div class="help-container">
         <div class="faq-section">
           <h2>Perguntas Frequentes</h2>
@@ -97,26 +106,62 @@
       
       <div class="action-buttons">
         <router-link to="/" class="btn-secondary">Voltar para Home</router-link>
+        <router-link to="/menu" class="btn-primary">Ir para Menu</router-link>
       </div>
     </section>
+    
+    <!-- Modal de Tutorial -->
+    <TutorialModal
+      v-if="isTutorialOpen"
+      :isOpen="isTutorialOpen"
+      @close="closeTutorial"
+    />
   </main>
 </template>
 
 <script>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
+import TutorialModal from '@/components/TutorialModal.vue';
 
 export default {
   name: 'AppAjuda',
+  components: {
+    TutorialModal
+  },
   setup() {
     const activeAccordion = ref(null);
+    const isTutorialOpen = ref(false);
+    
+    // Verificar se o usuário é do tipo "comum"
+    const isCommonUser = computed(() => {
+      try {
+        const user = JSON.parse(localStorage.getItem("user"));
+        return user && user.tipo_usuario === 'comum';
+      } catch (error) {
+        console.error("Erro ao verificar tipo de usuário:", error);
+        return false;
+      }
+    });
     
     const toggleAccordion = (index) => {
       activeAccordion.value = activeAccordion.value === index ? null : index;
     };
     
+    const startTutorial = () => {
+      isTutorialOpen.value = true;
+    };
+    
+    const closeTutorial = () => {
+      isTutorialOpen.value = false;
+    };
+    
     return {
       activeAccordion,
-      toggleAccordion
+      toggleAccordion,
+      isTutorialOpen,
+      startTutorial,
+      closeTutorial,
+      isCommonUser
     };
   }
 }
@@ -269,7 +314,89 @@ h2 {
 }
 
 .action-buttons {
-  margin-top: 20px;
+  display: flex;
+  gap: 15px;
+  margin-top: 30px;
+}
+
+.btn-primary {
+  padding: 12px 24px;
+  background-color: #66ccff;
+  color: #000;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+  background-color: #99ddff;
+  transform: translateY(-2px);
+}
+
+.btn-secondary {
+  padding: 12px 24px;
+  background-color: transparent;
+  color: #fff;
+  border: 1px solid #666;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.3s ease;
+}
+
+.btn-secondary:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Estilos para o botão de tutorial */
+.tutorial-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 30px 0;
+  padding: 20px;
+  background: linear-gradient(145deg, #3b3b3b, #2c2c2c);
+  border-radius: 12px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+}
+
+.btn-tutorial {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 24px;
+  background-color: #5cb85c;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.btn-tutorial:hover {
+  background-color: #4cae4c;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+}
+
+.tutorial-icon {
+  font-size: 20px;
+}
+
+.tutorial-tip {
+  margin-top: 15px;
+  font-size: 14px;
+  color: #aaa;
+  text-align: center;
 }
 
 /* Responsividade */

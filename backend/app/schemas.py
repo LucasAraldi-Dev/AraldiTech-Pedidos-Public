@@ -38,6 +38,7 @@ class Token(BaseModel):
     nome: str
     tipo_usuario: str
     setor: str
+    primeiro_login: Optional[bool] = False
 
 # Esquema de criação de Pedido
 class PedidoCreate(BaseModel):

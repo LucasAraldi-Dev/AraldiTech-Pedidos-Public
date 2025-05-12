@@ -28,12 +28,23 @@ Principais funcionalidades:
 ## Versão  
 A versão atual do projeto é **0.8.2**.
 
-### Mudanças Principais na Versão 0.8.2
-A versão 0.8.2 traz importantes clarificações e melhorias na interface:
+### Principais Alterações na Versão 0.8.2
 
-- **Padronização da Terminologia**: O campo "Data de Entrega" foi renomeado para "Data do Pedido" em toda a aplicação para maior consistência.
-- **Controle de Acesso Melhorado**: Agora somente administradores podem alterar a data do pedido, enquanto usuários comuns apenas visualizam o campo.
-- **Feedback de Interface**: Adicionadas mensagens informativas sobre as permissões para alteração da data do pedido.
+#### Alterado
+- **Terminologia mais clara**: Campo "Data de Entrega" renomeado para "Data do Pedido" em toda a aplicação para maior consistência.
+- **Controle de acesso aprimorado**: Agora apenas administradores podem alterar a data do pedido, enquanto usuários comuns visualizam o campo desabilitado.
+- **Mensagens informativas** adicionadas para indicar as permissões relacionadas à data do pedido.
+- **Fluxo de login otimizado**: Eliminada a tela de carregamento do sistema após o login, redirecionando o usuário diretamente para o menu principal.
+- **Tratamento de erros aprimorado**: Mensagens de erro mais específicas e contextuais no processo de cadastro de usuários.
+
+#### Adicionado
+- **Design modernizado** para página inicial (AppHome) seguindo o padrão visual do sistema.
+- **Reformulação da página de contato** (AppContato) com novos campos e layout responsivo.
+- **Nova central de ajuda** (AppAjuda) com perguntas frequentes interativas.
+- **Política de Privacidade e Termos de Uso** acessíveis pelo rodapé da aplicação.
+- **Modais interativos** para exibição das políticas legais sem redirecionamento.
+- **Sistema de Aceitação de Termos**: Implementado modal de aceitação obrigatória dos Termos de Serviço durante o cadastro.
+- **Controle de Conformidade Legal**: Armazenamento e controle das informações de aceite de termos para fins legais e de auditoria.
 
 ## Funcionalidades
 - **Autenticação JWT**: Somente usuários autenticados têm permissão para criar, listar e editar pedidos.
@@ -76,7 +87,7 @@ A versão 0.8.2 traz importantes clarificações e melhorias na interface:
 
 5. Inicie o servidor FastAPI (backend):
     ```bash
-    uvicorn main:app --reload
+    uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload
     ```
 
 6. Inicie o servidor Vue.js (frontend):

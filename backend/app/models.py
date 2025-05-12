@@ -19,6 +19,7 @@ class Usuario(BaseModel):
     tipo_usuario: str = "comum"  # comum, gestor ou admin
     termsAcceptance: Optional[dict] = None  # Informações de aceite dos termos
     termsAcceptanceDate: Optional[datetime] = None  # Data de aceitação dos termos
+    primeiro_login: bool = True  # Indica se é o primeiro login do usuário
 
     class Config:
         arbitrary_types_allowed = True  

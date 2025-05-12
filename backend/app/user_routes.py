@@ -45,6 +45,9 @@ async def create_user(user: schemas.UsuarioCreate, db=Depends(database.get_db)):
         # Definir tipo de usuário como comum por padrão
         user_dict["tipo_usuario"] = "comum"
         
+        # Definir primeiro_login como true
+        user_dict["primeiro_login"] = True
+        
         # Processar informações do aceite dos termos
         if "termsAcceptance" in user_dict and user_dict["termsAcceptance"]:
             # Armazenar data de aceitação dos termos explicitamente
@@ -168,3 +171,44 @@ async def get_user_logs(user_id: str, db=Depends(database.get_db), current_user=
     
     # Retornar logs se existirem
     return user.get("logs", [])
+
+# Rota para atualizar o campo primeiro_login
+@router.put("/usuarios/primeiro-login", response_model=dict)
+async def update_primeiro_login(db=Depends(database.get_db), current_user=Depends(auth.get_current_user)):
+    try:
+        # Obter o username do usuário atual
+        username = current_user.get("username")
+        if not username:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Usuário não identificado"
+            )
+        
+        # Atualizar o campo primeiro_login para false
+        result = await db["users"].update_one(
+            {"username": username},
+            {"$set": {"primeiro_login": False}}
+        )
+        
+        if result.modified_count == 0:
+            # Se nenhum documento foi atualizado
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Usuário não encontrado ou campo já atualizado"
+            )
+        
+        # Obter o usuário atualizado
+        updated_user = await db["users"].find_one({"username": username})
+        
+        logging.info(f"Campo primeiro_login atualizado para o usuário: {username}")
+        return {"success": True, "username": username, "primeiro_login": False}
+    
+    except HTTPException as e:
+        # Repassar exceções HTTP
+        raise e
+    except Exception as e:
+        logging.error(f"Erro ao atualizar campo primeiro_login: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erro ao atualizar status de primeiro login: {str(e)}"
+        )

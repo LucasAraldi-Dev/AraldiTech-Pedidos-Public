@@ -1,7 +1,17 @@
 # Changelog
 Todas as alterações notáveis deste projeto serão documentadas neste arquivo.
 
-## [0.8.2] - 2025-05-15
+## [0.8.3] - 2025-05-15
+### Adicionado
+- **Tutorial Interativo**: Implementado sistema de tutorial passo a passo para novos usuários, apresentado automaticamente após o primeiro login.
+- **Botão de Ajuda**: Novo botão no menu principal para acesso rápido ao suporte e tutorial.
+
+### Melhorado
+- **Experiência de Primeiro Uso**: Fluxo aprimorado para novos usuários com orientações claras sobre as funcionalidades.
+- **Acessibilidade**: Interface de ajuda redesenhada para melhor usabilidade e acesso às informações.
+- **Documentação In-App**: Atualização das perguntas frequentes na Central de Ajuda com informações mais detalhadas.
+
+## [0.8.2] - 2025-05-11
 ### Alterado
 - Terminologia mais clara: campo "Data de Entrega" renomeado para "Data do Pedido" em toda a aplicação para maior consistência.
 - Controle de acesso aprimorado: agora apenas administradores podem alterar a data do pedido, enquanto usuários comuns visualizam o campo desabilitado.
