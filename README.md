@@ -26,25 +26,20 @@ Principais funcionalidades:
 - **Chart.js**: Biblioteca para criação de gráficos interativos no dashboard.
 
 ## Versão  
-A versão atual do projeto é **0.8.2**.
+A versão atual do projeto é **0.8.3**.
 
-### Principais Alterações na Versão 0.8.2
+### Principais Alterações na Versão 0.8.3
 
-#### Alterado
-- **Terminologia mais clara**: Campo "Data de Entrega" renomeado para "Data do Pedido" em toda a aplicação para maior consistência.
-- **Controle de acesso aprimorado**: Agora apenas administradores podem alterar a data do pedido, enquanto usuários comuns visualizam o campo desabilitado.
-- **Mensagens informativas** adicionadas para indicar as permissões relacionadas à data do pedido.
-- **Fluxo de login otimizado**: Eliminada a tela de carregamento do sistema após o login, redirecionando o usuário diretamente para o menu principal.
-- **Tratamento de erros aprimorado**: Mensagens de erro mais específicas e contextuais no processo de cadastro de usuários.
+### Adicionado
+- **Tutorial Interativo**: Implementado sistema de tutorial passo a passo para novos usuários, apresentado automaticamente após o primeiro login.
+- **Botão de Ajuda**: Novo botão no menu principal para acesso rápido ao suporte e tutorial.
 
-#### Adicionado
-- **Design modernizado** para página inicial (AppHome) seguindo o padrão visual do sistema.
-- **Reformulação da página de contato** (AppContato) com novos campos e layout responsivo.
-- **Nova central de ajuda** (AppAjuda) com perguntas frequentes interativas.
-- **Política de Privacidade e Termos de Uso** acessíveis pelo rodapé da aplicação.
-- **Modais interativos** para exibição das políticas legais sem redirecionamento.
-- **Sistema de Aceitação de Termos**: Implementado modal de aceitação obrigatória dos Termos de Serviço durante o cadastro.
-- **Controle de Conformidade Legal**: Armazenamento e controle das informações de aceite de termos para fins legais e de auditoria.
+### Melhorado
+- **Experiência de Primeiro Uso**: Fluxo aprimorado para novos usuários com orientações claras sobre as funcionalidades.
+- **Acessibilidade**: Interface de ajuda redesenhada para melhor usabilidade e acesso às informações.
+- **Documentação In-App**: Atualização das perguntas frequentes na Central de Ajuda com informações mais detalhadas.
+
+
 
 ## Funcionalidades
 - **Autenticação JWT**: Somente usuários autenticados têm permissão para criar, listar e editar pedidos.
