@@ -3,24 +3,44 @@
     <div class="order-form" @click.stop>
       <div class="form-header">
         <h2>CONSULTAR PEDIDOS</h2>
-        <div class="filter-container">
-          <label for="statusFilter">
-            <i class="material-icons">filter_list</i>
-            Status:
-          </label>
-          <select v-model="statusFilter" id="statusFilter">
-            <option value="PENDENTE">PENDENTE</option>
-            <option value="CONCLUÍDO">CONCLUÍDO</option>
-            <option value="CANCELADO">CANCELADO</option>
-          </select>
+        <div class="filters-container">
+          <div class="filter-item">
+            <label for="sectorFilter">
+              <i class="material-icons">business</i>
+              Setor:
+            </label>
+            <select v-model="sectorFilter" id="sectorFilter" :disabled="!isAdminOrGestor">
+              <option value="TODOS">TODOS</option>
+              <option value="Escritório">Escritório</option>
+              <option value="Fábrica de Ração">Fábrica de Ração</option>
+              <option value="CPO">CPO</option>
+              <option value="Granjas">Granjas</option>
+              <option value="Abatedouro">Abatedouro</option>
+              <option value="Transporte">Transporte</option>
+              <option value="Incubatório">Incubatório</option>
+              <option value="Favorito">Favorito</option>
+            </select>
+          </div>
+          <div class="filter-item">
+            <label for="statusFilter">
+              <i class="material-icons">filter_list</i>
+              Status:
+            </label>
+            <select v-model="statusFilter" id="statusFilter">
+              <option value="PENDENTE">PENDENTE</option>
+              <option value="CONCLUÍDO">CONCLUÍDO</option>
+              <option value="CANCELADO">CANCELADO</option>
+            </select>
+          </div>
         </div>
       </div>
 
       <!-- Cards dos Pedidos -->
       <div class="orders-list">
-        <div v-for="order in currentOrders" :key="order.id" class="order-card">
+        <div v-for="order in currentOrders" :key="order.id" class="order-card" :class="[getUrgencyClass(order.urgencia)]">
           <div class="order-header">
             <span class="order-id">#{{ order.id }}</span>
+            <span class="urgency-badge" v-if="order.urgencia !== 'Padrão'">{{ order.urgencia }}</span>
           </div>
           <h3 class="order-title">{{ order.descricao }}</h3>
           <div class="order-details">
@@ -35,6 +55,10 @@
             <p>
               <i class="material-icons">priority_high</i>
               <strong>Urgência:</strong> {{ order.urgencia }}
+            </p>
+            <p>
+              <i class="material-icons">business</i>
+              <strong>Setor:</strong> {{ order.setor }}
             </p>
             <p>
               <i class="material-icons">event</i>
@@ -171,6 +195,7 @@ export default {
   data() {
     return {
       statusFilter: "PENDENTE",
+      sectorFilter: "TODOS",
       currentPage: 1,
       orders: [],
       toast: useToast(),
@@ -178,11 +203,27 @@ export default {
       selectedOrder: null,
       completionDate: null,
       minDate: new Date().toISOString().split('T')[0],
+      userType: null,
+      userSector: null,
     };
   },
   computed: {
+    isAdmin() {
+      return this.userType === "admin";
+    },
+    isAdminOrGestor() {
+      return this.userType === "admin" || this.userType === "gestor";
+    },
     filteredOrders() {
-      return this.orders.filter(order => order.status.toUpperCase() === this.statusFilter.toUpperCase());
+      return this.orders.filter(order => {
+        const statusMatch = order.status.toUpperCase() === this.statusFilter.toUpperCase();
+        // Verificar correspondência de setor, incluindo possíveis variações de capitalização
+        const sectorMatch = this.sectorFilter === "TODOS" || 
+                            order.setor === this.sectorFilter || 
+                            order.setor?.toLowerCase() === this.sectorFilter?.toLowerCase();
+        
+        return statusMatch && sectorMatch;
+      });
     },
     totalPages() {
       const ordersPerPage = this.getOrdersPerPage();
@@ -195,12 +236,52 @@ export default {
   },
   methods: {
     fetchOrders() {
+      // Garantir que os dados do usuário foram carregados antes de buscar pedidos
+      this.loadUserData();
+      
       axios
         .get(`${process.env.VUE_APP_API_URL}/pedidos`, {
           headers: { Authorization: `Bearer ${localStorage.getItem("access_token")}` },
         })
         .then(response => {
           this.orders = response.data;
+          console.log(`Pedidos carregados: ${this.orders.length}, Filtro de setor: ${this.sectorFilter}, Tipo de usuário: ${this.userType}`);
+          
+          if (this.orders.length > 0) {
+            // Log para depuração dos setores disponíveis
+            const setores = [...new Set(this.orders.map(order => order.setor))];
+            console.log(`Setores encontrados nos pedidos: ${setores.join(', ')}`);
+          }
+          
+          // Ordenar os pedidos por prioridade (Crítico > Urgente > Padrão)
+          this.orders.sort((a, b) => this.getUrgencyPriority(b.urgencia) - this.getUrgencyPriority(a.urgencia));
+          
+          // Validar se temos pedidos após aplicar os filtros
+          setTimeout(() => {
+            console.log(`Pedidos filtrados: ${this.filteredOrders.length} para o setor: ${this.sectorFilter}`);
+            
+            // Se não houver pedidos filtrados e o usuário não é admin/gestor, tenta ajustar o filtro
+            if (this.filteredOrders.length === 0 && !this.isAdminOrGestor && this.orders.length > 0) {
+              const setores = [...new Set(this.orders.map(order => order.setor))];
+              
+              if (setores.length === 1) {
+                // Se só há um setor nos pedidos, use-o
+                this.sectorFilter = setores[0];
+                console.log(`Ajustando filtro para o único setor disponível: ${this.sectorFilter}`);
+              } else if (this.userSector) {
+                // Tenta encontrar o setor do usuário nos pedidos
+                const setorProximo = setores.find(s => 
+                  s.toLowerCase().includes(this.userSector.toLowerCase()) || 
+                  this.userSector.toLowerCase().includes(s.toLowerCase())
+                );
+                
+                if (setorProximo) {
+                  this.sectorFilter = setorProximo;
+                  console.log(`Ajustando filtro para o setor aproximado: ${this.sectorFilter}`);
+                }
+              }
+            }
+          }, 100);
         })
         .catch(error => {
           console.error("Erro ao buscar pedidos:", error);
@@ -210,6 +291,21 @@ export default {
             closeButtonClassName: "custom-toast-close"
           });
         });
+    },
+    getUrgencyPriority(urgencia) {
+      switch(urgencia) {
+        case 'Crítico': return 3;
+        case 'Urgente': return 2;
+        case 'Padrão': return 1;
+        default: return 0;
+      }
+    },
+    getUrgencyClass(urgencia) {
+      switch(urgencia) {
+        case 'Crítico': return 'urgency-critical';
+        case 'Urgente': return 'urgency-urgent';
+        default: return '';
+      }
     },
     openOrder(order) {
       this.$emit("open-order", order);
@@ -313,8 +409,46 @@ export default {
           });
         });
     },
+    loadUserData() {
+      // Carregar dados do usuário do localStorage
+      const userStr = localStorage.getItem("user");
+      if (userStr) {
+        try {
+          const userObj = JSON.parse(userStr);
+          this.userType = userObj.tipo_usuario;
+          this.userSector = userObj.setor;
+          
+          console.log(`Dados do usuário carregados - Tipo: ${this.userType}, Setor: ${this.userSector}`);
+          
+          // Para usuário comum, o filtro de setor deve mostrar apenas o seu setor
+          if (this.userType !== "admin" && this.userType !== "gestor") {
+            if (this.userSector) {
+              this.sectorFilter = this.userSector;
+              console.log(`Filtro de setor definido para: ${this.sectorFilter}`);
+            } else {
+              console.warn("Usuário comum sem setor definido!");
+            }
+          }
+          
+        } catch (e) {
+          console.error("Erro ao parsear dados do usuário:", e);
+        }
+      } else {
+        console.warn("Nenhum dado de usuário encontrado no localStorage");
+      }
+    }
+  },
+  watch: {
+    // Observar quando o modal é aberto para recarregar os dados
+    isOpen(newValue) {
+      if (newValue) {
+        this.loadUserData();
+        this.fetchOrders();
+      }
+    }
   },
   created() {
+    // Não precisa chamar loadUserData aqui, pois já estamos chamando dentro de fetchOrders
     this.fetchOrders();
   },
 };
@@ -400,8 +534,15 @@ export default {
   margin: 0;
 }
 
-/* Container de filtro */
-.filter-container {
+/* Container de filtros */
+.filters-container {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.filter-item {
   display: flex;
   align-items: center;
   background-color: #333;
@@ -409,26 +550,31 @@ export default {
   border-radius: 5px;
 }
 
-.filter-container label {
+.filter-item label {
   display: flex;
   align-items: center;
   color: #999;
   margin-right: 10px;
 }
 
-.filter-container label i {
+.filter-item label i {
   margin-right: 5px;
   color: #ff6f61;
   font-size: 18px;
 }
 
-.filter-container select {
+.filter-item select {
   background-color: #444;
   color: #f5f5f5;
   border: none;
   padding: 5px 10px;
   border-radius: 3px;
   font-size: 0.9rem;
+}
+
+.filter-item select:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 
 /* Cards dos Pedidos */
@@ -452,6 +598,7 @@ export default {
   font-size: 1rem;
   transition: transform 0.2s, box-shadow 0.2s;
   border: 1px solid #333;
+  position: relative;
 }
 
 .order-card:hover {
@@ -459,10 +606,40 @@ export default {
   box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.4);
 }
 
+/* Classes de urgência para cards */
+.urgency-critical {
+  border: 2px solid #e74c3c;
+  box-shadow: 0 0 10px rgba(231, 76, 60, 0.3);
+}
+
+.urgency-urgent {
+  border: 2px solid #f39c12;
+  box-shadow: 0 0 10px rgba(243, 156, 18, 0.3);
+}
+
+.urgency-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: bold;
+  color: white;
+}
+
+.urgency-critical .urgency-badge {
+  background-color: #e74c3c;
+}
+
+.urgency-urgent .urgency-badge {
+  background-color: #f39c12;
+}
+
 /* Cabeçalho do card */
 .order-header {
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
   width: 100%;
   font-size: 1.5rem;
 }
@@ -471,8 +648,7 @@ export default {
   font-size: 1.5em;
   color: #ff6f61; 
   font-weight: bold;
-  text-align: center;
-  flex: 1;
+  text-align: left;
 }
 
 .order-title {
@@ -831,6 +1007,16 @@ export default {
   .order-card {
     padding: 15px;
   }
+  
+  .filters-container {
+    margin-top: 15px;
+    width: 100%;
+  }
+  
+  .form-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 
 /* Tablets e dispositivos médios */
@@ -845,13 +1031,7 @@ export default {
     padding: 20px;
   }
   
-  .form-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  
-  .filter-container {
-    margin-top: 15px;
+  .filter-item {
     width: 100%;
     justify-content: space-between;
   }

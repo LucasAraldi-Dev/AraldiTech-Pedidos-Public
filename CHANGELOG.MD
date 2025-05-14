@@ -1,6 +1,20 @@
 # Changelog
 Todas as alterações notáveis deste projeto serão documentadas neste arquivo.
 
+## [0.8.4] - 2025-05-15
+### Adicionado
+- **Filtro de Setor no Modal de Consulta**: Novo filtro para permitir que gestores e administradores visualizem pedidos específicos por setor.
+- **Indicadores Visuais de Prioridade**: Destaque visual para pedidos urgentes e críticos com bordas coloridas e badges.
+- **Ordenação Inteligente de Pedidos**: Pedidos agora são exibidos em ordem de prioridade (Crítico > Urgente > Padrão).
+- **Visualização de Setor nos Cards**: Adicionado campo de setor em cada card de pedido para facilitar identificação.
+- **Roadmap adicionado**: Adicionado um roadmap do futuro do projeto até o lançamento da versão 1.0 , e tamém inclusão de melhorias futuras.
+
+### Melhorado
+- **Design Responsivo dos Filtros**: Layout otimizado para melhor usabilidade em dispositivos móveis.
+- **Experiência Visual**: Cards de pedidos reformulados para destacar informações prioritárias.
+- **Eficiência na Consulta**: Possibilidade de visualizar todos os setores ou filtrar por um específico para usuários com permissão.
+- **Controle de Acesso Refinado**: Usuários comuns agora visualizam apenas os pedidos do seu setor, com filtro bloqueado.
+
 ## [0.8.3] - 2025-05-12
 ### Adicionado
 - **Tutorial Interativo**: Implementado sistema de tutorial passo a passo para novos usuários, apresentado automaticamente após o primeiro login.
