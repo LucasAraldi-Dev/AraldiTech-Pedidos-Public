@@ -1,5 +1,5 @@
-# AraldiTech - Pedidos (Versão 0.8.3) 
-![GitHub version](https://img.shields.io/badge/version-0.8.3-blue)
+# AraldiTech - Pedidos (Versão 0.8.4) 
+![GitHub version](https://img.shields.io/badge/version-0.8.4-blue)
 
 ## Descrição
 **AraldiTech - Pedidos** é um WebApp desenvolvido para gerenciar pedidos de produtos para setores específicos, com interface moderna, intuitiva e responsiva, proporcionando uma experiência de uso otimizada.
@@ -26,20 +26,19 @@ Principais funcionalidades:
 - **Chart.js**: Biblioteca para criação de gráficos interativos no dashboard.
 
 ## Versão  
-A versão atual do projeto é **0.8.3**.
+A versão atual do projeto é **0.8.4**.
 
-### Principais Alterações na Versão 0.8.3
+### Principais Alterações na Versão 0.8.4
 
 ### Adicionado
-- **Tutorial Interativo**: Implementado sistema de tutorial passo a passo para novos usuários, apresentado automaticamente após o primeiro login.
-- **Botão de Ajuda**: Novo botão no menu principal para acesso rápido ao suporte e tutorial.
+- **Filtro de Setor no Modal de Consulta**: Novo filtro para permitir que gestores e administradores visualizem pedidos específicos por setor.
+- **Indicadores Visuais de Prioridade**: Destaque visual para pedidos urgentes e críticos com bordas coloridas e badges.
+- **Ordenação Inteligente de Pedidos**: Pedidos agora são exibidos em ordem de prioridade (Crítico > Urgente > Padrão).
 
 ### Melhorado
-- **Experiência de Primeiro Uso**: Fluxo aprimorado para novos usuários com orientações claras sobre as funcionalidades.
-- **Acessibilidade**: Interface de ajuda redesenhada para melhor usabilidade e acesso às informações.
-- **Documentação In-App**: Atualização das perguntas frequentes na Central de Ajuda com informações mais detalhadas.
-
-
+- **Experiência Visual**: Cards de pedidos reformulados para destacar informações prioritárias.
+- **Controle de Acesso Refinado**: Usuários comuns visualizam apenas os pedidos do seu setor, com filtro bloqueado.
+- **Design Responsivo dos Filtros**: Layout otimizado para melhor usabilidade em dispositivos móveis.
 
 ## Funcionalidades
 - **Autenticação JWT**: Somente usuários autenticados têm permissão para criar, listar e editar pedidos.
