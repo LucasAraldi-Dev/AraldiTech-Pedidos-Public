@@ -22,7 +22,10 @@
               v-model="orderDescription"
               placeholder="DESCRIÇÃO DO PEDIDO"
               required
+              @blur="validateDescription"
+              :class="{ 'invalid': validationErrors.description }"
             ></textarea>
+            <span class="error-message" v-if="validationErrors.description">{{ validationErrors.description }}</span>
           </div>
 
           <div class="form-group">
@@ -40,6 +43,7 @@
                 v-model.number="orderQuantity" 
                 min="1" 
                 @input="validateQuantity"
+                @blur="validateQuantity"
                 required 
                 :class="{ 'invalid': validationErrors.quantity }"
               />
@@ -47,7 +51,8 @@
                 <i class="material-icons">add</i>
               </button>
             </div>
-            <div class="input-note">
+            <span class="error-message" v-if="validationErrors.quantity">{{ validationErrors.quantity }}</span>
+            <div class="input-note" v-else>
               Quantidade mínima: 1
             </div>
           </div>
@@ -77,36 +82,26 @@
               <option value="Urgente">Urgente (Para o mesmo dia)</option>
               <option value="Crítico">Crítico (Fábrica parada)</option>
             </select>
-            <div class="info-tooltip-container">
-              <span class="info-icon-wrapper" 
-                 @mouseenter="showUrgencyTooltip" 
-                 @mouseleave="hideUrgencyTooltip">
-                <i class="material-icons info-icon">info</i>
-              </span>
-              <div class="info-tooltip" :class="{ show: isUrgencyTooltipVisible }" ref="urgencyTooltip" 
-                 :style="tooltipStyle">
-                <div class="tooltip-header" v-if="isMobile">
-                  <span class="tooltip-title">Informações de Urgência</span>
-                  <button type="button" class="close-tooltip" @click="hideUrgencyTooltip">
-                    <i class="material-icons">close</i>
-                  </button>
+            <TooltipInfo 
+              title="Informações de Urgência" 
+              position="left"
+              :maxWidth="300"
+            >
+              <div class="urgency-legend">
+                <div class="urgency-item">
+                  <span class="urgency-icon padrão">●</span>
+                  <span class="urgency-desc">Padrão: Para pedidos sem prioridade, prazo de até 7 dias</span>
                 </div>
-                <div class="urgency-legend">
-                  <div class="urgency-item">
-                    <span class="urgency-icon padrão">●</span>
-                    <span class="urgency-desc">Padrão: Para pedidos sem prioridade, prazo de até 7 dias</span>
-                  </div>
-                  <div class="urgency-item">
-                    <span class="urgency-icon urgente">●</span>
-                    <span class="urgency-desc">Urgente: Necessário para o mesmo dia</span>
-                  </div>
-                  <div class="urgency-item">
-                    <span class="urgency-icon critico">●</span>
-                    <span class="urgency-desc">Crítico: Emergência, processo de produção interrompido</span>
-                  </div>
+                <div class="urgency-item">
+                  <span class="urgency-icon urgente">●</span>
+                  <span class="urgency-desc">Urgente: Necessário para o mesmo dia</span>
+                </div>
+                <div class="urgency-item">
+                  <span class="urgency-icon critico">●</span>
+                  <span class="urgency-desc">Crítico: Emergência, processo de produção interrompido</span>
                 </div>
               </div>
-            </div>
+            </TooltipInfo>
           </div>
 
           <div class="form-group">
@@ -166,31 +161,21 @@
                 <div class="input-note">
                   Clique para anexar um arquivo de referência (opcional)
                 </div>
-                <div class="info-tooltip-container">
-                  <span class="info-icon-wrapper"
-                     @mouseenter="showFileTooltip"
-                     @mouseleave="hideFileTooltip">
-                    <i class="material-icons info-icon">info</i>
-                  </span>
-                  <div class="info-tooltip" :class="{ show: isFileTooltipVisible }" ref="fileTooltip"
-                     :style="fileTooltipStyle">
-                    <div class="tooltip-header" v-if="isMobile">
-                      <span class="tooltip-title">Sobre anexos</span>
-                      <button type="button" class="close-tooltip" @click="hideFileTooltip">
-                        <i class="material-icons">close</i>
-                      </button>
-                    </div>
-                    <div class="file-info-content">
-                      <p>Você pode anexar arquivos como:</p>
-                      <ul>
-                        <li>Imagens (JPG, PNG, GIF)</li>
-                        <li>Documentos (PDF, DOC, XLS)</li>
-                        <li>Outros arquivos de referência</li>
-                      </ul>
-                      <p>Tamanho máximo: 10MB</p>
-                    </div>
+                <TooltipInfo 
+                  title="Sobre anexos" 
+                  position="right"
+                  :maxWidth="300"
+                >
+                  <div class="file-info-content">
+                    <p>Você pode anexar arquivos como:</p>
+                    <ul>
+                      <li>Imagens (JPG, PNG, GIF)</li>
+                      <li>Documentos (PDF, DOC, XLS)</li>
+                      <li>Outros arquivos de referência</li>
+                    </ul>
+                    <p>Tamanho máximo: 10MB</p>
                   </div>
-                </div>
+                </TooltipInfo>
               </div>
             </div>
           </div>
@@ -243,11 +228,14 @@
         </div>
 
         <div class="form-buttons">
-          <button type="submit" class="submit-btn">
-            <i class="material-icons">send</i>
-            ENVIAR PEDIDO
+          <button type="submit" class="submit-btn" :disabled="isSubmitting">
+            <LoadingIndicator v-if="isSubmitting" size="small" />
+            <template v-else>
+              <i class="material-icons">send</i>
+              ENVIAR PEDIDO
+            </template>
           </button>
-          <button type="button" class="close-btn" @click="closeForm">
+          <button type="button" class="close-btn" @click="closeForm" :disabled="isSubmitting">
             <i class="material-icons">close</i>
             CANCELAR
           </button>
@@ -261,8 +249,16 @@
 // Usando axiosService para requisições HTTP
 import axiosService from '../api/axiosService';
 import { useToast } from 'vue-toastification';  // Importando Vue Toastification
+import { validateQuantity, validateText, validateDate } from '../utils/validationService';
+import { ensureCsrfToken } from '../utils/securityService';
+import LoadingIndicator from './ui/LoadingIndicator.vue';
+import TooltipInfo from './ui/TooltipInfo.vue';
 
 export default {
+  components: {
+    LoadingIndicator,
+    TooltipInfo
+  },
   props: {
     isOpen: Boolean,
     onClose: Function,
@@ -288,8 +284,14 @@ export default {
       isUrgencyTooltipVisible: false,
       isFileTooltipVisible: false,
       validationErrors: {
-        quantity: false
+        description: "",
+        quantity: "",
+        category: "",
+        date: "",
+        sender: ""
       },
+      isSubmitting: false,
+      successMessage: "",
       isMobile: false,
       tooltipStyle: {
         top: '25px',
@@ -357,17 +359,33 @@ export default {
         return;
       }
       
-      // Validar quantidade
-      if (this.orderQuantity < 1) {
-        this.orderQuantity = 1;
-        this.validationErrors.quantity = true;
-        toast.warning("A quantidade deve ser maior que zero!");
+      // Garantir que temos um token CSRF válido
+      try {
+        await ensureCsrfToken();
+      } catch (error) {
+        console.error("Erro ao obter token CSRF:", error);
+        toast.error("Erro de segurança. Tente fazer login novamente.");
         return;
       }
-
-      // Validar campos obrigatórios
-      if (!this.orderDescription || !this.orderQuantity || !this.orderSender || !this.orderCategory) {
-        toast.warning("Por favor, preencha todos os campos obrigatórios!");
+      
+      // Validar formulário completo
+      if (!this.validateForm()) {
+        // Exibir mensagens de erro para cada campo inválido
+        if (this.validationErrors.description) {
+          toast.error(this.validationErrors.description);
+        }
+        if (this.validationErrors.quantity) {
+          toast.error(this.validationErrors.quantity);
+        }
+        if (this.validationErrors.category) {
+          toast.error(this.validationErrors.category);
+        }
+        if (this.validationErrors.date) {
+          toast.error(this.validationErrors.date);
+        }
+        if (this.validationErrors.sender) {
+          toast.error(this.validationErrors.sender);
+        }
         return;
       }
 
@@ -375,6 +393,9 @@ export default {
         toast.warning("Aguarde o processamento do arquivo antes de enviar o pedido.");
         return;
       }
+
+      // Ativar indicador de carregamento
+      this.isSubmitting = true;
 
       // Usar o nome do usuário e setor do token
       this.token = localStorage.getItem("access_token");
@@ -448,6 +469,9 @@ export default {
         if (error.response && (error.response.status === 401 || error.response.status === 403)) {
           toast.error("Sessão expirada ou inválida. Por favor, faça login novamente.");
         }
+      } finally {
+        // Desativar indicador de carregamento
+        this.isSubmitting = false;
       }
     },
     resetForm() {
@@ -510,12 +534,54 @@ export default {
       this.orderQuantity++;
     },
     validateQuantity() {
-      if (this.orderQuantity < 1) {
-        this.orderQuantity = 1;
-        this.validationErrors.quantity = true;
-      } else {
-        this.validationErrors.quantity = false;
-      }
+      const result = validateQuantity(this.orderQuantity);
+      this.validationErrors.quantity = result.isValid ? "" : result.message;
+      return result.isValid;
+    },
+    validateDescription() {
+      const result = validateText(this.orderDescription, {
+        required: true,
+        minLength: 10,
+        fieldName: "Descrição do pedido"
+      });
+      this.validationErrors.description = result.isValid ? "" : result.message;
+      return result.isValid;
+    },
+    validateCategory() {
+      const result = validateText(this.orderCategory, {
+        required: true,
+        fieldName: "Categoria"
+      });
+      this.validationErrors.category = result.isValid ? "" : result.message;
+      return result.isValid;
+    },
+    validateDate() {
+      const result = validateDate(this.orderDeliveryDate, {
+        required: true,
+        allowPastDates: this.isAdmin // Apenas admin pode selecionar datas passadas
+      });
+      this.validationErrors.date = result.isValid ? "" : result.message;
+      return result.isValid;
+    },
+    validateSender() {
+      const result = validateText(this.orderSender, {
+        required: true,
+        minLength: 3,
+        fieldName: "Responsável pela compra"
+      });
+      this.validationErrors.sender = result.isValid ? "" : result.message;
+      return result.isValid;
+    },
+    validateForm() {
+      // Executar todas as validações
+      const isQuantityValid = this.validateQuantity();
+      const isDescriptionValid = this.validateDescription();
+      const isCategoryValid = this.validateCategory();
+      const isDateValid = this.validateDate();
+      const isSenderValid = this.validateSender();
+      
+      return isQuantityValid && isDescriptionValid && isCategoryValid && 
+             isDateValid && isSenderValid;
     },
     showUrgencyTooltip(event) {
       this.isUrgencyTooltipVisible = true;
@@ -792,9 +858,22 @@ textarea.invalid {
 }
 
 .error-message {
-  color: #e74c3c;
-  font-size: 0.8rem;
+  color: #ff5252;
+  font-size: 0.85rem;
   margin-top: 5px;
+  display: block;
+  font-weight: 500;
+}
+
+.invalid {
+  border-color: #ff5252 !important;
+  box-shadow: 0 0 5px rgba(255, 82, 82, 0.3) !important;
+}
+
+textarea.invalid,
+input.invalid,
+select.invalid {
+  background-color: rgba(255, 82, 82, 0.05);
 }
 
 /* Container para input de arquivo */
@@ -935,6 +1014,10 @@ button i {
 .submit-btn {
   background-color: #ff6f61;
   color: #1f1f1f;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 45px;
 }
 
 .submit-btn:hover {

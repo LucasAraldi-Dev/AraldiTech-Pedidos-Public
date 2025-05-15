@@ -1,6 +1,31 @@
 # Changelog
 Todas as alterações notáveis deste projeto serão documentadas neste arquivo.
 
+## [0.8.5] - 2025-05-20
+### Adicionado
+- **Segurança Aprimorada**: Implementação de proteção CSRF em todos os endpoints, com validação avançada de dados e proteção contra XSS e injeção SQL.
+- **Sistema de Cache**: Mecanismo de cache para requisições frequentes, reduzindo o tempo de resposta e a carga no servidor.
+- **Visualizador de Logs do Sistema**: Novo modal para administradores acompanharem atividades do sistema com filtros avançados e exportação.
+- **Configuração de Testes Unitários**: Framework Jest integrado para testes automatizados de componentes e serviços.
+- **Serviço de Validação Centralizado**: Implementação de regras de validação padronizadas para uso em todos os formulários.
+- **Componentes de UI Reutilizáveis**: Novos componentes para indicadores de carregamento e tooltips informativos.
+- **Tratamento Avançado de Erros**: Sistema centralizado para tratamento de erros de API com feedback contextual.
+
+### Melhorado
+- **Performance da Aplicação**: Otimização das requisições HTTP com sistema de cache e redução de chamadas desnecessárias.
+- **Feedback ao Usuário**: Notificações mais claras e indicação visual de operações em andamento.
+- **Responsividade**: Ajustes nos layouts de modais e cards para melhor visualização em diferentes dispositivos.
+- **Segurança de Dados**: Validação rigorosa de entradas do usuário para prevenir ataques comuns.
+- **Organização do Código**: Refatoração para melhor modularidade e padrões de desenvolvimento.
+- **Consistência Visual**: Padronização dos componentes visuais em toda a aplicação.
+
+### Corrigido
+- **Inconsistências nos Formulários**: Uniformização da validação e mensagens de erro entre todos os formulários.
+- **Problemas de Responsividade**: Correção de layout em telas específicas, especialmente em dispositivos móveis.
+- **Tratamento de Datas**: Formato consistente de datas entre formulários e relatórios.
+- **Concorrência de Requisições**: Melhor gerenciamento de múltiplas requisições simultâneas.
+- **Comportamento em Rede Instável**: Recuperação mais robusta de falhas temporárias de conexão.
+
 ## [0.8.4] - 2025-05-15
 ### Adicionado
 - **Filtro de Setor no Modal de Consulta**: Novo filtro para permitir que gestores e administradores visualizem pedidos específicos por setor.

@@ -5,7 +5,6 @@ import AppContato from '@/views/AppContato.vue';
 import AppAjuda from '@/views/AppAjuda.vue';
 import AppMenu from '@/views/AppMenu.vue';
 import AppMenuLayout from '@/views/AppMenuLayout.vue';
-import AppLoading from '@/views/AppLoading.vue';
 import { isTokenValid } from '@/utils/isTokenValid';
 
 const routes = [
@@ -66,20 +65,7 @@ const routes = [
       }, 100);
     }
   },
-  {
-    path: '/loading',
-    name: 'Loading',
-    component: AppLoading,
-    beforeEnter: (to, from, next) => {
-      // Permitir acesso da página de login ou após uma autenticação bem-sucedida
-      const token = localStorage.getItem('access_token');
-      if (from.name === 'Login' || token) {
-        next();
-      } else {
-        next({ name: 'Login' });
-      }
-    }
-  },
+
   {
     path: '/menu',
     component: AppMenuLayout,

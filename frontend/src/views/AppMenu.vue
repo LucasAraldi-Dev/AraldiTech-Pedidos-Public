@@ -33,6 +33,14 @@
       >
         Gerenciar Usuários
       </button>
+      <!-- Botão Visualizador de Logs para administradores -->
+      <button 
+        v-if="isAdmin" 
+        class="menu-btn log-btn" 
+        @click="openLogViewer"
+      >
+        Visualizar Logs
+      </button>
       <!-- Botão de Ajuda para todos os usuários -->
       <button class="menu-btn help-btn" @click="openHelp">
         Ajuda
@@ -67,6 +75,14 @@
         @click="openUserManagementModal"
       >
         Gerenciar Usuários
+      </button>
+      <!-- Botão Visualizador de Logs para administradores -->
+      <button 
+        v-if="isAdmin" 
+        class="menu-btn log-btn" 
+        @click="openLogViewer"
+      >
+        Visualizar Logs
       </button>
       <!-- Botão de Ajuda para todos os usuários -->
       <button class="menu-btn help-btn" @click="openHelp">
@@ -147,6 +163,13 @@
       :isOpen="isTutorialOpen"
       @close="closeTutorial"
     />
+
+    <!-- Modal de Visualização de Logs -->
+    <ModalLogViewer
+      v-if="isLogViewerOpen"
+      :isOpen="isLogViewerOpen"
+      @close="closeLogViewer"
+    />
   </div>
 </template>
 
@@ -158,6 +181,7 @@ import ModalImprimirPedido from '@/components/ModalImprimirPedido.vue';
 import ModalGerenciarUsuarios from '@/components/ModalGerenciarUsuarios.vue';
 import ModalRelatorioFinanceiro from '@/components/ModalRelatorioFinanceiro.vue';
 import ModalDashboard from '@/components/ModalDashboard.vue';
+import ModalLogViewer from '@/components/ModalLogViewer.vue';
 import TutorialModal from '@/components/TutorialModal.vue';
 import html2canvas from "html2canvas";
 // Importação modificada para evitar o erro de 'module is not defined'
@@ -178,6 +202,7 @@ export default {
     ModalGerenciarUsuarios,
     ModalRelatorioFinanceiro,
     ModalDashboard,
+    ModalLogViewer,
     TutorialModal,
   },
   data() {
@@ -199,7 +224,8 @@ export default {
       userName: '',
       // Verificar permissões de usuário
       isAdmin: false,
-      isGestor: false
+      isGestor: false,
+      isLogViewerOpen: false
     };
   },
   created() {
@@ -456,6 +482,12 @@ export default {
       const urlWithoutParams = currentUrl.split('?')[0];
       window.history.replaceState({}, document.title, urlWithoutParams);
     },
+    openLogViewer() {
+      this.isLogViewerOpen = true;
+    },
+    closeLogViewer() {
+      this.isLogViewerOpen = false;
+    },
   },
 };
 </script>
@@ -509,13 +541,11 @@ export default {
 }
 
 .admin-btn {
-  background-color: #FF5733;
-  border-color: #FF5733;
+  background-color: #724e91;
 }
 
 .admin-btn:hover {
-  background-color: #e64a2e;
-  border-color: #e64a2e;
+  background-color: #8a5aa9;
 }
 
 .gestor-btn {
@@ -942,6 +972,14 @@ export default {
 .help-btn:hover {
   background-color: #4cae4c;
   border-color: #4cae4c;
+}
+
+.log-btn {
+  background-color: #345995;
+}
+
+.log-btn:hover {
+  background-color: #4270b3;
 }
 
 @media (max-width: 768px) {

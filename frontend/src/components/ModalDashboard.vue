@@ -1,6 +1,6 @@
 <template>
-  <div v-if="isOpen" class="modal">
-    <div class="modal-content">
+  <div v-if="isOpen" class="modal-overlay" @click.self="$emit('close')">
+    <div class="modal-content" @click.stop>
       <div class="modal-header">
         <h2 class="dashboard-title">Dashboard de Gestão</h2>
         <button class="close-btn" @click="$emit('close')">
@@ -14,40 +14,45 @@
           <div class="dashboard-section full-width">
             <h2><i class="material-icons section-icon">insights</i>Estatísticas de Pedidos</h2>
             <div class="statistics-container">
-              <div class="statistics-row">
-                <!-- KPIs -->
-                <div class="kpi-card">
-                  <i class="material-icons kpi-icon">assignment</i>
-                  <h3>Total de Pedidos</h3>
-                  <div class="kpi-value">{{ totalPedidos }}</div>
-                </div>
-                <div class="kpi-card">
-                  <i class="material-icons kpi-icon">timer</i>
-                  <h3>Tempo Médio de Conclusão</h3>
-                  <div class="kpi-value">{{ tempoMedioConclusao }}</div>
-                </div>
-                <div class="kpi-card">
-                  <i class="material-icons kpi-icon">pending_actions</i>
-                  <h3>Pedidos Pendentes</h3>
-                  <div class="kpi-value">{{ pedidosPendentes }}</div>
-                </div>
+              <div v-if="isLoadingCharts" class="loading-charts">
+                <LoadingIndicator message="Carregando estatísticas..." />
               </div>
-              
-              <!-- Gráficos -->
-              <div class="charts-container">
-                <div class="chart-wrapper">
-                  <h3>Pedidos por Status</h3>
-                  <canvas ref="statusChart"></canvas>
+              <template v-else>
+                <div class="statistics-row">
+                  <!-- KPIs -->
+                  <div class="kpi-card">
+                    <i class="material-icons kpi-icon">assignment</i>
+                    <h3>Total de Pedidos</h3>
+                    <div class="kpi-value">{{ totalPedidos }}</div>
+                  </div>
+                  <div class="kpi-card">
+                    <i class="material-icons kpi-icon">timer</i>
+                    <h3>Tempo Médio de Conclusão</h3>
+                    <div class="kpi-value">{{ tempoMedioConclusao }}</div>
+                  </div>
+                  <div class="kpi-card">
+                    <i class="material-icons kpi-icon">pending_actions</i>
+                    <h3>Pedidos Pendentes</h3>
+                    <div class="kpi-value">{{ pedidosPendentes }}</div>
+                  </div>
                 </div>
-                <div class="chart-wrapper">
-                  <h3>Pedidos por Categoria</h3>
-                  <canvas ref="categoryChart"></canvas>
+                
+                <!-- Gráficos -->
+                <div class="charts-container">
+                  <div class="chart-wrapper">
+                    <h3>Pedidos por Status</h3>
+                    <canvas ref="statusChart"></canvas>
+                  </div>
+                  <div class="chart-wrapper">
+                    <h3>Pedidos por Categoria</h3>
+                    <canvas ref="categoryChart"></canvas>
+                  </div>
+                  <div class="chart-wrapper">
+                    <h3>Pedidos por Urgência</h3>
+                    <canvas ref="urgencyChart"></canvas>
+                  </div>
                 </div>
-                <div class="chart-wrapper">
-                  <h3>Pedidos por Urgência</h3>
-                  <canvas ref="urgencyChart"></canvas>
-                </div>
-              </div>
+              </template>
             </div>
           </div>
           
@@ -56,14 +61,17 @@
             <h2><i class="material-icons section-icon">history</i>Atividades Recentes</h2>
             <div class="activity-feed">
               <div v-if="isLoading" class="loading">
-                <div class="loading-spinner"></div>
-                Carregando atividades...
+                <LoadingIndicator message="Carregando atividades..." />
               </div>
               <div v-else-if="activities.length === 0" class="empty-feed">
                 <i class="material-icons">info</i>
                 Nenhuma atividade recente encontrada.
               </div>
               <div v-else class="activity-list">
+                <div class="cache-indicator" v-if="dataFromCache">
+                  <i class="material-icons">cached</i>
+                  Dados carregados do cache
+                </div>
                 <div v-for="activity in activities" :key="activity.id" class="activity-item">
                   <div class="activity-icon" :class="getActivityIcon(activity.tipo)">
                     <i :class="getActivityIconClass(activity.tipo)"></i>
@@ -128,8 +136,8 @@
               
               <div class="report-actions">
                 <button class="btn-generate" @click="generateReport" :disabled="isDownloadingReport">
-                  <span v-if="isDownloadingReport" class="loading-spinner-small"></span>
-                  <span>{{ isDownloadingReport ? 'Gerando...' : 'Gerar Relatório' }}</span>
+                  <LoadingIndicator v-if="isDownloadingReport" size="small" />
+                  <span v-else>Gerar Relatório</span>
                 </button>
               </div>
             </div>
@@ -206,8 +214,12 @@ import * as axiosModule from "axios";
 const axios = axiosModule.default || axiosModule;
 import { Chart, registerables } from 'chart.js';
 import authService from '@/api/authService';
+import axiosService from '@/api/axiosService';
+import { cachedRequest } from '@/utils/cacheService';
 import ModalDetalhePedido from '@/components/ModalDetalhePedido.vue';
 import ModalFinanceiro from '@/components/ModalFinanceiro.vue';
+import LoadingIndicator from '@/components/ui/LoadingIndicator.vue';
+import { useToast } from 'vue-toastification';
 
 // Registrar todos os componentes
 Chart.register(...registerables);
@@ -216,7 +228,8 @@ export default {
   name: 'ModalDashboard',
   components: {
     ModalDetalhePedido,
-    ModalFinanceiro
+    ModalFinanceiro,
+    LoadingIndicator
   },
   emits: ['close'],
   props: {
@@ -229,6 +242,8 @@ export default {
     return {
       isLoading: true,
       isDownloadingReport: false,
+      isLoadingCharts: false,
+      dataFromCache: false,
       activities: [],
       pedidos: [],
       charts: {
@@ -236,6 +251,16 @@ export default {
         category: null,
         urgency: null,
         budget: null
+      },
+      cacheOptions: {
+        dashboard: {
+          enabled: true,
+          ttl: 5 * 60 * 1000 // 5 minutos para dados do dashboard
+        },
+        activities: {
+          enabled: true,
+          ttl: 2 * 60 * 1000 // 2 minutos para atividades
+        }
       },
       totalPedidos: 0,
       tempoMedioConclusao: '0 dias',
@@ -271,17 +296,39 @@ export default {
   methods: {
     async fetchData() {
       this.isLoading = true;
+      this.dataFromCache = false;
+      
       try {
-        // Carregar dados das atividades usando o authService para os cabeçalhos de autenticação
-        const activityResponse = await axios.get(`${process.env.VUE_APP_API_URL}/atividades`, {
-          headers: authService.getAuthHeaders()
-        });
-        this.activities = activityResponse.data.slice(0, 10); // Limitar a 10 atividades recentes
+        // Carregar dados das atividades usando o cacheService
+        const activityResponse = await cachedRequest(
+          axiosService.get,
+          '/atividades',
+          { params: { limit: 10 } },  // Limitar a 10 atividades recentes
+          this.cacheOptions.activities
+        );
+        
+        // Marcar se os dados vieram do cache
+        if (activityResponse.cached) {
+          this.dataFromCache = true;
+          console.log('Dados de atividades carregados do cache');
+        }
+        
+        this.activities = activityResponse.data;
         
         // Carregar dados dos pedidos
-        const pedidosResponse = await axios.get(`${process.env.VUE_APP_API_URL}/pedidos`, {
-          headers: authService.getAuthHeaders()
-        });
+        this.isLoadingCharts = true;
+        const pedidosResponse = await cachedRequest(
+          axiosService.get,
+          '/pedidos',
+          {},
+          this.cacheOptions.dashboard
+        );
+        
+        if (pedidosResponse.cached) {
+          this.dataFromCache = true;
+          console.log('Dados de pedidos carregados do cache');
+        }
+        
         this.pedidos = pedidosResponse.data;
         
         // Calcular métricas
@@ -293,8 +340,11 @@ export default {
         });
       } catch (error) {
         console.error('Erro ao carregar dados do dashboard:', error);
+        const toast = useToast();
+        toast.error('Erro ao carregar dados do dashboard. Tente novamente.');
       } finally {
         this.isLoading = false;
+        this.isLoadingCharts = false;
       }
     },
     
@@ -764,17 +814,19 @@ export default {
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Material+Icons&display=swap');
 
-.modal {
+/* Modal Overlay */
+.modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
-  right: 0;
-  bottom: 0;
+  width: 100vw;
+  height: 100vh;
   background-color: rgba(0, 0, 0, 0.85);
+  z-index: 1000;
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
+  transition: opacity 0.3s ease-in-out;
   overflow-y: auto;
   padding: 15px;
   box-sizing: border-box;
@@ -788,10 +840,12 @@ export default {
   max-height: 90vh;
   overflow-y: auto;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  color: #f5f5f5;
   scrollbar-width: thin;
   scrollbar-color: #ff6f61 #333;
-  color: #f5f5f5;
-  position: relative;
 }
 
 .modal-content::-webkit-scrollbar {
@@ -1094,7 +1148,6 @@ canvas {
   justify-content: center;
   padding: 40px 20px;
   color: #888;
-  font-style: italic;
 }
 
 .empty-feed i {
@@ -1332,5 +1385,38 @@ canvas {
   .financial-kpis {
     grid-template-columns: 1fr;
   }
+}
+
+.cache-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(102, 204, 255, 0.1);
+  color: #66ccff;
+  padding: 5px 10px;
+  border-radius: 4px;
+  margin-bottom: 10px;
+  font-size: 0.9rem;
+}
+
+.cache-indicator i {
+  margin-right: 5px;
+  font-size: 18px;
+}
+
+.loading-charts {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 300px;
+  width: 100%;
+}
+
+.btn-generate {
+  min-width: 160px;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 </style> 

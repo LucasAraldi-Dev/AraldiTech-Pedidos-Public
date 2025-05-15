@@ -56,7 +56,7 @@
             <div class="step-label">Carregando suas informações</div>
           </div>
         </div>
-        <div class="spinner"></div>
+        <LoadingIndicator message="" size="medium" />
         <div class="status-message">{{ statusMessage }}</div>
       </div>
 
@@ -100,12 +100,17 @@ import * as axiosModule from "axios";
 const axios = axiosModule.default || axiosModule;
 import RegisterModal from "../components/RegisterModal.vue";
 import { useToast } from "vue-toastification";
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
+import { validateText } from "../utils/validationService";
+import { initCsrfProtection, checkPasswordStrength } from "../utils/securityService";
+import LoadingIndicator from "../components/ui/LoadingIndicator.vue";
+import axiosService from '../api/axiosService';
 
 export default {
   name: "AppLogin",
   components: {
     RegisterModal,
+    LoadingIndicator,
   },
   setup() {
     const toast = useToast();
@@ -126,11 +131,83 @@ export default {
     const errorType = ref(""); // "credentials" ou "connection"
     const errorTitle = ref("");
     const errorHelp = ref("");
+    
+    // Estado para validação de campos
+    const validationErrors = ref({
+      username: "",
+      password: ""
+    });
+    
+    // Senha forte o suficiente
+    const passwordStrength = ref({
+      score: 0,
+      feedback: ""
+    });
+    
+    // Inicializar proteção CSRF ao montar o componente
+    onMounted(async () => {
+      try {
+        await initCsrfProtection();
+      } catch (error) {
+        console.error("Falha ao inicializar proteção CSRF:", error);
+      }
+    });
+    
+    // Validar formulário antes de enviar
+    const validateForm = () => {
+      // Resetar erros de validação
+      validationErrors.value = {
+        username: "",
+        password: ""
+      };
+      
+      // Validar usuário
+      const userValidation = validateText(username.value, {
+        required: true,
+        minLength: 3,
+        fieldName: "Nome de usuário"
+      });
+      
+      // Validar senha
+      const passValidation = validateText(password.value, {
+        required: true,
+        minLength: 6,
+        fieldName: "Senha"
+      });
+      
+      // Atualizar mensagens de erro
+      if (!userValidation.isValid) {
+        validationErrors.value.username = userValidation.message;
+      }
+      
+      if (!passValidation.isValid) {
+        validationErrors.value.password = passValidation.message;
+      }
+      
+      // Verificar força da senha
+      if (passValidation.isValid && password.value.length >= 6) {
+        passwordStrength.value = checkPasswordStrength(password.value);
+      }
+      
+      return userValidation.isValid && passValidation.isValid;
+    };
 
     const startLoginProcess = async () => {
-      if (!username.value || !password.value) {
-        toast.error("Por favor, preencha todos os campos.");
+      // Validar formulário antes de prosseguir
+      if (!validateForm()) {
+        // Mostrar mensagens de erro para o usuário
+        if (validationErrors.value.username) {
+          toast.error(validationErrors.value.username);
+        }
+        if (validationErrors.value.password) {
+          toast.error(validationErrors.value.password);
+        }
         return;
+      }
+      
+      // Verificar força da senha e avisar se for fraca (mas permitir login)
+      if (passwordStrength.value.score < 3) {
+        toast.warning("Sua senha não é muito forte. Considere alterá-la para maior segurança.");
       }
       
       isLoggingIn.value = true;
@@ -147,8 +224,8 @@ export default {
         // Aguarda 1.5 segundos antes de fazer a requisição real (apenas para efeito de UI)
         await new Promise(resolve => setTimeout(resolve, 1500));
         
-        const response = await axios.post(
-          `${process.env.VUE_APP_API_URL}/token`,
+        const response = await axiosService.post(
+          '/token',
           {
             username: username.value,
             senha: password.value,
@@ -198,6 +275,9 @@ export default {
             window.location.href = '/';
           }
         }, 3000);
+
+        // Após login bem-sucedido:
+        await initCsrfProtection();
       } catch (error) {
         console.error("Erro ao fazer login:", error);
         isLoggingIn.value = false;
@@ -333,7 +413,11 @@ export default {
       errorTitle,
       errorHelp,
       resetLogin,
-      tryOfflineMode
+      tryOfflineMode,
+      // Estado para validação de campos
+      validationErrors,
+      // Senha forte o suficiente
+      passwordStrength
     };
   },
 };

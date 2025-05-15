@@ -1,5 +1,5 @@
-# AraldiTech - Pedidos (Versão 0.8.4) 
-![GitHub version](https://img.shields.io/badge/version-0.8.4-blue)
+# AraldiTech - Pedidos (Versão 0.8.5) 
+![GitHub version](https://img.shields.io/badge/version-0.8.5-blue)
 
 ## Descrição
 **AraldiTech - Pedidos** é um WebApp desenvolvido para gerenciar pedidos de produtos para setores específicos, com interface moderna, intuitiva e responsiva, proporcionando uma experiência de uso otimizada.
@@ -24,21 +24,32 @@ Principais funcionalidades:
 - **Motor**: Driver assíncrono para integração com MongoDB.
 - **OAuth2 com JWT**: Autenticação segura usando JSON Web Tokens.
 - **Chart.js**: Biblioteca para criação de gráficos interativos no dashboard.
+- **Jest**: Framework de testes unitários para garantia de qualidade do código.
 
 ## Versão  
-A versão atual do projeto é **0.8.4**.
+A versão atual do projeto é **0.8.5**.
 
-### Principais Alterações na Versão 0.8.4
+### Principais Alterações na Versão 0.8.5
 
-### Adicionado
-- **Filtro de Setor no Modal de Consulta**: Novo filtro para permitir que gestores e administradores visualizem pedidos específicos por setor.
-- **Indicadores Visuais de Prioridade**: Destaque visual para pedidos urgentes e críticos com bordas coloridas e badges.
-- **Ordenação Inteligente de Pedidos**: Pedidos agora são exibidos em ordem de prioridade (Crítico > Urgente > Padrão).
+#### Adicionado
+- **Segurança Reforçada**: Proteção CSRF, validação avançada de dados e detecção de ataques comuns.
+- **Sistema de Cache**: Otimização de desempenho com armazenamento temporário de dados frequentes.
+- **Visualizador de Logs**: Nova interface para administradores monitorarem atividades do sistema.
+- **Testes Automatizados**: Implementação de testes unitários para garantia de qualidade.
+- **Componentes Reutilizáveis**: Novos elementos de UI para feedback visual aprimorado.
 
-### Melhorado
-- **Experiência Visual**: Cards de pedidos reformulados para destacar informações prioritárias.
-- **Controle de Acesso Refinado**: Usuários comuns visualizam apenas os pedidos do seu setor, com filtro bloqueado.
-- **Design Responsivo dos Filtros**: Layout otimizado para melhor usabilidade em dispositivos móveis.
+#### Melhorado
+- **Performance**: Redução no tempo de carregamento e otimização de requisições.
+- **Feedback ao Usuário**: Indicações visuais claras durante processos e operações.
+- **Responsividade**: Melhor adaptação a diferentes tamanhos de tela e dispositivos.
+- **Organização do Código**: Estrutura modular para facilitar manutenção futura.
+- **Validação de Dados**: Sistema unificado para garantir consistência em formulários.
+
+#### Corrigido
+- **Inconsistências de Interface**: Padronização visual entre diferentes seções do aplicativo.
+- **Problemas em Dispositivos Móveis**: Ajustes para melhor experiência em telas pequenas.
+- **Tratamento de Erros**: Sistema robusto para lidar com falhas inesperadas.
+- **Manipulação de Datas**: Formato consistente em todo o sistema.
 
 ## Funcionalidades
 - **Autenticação JWT**: Somente usuários autenticados têm permissão para criar, listar e editar pedidos.
@@ -90,7 +101,13 @@ A versão atual do projeto é **0.8.4**.
     npm run serve
     ```
 
-7. Acesse a aplicação em `http://localhost:8080` para o frontend, ou conforme configurado.
+7. Execute os testes unitários:
+    ```bash
+    cd frontend
+    npm run test:unit
+    ```
+
+8. Acesse a aplicação em `http://localhost:8080` para o frontend, ou conforme configurado.
 
 ## Contribuição
 Contribuições são bem-vindas! Se você quiser sugerir melhorias, abrir uma issue ou fazer um pull request, fique à vontade.

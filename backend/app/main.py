@@ -17,6 +17,9 @@ from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
 from reportlab.lib.styles import getSampleStyleSheet
 import xlsxwriter
+import secrets
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.datastructures import MutableHeaders
 
 # Importar e incluir o router de usuários
 from .user_routes import router as user_router
@@ -35,17 +38,72 @@ origins = [
     "http://192.168.10.27:8080",
     "http://192.168.1.5",
     "http://192.168.1.5:8000",
-    "http://192.168.1.5:8080",
-    "*",
+    "http://192.168.1.5:8080"
 ]
 
+# Adiciona o middleware CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization"],
+    allow_headers=["Content-Type", "Authorization", "X-CSRF-Token"],
 )
+
+# Middleware para validar CSRF em métodos sensíveis - Movido para APÓS o CORS
+class CSRFMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        # Ignorar verificação CSRF para o endpoint de login e OPTIONS
+        if request.url.path == "/token" or request.method == "OPTIONS":
+            return await call_next(request)
+            
+        # Verificar CSRF apenas em métodos sensíveis
+        if request.method in ("POST", "PUT", "DELETE"):
+            # Tenta obter o token do header
+            header_token = request.headers.get(CSRF_HEADER_NAME)
+            # Tenta obter o token do cookie
+            cookie_token = request.cookies.get(CSRF_COOKIE_NAME)
+            
+            # Em desenvolvimento, apenas logar avisos
+            # Em produção, isto deve ser alterado para rejeitar a requisição
+            if not header_token or not cookie_token:
+                logging.warning(f"CSRF Warning: Token ausente - Header: {bool(header_token)}, Cookie: {bool(cookie_token)}")
+            elif header_token != cookie_token:
+                logging.warning(f"CSRF Warning: Tokens não correspondem - Header: {header_token[:10]}..., Cookie: {cookie_token[:10]}...")
+                
+            # AMBIENTE DE DESENVOLVIMENTO: Permitir a requisição de qualquer forma
+            # PRODUÇÃO: Descomente a linha abaixo para rejeitar requisições sem CSRF válido
+            # return JSONResponse(status_code=403, content={"detail": "CSRF token inválido ou ausente."})
+        
+        response = await call_next(request)
+        return response
+
+# Adiciona o middleware CSRF APÓS o CORS
+app.add_middleware(CSRFMiddleware)
+
+# Chave secreta para CSRF (ideal: carregar de .env)
+CSRF_SECRET = getattr(app.state, 'CSRF_SECRET', None)
+if not CSRF_SECRET:
+    CSRF_SECRET = secrets.token_urlsafe(32)
+    app.state.CSRF_SECRET = CSRF_SECRET
+
+CSRF_COOKIE_NAME = "csrf_token"
+CSRF_HEADER_NAME = "x-csrf-token"
+
+# Endpoint para gerar e retornar o token CSRF
+@app.get("/security/csrf-token")
+async def get_csrf_token():
+    token = secrets.token_urlsafe(32)
+    response = JSONResponse(content={"csrf_token": token})
+    # Em desenvolvimento, use samesite="none" para permitir cookies cross-origin
+    response.set_cookie(
+        key=CSRF_COOKIE_NAME,
+        value=token,
+        httponly=False,
+        samesite="none",
+        secure=False  # Use True em produção com HTTPS
+    )
+    return response
 
 @app.middleware("http")
 async def log_auth_middleware(request: Request, call_next):
@@ -86,11 +144,51 @@ async def registrar_atividade(db, tipo, descricao, usuario_nome, pedido_id=None)
         logging.error(f"Erro ao registrar atividade: {e}")
         # Não lançamos exceção para não interromper o fluxo principal
 
+# Função para converter objetos datetime.date em datetime.datetime
+def convert_dates_to_datetime(data_dict):
+    """
+    Converte todos os objetos datetime.date em datetime.datetime em um dicionário recursivamente.
+    Isso é necessário porque o MongoDB não consegue serializar objetos datetime.date diretamente.
+    
+    Args:
+        data_dict (dict): O dicionário com possíveis objetos date
+        
+    Returns:
+        dict: O dicionário com todas as datas convertidas para datetime
+    """
+    if not isinstance(data_dict, dict):
+        return data_dict
+        
+    result = {}
+    for key, value in data_dict.items():
+        if isinstance(value, date) and not isinstance(value, datetime):
+            # Converter date para datetime
+            result[key] = datetime.combine(value, datetime.min.time())
+        elif isinstance(value, dict):
+            # Processar dicionários aninhados
+            result[key] = convert_dates_to_datetime(value)
+        elif isinstance(value, list):
+            # Processar listas
+            result[key] = [convert_dates_to_datetime(item) if isinstance(item, dict) else item for item in value]
+        else:
+            # Manter outros valores inalterados
+            result[key] = value
+    
+    return result
+
 # Rota para login e geração de token
 @app.post("/token", response_model=schemas.Token)
 async def login_for_access_token(form_data: schemas.LoginRequest, db=Depends(database.get_db)):
     user = await auth.authenticate_user(db, form_data.username, form_data.senha)
     if not user:
+        # Registrar atividade de login com falha
+        await db["atividades"].insert_one({
+            "tipo": "login",
+            "descricao": f"Tentativa de login falhou para o usuário: {form_data.username}",
+            "usuario_nome": form_data.username,
+            "data": datetime.now(),
+            "sucesso": False
+        })
         logging.warning("Credenciais inválidas fornecidas.")
         raise HTTPException(status_code=401, detail="Credenciais inválidas")
     
@@ -393,6 +491,10 @@ async def atualizar_pedido(pedido_id: int, pedido: schemas.PedidoCreate, db=Depe
             )
 
         logging.info(f"Dados para atualização após transformação: {update_data}")
+        
+        # Converter todos os objetos datetime.date para datetime.datetime
+        update_data = convert_dates_to_datetime(update_data)
+        logging.info(f"Dados após conversão de datas: {update_data}")
 
         # Atualizar o pedido
         result = await db["pedidos"].update_one(
@@ -467,11 +569,13 @@ async def atualizar_pedido_com_historico(
     current_user=Depends(get_current_user)
 ):
     try:
-        # Busca o pedido atual
+        logging.info(f"Requisição PUT recebida para o pedido ID: {pedido_id} com histórico")
+        
+        # Buscar o pedido atual para comparações
         pedido_atual = await db["pedidos"].find_one({"id": pedido_id})
         if not pedido_atual:
             raise HTTPException(status_code=404, detail="Pedido não encontrado.")
-        
+            
         # Verificar se o usuário é admin ou gestor
         is_admin = current_user.get("tipo_usuario") == "admin"
         is_gestor = current_user.get("tipo_usuario") == "gestor"
@@ -497,44 +601,16 @@ async def atualizar_pedido_com_historico(
             logging.warning(f"Usuário {usuario_nome} (tipo: {current_user.get('tipo_usuario')}) tentou editar pedido #{pedido_id} sem permissão")
             raise HTTPException(status_code=403, detail=msg_erro)
         
-        # Prepara os dados para atualização
+        # Obter os dados atualizados e o histórico de alterações
         update_data = pedido.dict(exclude_unset=True)
-        logging.info(f"Dados iniciais para atualização com histórico: {update_data}")
+        historico = update_data.pop("historico", None)
         
-        # Extrai o histórico de alterações se existir
-        historico = update_data.pop("historico", []) if hasattr(pedido, "historico") else []
-        
-        # Usar APENAS o nome do usuário obtido do token
-        usuario_nome = current_user.get("nome")
-        if not usuario_nome:
-            usuario_nome = current_user.get("username", "Sistema")
-            
-        logging.info(f"Usuário autenticado: {usuario_nome}")
-        
-        # Sobrescreve o campo usuario_nome com o usuário autenticado
+        # Sobrescreve o campo usuario_nome, ignorando o enviado pelo cliente
         update_data["usuario_nome"] = usuario_nome
         
         # Manter o setor original do pedido, exceto se for admin ou gestor
         if not (is_admin or is_gestor):
             update_data["setor"] = pedido_atual.get("setor", setor_usuario)
-        
-        # Manter a data original do pedido, permitindo alteração apenas para administradores
-        if "deliveryDate" in update_data:
-            if not is_admin:
-                logging.info(f"Usuário não é admin, mantendo a data original do pedido: {pedido_atual.get('deliveryDate')}")
-                del update_data["deliveryDate"]
-            else:
-                logging.info(f"Admin alterando a data do pedido para: {update_data['deliveryDate']}")
-                # Se for admin, registrar a alteração no histórico
-                hist_data_date = {
-                    "pedido_id": pedido_id,
-                    "usuario_nome": usuario_nome,
-                    "campo_alterado": "Data do Pedido",
-                    "valor_anterior": pedido_atual.get('deliveryDate').strftime("%d/%m/%Y") if pedido_atual.get('deliveryDate') else "Não definida",
-                    "valor_novo": update_data["deliveryDate"].strftime("%d/%m/%Y") if isinstance(update_data["deliveryDate"], datetime) else str(update_data["deliveryDate"]),
-                    "data_edicao": datetime.now()
-                }
-                await db["pedido_historico"].insert_one(hist_data_date)
         
         # Processar a data de conclusão
         if "completionDate" in update_data:
@@ -570,6 +646,10 @@ async def atualizar_pedido_com_historico(
         # Registra o status anterior
         status_anterior = pedido_atual.get("status", "Pendente")
         status_novo = update_data.get("status", status_anterior)
+        
+        # Converter todos os objetos datetime.date para datetime.datetime
+        update_data = convert_dates_to_datetime(update_data)
+        logging.info(f"Dados após conversão de datas: {update_data}")
         
         # Atualiza o pedido
         result = await db["pedidos"].update_one(
@@ -1308,3 +1388,43 @@ async def gerar_relatorio_financeiro(
             status_code=500,
             detail=f"Erro ao gerar relatório financeiro: {str(e)}"
         )
+
+@app.get("/logs")
+async def listar_logs(
+    tipo: str = Query(None),
+    start_date: str = Query(None),
+    end_date: str = Query(None),
+    search: str = Query(None),
+    db=Depends(database.get_db),
+    current_user=Depends(get_current_user)
+):
+    """
+    Endpoint para listar logs do sistema (coleção 'atividades').
+    Permite filtrar por tipo, data e texto.
+    Apenas gestores e admins podem acessar.
+    """
+    if current_user.get("tipo_usuario") not in ["gestor", "admin"]:
+        raise HTTPException(status_code=403, detail="Acesso não autorizado. Apenas gestores podem visualizar logs.")
+
+    filtro = {}
+    if tipo:
+        filtro["tipo"] = tipo
+    if start_date and end_date:
+        from datetime import datetime
+        filtro["data"] = {
+            "$gte": datetime.fromisoformat(start_date),
+            "$lte": datetime.fromisoformat(end_date)
+        }
+    if search:
+        filtro["$or"] = [
+            {"descricao": {"$regex": search, "$options": "i"}},
+            {"usuario_nome": {"$regex": search, "$options": "i"}},
+            {"tipo": {"$regex": search, "$options": "i"}},
+            {"pedido_id": {"$regex": search, "$options": "i"}}
+        ]
+    logs = await db["atividades"].find(filtro).sort("data", -1).to_list(200)
+    for log in logs:
+        if "_id" in log:
+            log["id"] = str(log["_id"])
+            del log["_id"]
+    return logs
