@@ -107,11 +107,14 @@ class PedidoHistorico(BaseModel):
 # Modelo de atividade para o MongoDB
 class Atividade(BaseModel):
     id: Optional[str] = None
-    tipo: str  # criacao, edicao, conclusao, cancelamento, login, registro, orcamento
+    tipo: str  # criacao, edicao, conclusao, cancelamento, login, registro, orcamento, seguranca, erro
     descricao: str
     usuario_nome: str
     data: datetime = Field(default_factory=datetime.now)
     pedido_id: Optional[int] = None
+    ip_address: Optional[str] = None
+    user_agent: Optional[str] = None
+    dados_adicionais: Optional[dict] = None
     
     class Config:
         json_encoders = {

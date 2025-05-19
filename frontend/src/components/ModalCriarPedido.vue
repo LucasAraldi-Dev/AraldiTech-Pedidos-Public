@@ -1,6 +1,9 @@
 <template>
   <div v-if="isOpen" class="modal-overlay" @click.self="handleOverlayClick">
     <div class="order-form" @click.stop>
+      <button type="button" class="close-modal-btn" @click="closeForm">
+        <i class="material-icons">close</i>
+      </button>
       <div class="form-header">
         <h2>ADICIONAR PEDIDO</h2>
         <div class="user-info" v-if="userName">
@@ -347,6 +350,34 @@ export default {
 
     // Verificar se o dispositivo é móvel
     this.isMobile = window.innerWidth < 768;
+
+    // Monitorar scroll para adicionar efeito sticky aos botões
+    this.$nextTick(() => {
+      const formEl = this.$el.querySelector('.order-form');
+      const buttonsEl = this.$el.querySelector('.form-buttons');
+      
+      if (formEl && buttonsEl) {
+        this.handleScroll = () => {
+          // Verifica se estamos próximos do final do formulário
+          const isNearBottom = formEl.scrollHeight - formEl.scrollTop - formEl.clientHeight < 50;
+          
+          if (isNearBottom) {
+            buttonsEl.classList.remove('sticky');
+          } else {
+            buttonsEl.classList.add('sticky');
+          }
+        };
+        
+        formEl.addEventListener('scroll', this.handleScroll);
+      }
+    });
+  },
+  beforeUnmount() {
+    // Limpar os event listeners quando o componente for desmontado
+    const formEl = this.$el.querySelector('.order-form');
+    if (formEl && this.handleScroll) {
+      formEl.removeEventListener('scroll', this.handleScroll);
+    }
   },
   methods: {
     async handleCreateOrder() {
@@ -678,30 +709,60 @@ export default {
   width: 100vw;
   height: 100vh;
   background-color: rgba(0, 0, 0, 0.85); 
-  z-index: 1000;
+  z-index: var(--z-index-modal);
   display: flex;
   justify-content: center;
   align-items: center;
   transition: opacity 0.3s ease-in-out;
   overflow-y: auto;
-  padding: 15px;
+  padding: var(--spacing-md);
   box-sizing: border-box;
+}
+
+/* Botão de fechar no canto superior */
+.close-modal-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: rgba(255, 111, 97, 0.2);
+  color: #fff;
+  border: 1px solid #ff6f61;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  z-index: 10;
+  transition: all 0.2s ease;
+}
+
+.close-modal-btn:hover {
+  background-color: rgba(255, 111, 97, 0.3);
+}
+
+.close-modal-btn i {
+  font-size: 20px;
+  margin: 0;
 }
 
 /* Estilo do Formulário */
 .order-form {
   background-color: #1f1f1f; 
   color: #f5f5f5;
-  padding: 30px; 
-  border-radius: 10px;
-  width: 100%;
-  max-width: 800px; 
+  padding: var(--spacing-lg); 
+  border-radius: var(--border-radius-lg);
+  width: var(--modal-width-md);
+  max-width: var(--modal-max-width); 
   box-sizing: border-box;
   position: relative;
   text-transform: none;
   overflow-y: auto;
-  max-height: 90vh;
+  max-height: var(--modal-max-height);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  margin: 20px 0;
 }
 
 /* Cabeçalho do formulário */
@@ -1019,6 +1080,7 @@ input:checked + .slider:before {
   justify-content: space-between;
   margin-top: 20px;
   gap: 15px;
+  position: relative;
 }
 
 button {
@@ -1048,6 +1110,8 @@ button i {
   align-items: center;
   justify-content: center;
   min-height: 45px;
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .submit-btn:hover {
@@ -1055,14 +1119,15 @@ button i {
 }
 
 .close-btn {
-  background-color: transparent;
-  color: #999;
+  background-color: rgba(51, 51, 51, 0.7);
+  color: #f5f5f5;
   border: 1px solid #555;
 }
 
 .close-btn:hover {
   background-color: #333;
   color: #fff;
+  border-color: #999;
 }
 
 /* Mensagem de sucesso */
@@ -1079,8 +1144,9 @@ button i {
 /* Tablets e telas menores (1024x768) */
 @media (max-width: 1024px) {
   .order-form {
-    max-width: 90%;
-    padding: 25px;
+    width: 90%;
+    max-width: var(--modal-max-width);
+    padding: 20px;
   }
   
   .form-header h2 {
@@ -1095,7 +1161,8 @@ button i {
   }
   
   .order-form {
-    max-width: 95%;
+    width: 90%;
+    max-width: 550px;
     padding: 20px;
   }
   
@@ -1107,6 +1174,51 @@ button i {
   .user-info {
     margin-top: 10px;
   }
+}
+
+/* Dispositivos móveis */
+@media (max-width: 480px) {
+  .modal-overlay {
+    padding: 10px;
+    align-items: flex-start;
+  }
+  
+  .order-form {
+    width: 95%;
+    padding: 15px;
+    margin-top: 10px;
+    margin-bottom: 10px;
+    max-height: 85vh;
+  }
+  
+  .close-modal-btn {
+    top: 10px;
+    right: 10px;
+    width: 32px;
+    height: 32px;
+    background-color: rgba(255, 111, 97, 0.3);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  }
+  
+  .close-modal-btn i {
+    font-size: 18px;
+  }
+  
+  .form-header h2 {
+    font-size: 1.2rem;
+    text-align: center;
+    width: 100%;
+    margin-bottom: 10px;
+  }
+  
+  .user-info {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .form-group {
+    margin-bottom: 12px;
+  }
   
   .form-group label {
     font-size: 0.85rem;
@@ -1116,46 +1228,6 @@ button i {
   .form-group select,
   .form-group textarea {
     padding: 10px;
-    font-size: 0.9rem;
-  }
-  
-  textarea {
-    min-height: 80px;
-  }
-  
-  button {
-    padding: 10px 15px;
-    font-size: 0.9rem;
-  }
-}
-
-/* Dispositivos móveis */
-@media (max-width: 480px) {
-  .modal-overlay {
-    padding: 10px;
-  }
-  
-  .order-form {
-    padding: 15px;
-    max-width: 100%;
-  }
-  
-  .form-header h2 {
-    font-size: 1.2rem;
-  }
-  
-  .form-group {
-    margin-bottom: 10px;
-  }
-  
-  .form-group label {
-    font-size: 0.8rem;
-  }
-  
-  .form-group input,
-  .form-group select,
-  .form-group textarea {
-    padding: 8px;
     font-size: 0.85rem;
   }
   
@@ -1164,13 +1236,95 @@ button i {
   }
   
   .form-buttons {
-    flex-direction: column;
+    position: sticky;
+    bottom: 0;
+    background-color: #1f1f1f;
+    padding-top: 10px;
+    margin-bottom: 0;
+    z-index: 5;
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    margin-top: 15px;
   }
   
-  button {
-    padding: 10px;
+  .form-buttons button {
+    padding: 12px 15px;
     font-size: 0.85rem;
+  }
+  
+  .submit-btn, .close-btn {
+    min-height: 44px;
+  }
+  
+  button i {
+    margin-right: 5px;
+    font-size: 16px;
+  }
+  
+  .submit-btn {
+    background-color: #ff6f61;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  }
+}
+
+/* Ajustes para telas pequenas */
+@media (max-width: 360px) {
+  .form-buttons {
+    flex-direction: column;
+    gap: 10px;
+    padding-bottom: 5px;
+  }
+  
+  .form-buttons button {
+    width: 100%;
+    margin: 0;
+  }
+  
+  .submit-btn {
+    order: -1;
+    margin-bottom: 8px;
+  }
+}
+
+/* Ajustes para modo paisagem em telas pequenas */
+@media (max-height: 500px) {
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  
+  .full-width {
+    grid-column: 1 / -1;
+  }
+  
+  .form-buttons {
+    padding: 5px 0;
     margin-top: 10px;
+  }
+  
+  textarea {
+    min-height: 60px;
+  }
+}
+
+/* Ajuste para telas menores com altura suficiente */
+@media (max-width: 480px) and (min-height: 600px) {
+  .order-form {
+    padding-bottom: 70px;
+  }
+  
+  .form-buttons {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: #1f1f1f;
+    padding: 10px 15px;
+    margin: 0;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
+    z-index: 100;
   }
 }
 
@@ -1521,6 +1675,144 @@ button i {
   transform: translateY(-50%);
   color: #999;
   pointer-events: none; /* Para não interferir com cliques no input */
+}
+
+/* Fundo para os botões para efeito visual na parte inferior */
+.form-buttons::before {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  right: 0;
+  height: 20px;
+  background: linear-gradient(to top, rgba(31, 31, 31, 1), rgba(31, 31, 31, 0));
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.form-buttons.sticky::before {
+  opacity: 1;
+}
+
+/* Dispositivos móveis em orientação retrato */
+@media (max-width: 480px) and (orientation: portrait) {
+  .modal-overlay {
+    padding: 10px;
+    align-items: flex-start;
+  }
+  
+  .order-form {
+    width: 95%;
+    padding: 15px;
+    margin-top: 10px;
+    margin-bottom: 10px;
+    max-height: 85vh;
+  }
+  
+  .close-modal-btn {
+    top: 10px;
+    right: 10px;
+    width: 32px;
+    height: 32px;
+    background-color: rgba(255, 111, 97, 0.3);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  }
+  
+  .close-modal-btn i {
+    font-size: 18px;
+  }
+  
+  .form-header h2 {
+    font-size: 1.2rem;
+    text-align: center;
+    width: 100%;
+    margin-bottom: 10px;
+  }
+  
+  .user-info {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Ajustes de formulário para dispositivos móveis (ambas orientações) */
+@media (max-width: 480px) {
+  .form-group {
+    margin-bottom: 12px;
+  }
+  
+  .form-group label {
+    font-size: 0.85rem;
+  }
+  
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    padding: 10px;
+    font-size: 0.85rem;
+  }
+  
+  textarea {
+    min-height: 70px;
+  }
+  
+  .form-buttons {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    margin-top: 15px;
+    padding: 10px 0;
+  }
+  
+  .form-buttons button {
+    padding: 12px 15px;
+    font-size: 0.85rem;
+    min-height: 44px;
+  }
+  
+  button i {
+    margin-right: 5px;
+    font-size: 16px;
+  }
+  
+  .submit-btn {
+    background-color: #ff6f61;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  }
+}
+
+/* Dispositivos móveis em orientação paisagem */
+@media (max-width: 850px) and (orientation: landscape) {
+  .modal-overlay {
+    align-items: flex-start;
+    padding: 10px 15px;
+  }
+  
+  .order-form {
+    max-height: 85vh;
+    padding: 15px;
+    margin: 5px 0;
+  }
+  
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  
+  .form-header {
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+  }
+  
+  .form-group {
+    margin-bottom: 10px;
+  }
+  
+  textarea {
+    min-height: 60px;
+  }
 }
 </style>
 

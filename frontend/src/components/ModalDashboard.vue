@@ -801,30 +801,29 @@ export default {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100vw;
-  height: 100vh;
-  background-color: rgba(0, 0, 0, 0.85);
-  z-index: 1000;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.8);
   display: flex;
   justify-content: center;
   align-items: center;
-  transition: opacity 0.3s ease-in-out;
+  z-index: var(--z-index-modal);
   overflow-y: auto;
-  padding: 15px;
+  padding: var(--spacing-md);
   box-sizing: border-box;
 }
 
 .modal-content {
   background-color: #1f1f1f;
-  border-radius: 10px;
-  width: 90%;
-  max-width: 1200px;
-  max-height: 90vh;
+  border-radius: var(--border-radius-lg);
+  box-shadow: 0 5px 25px rgba(0, 0, 0, 0.5);
+  width: var(--modal-width-md);
+  max-width: var(--modal-max-width);
+  max-height: var(--modal-max-height);
   overflow-y: auto;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  position: relative;
   display: flex;
   flex-direction: column;
-  position: relative;
   color: #f5f5f5;
   scrollbar-width: thin;
   scrollbar-color: #ff6f61 #333;
@@ -1334,38 +1333,128 @@ canvas {
 }
 
 /* Responsividade */
+@media (max-width: 1280px) {
+  .dashboard-container {
+    width: var(--modal-width-md);
+    max-width: var(--modal-max-width);
+  }
+  
+  .dashboard-header h2 {
+    font-size: var(--font-size-xl);
+  }
+  
+  .metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .charts-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 768px) {
-  .modal-content {
-    width: 95%;
-    max-height: 95vh;
+  .dashboard-container {
+    width: var(--modal-width-lg);
+    max-width: var(--modal-max-width);
+    padding: var(--spacing-md);
   }
   
-  .statistics-row {
+  .dashboard-header {
+    padding: var(--spacing-md);
+  }
+  
+  .dashboard-header h2 {
+    font-size: var(--font-size-lg);
+  }
+  
+  .dashboard-content {
+    padding: var(--spacing-md);
+  }
+  
+  .metrics-grid {
     grid-template-columns: 1fr;
+    gap: var(--spacing-md);
   }
   
-  .charts-container {
-    grid-template-columns: 1fr;
+  .metric-card {
+    padding: var(--spacing-md);
   }
   
-  .kpi-card {
-    padding: 15px;
+  .period-selector {
+    flex-direction: column;
+    align-items: stretch;
   }
   
-  .chart-wrapper {
-    height: 250px;
+  .period-buttons {
+    margin-top: var(--spacing-sm);
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard-container {
+    width: var(--modal-width-lg);
+    max-width: var(--modal-max-width);
+    padding: var(--spacing-sm);
   }
   
-  .report-options {
-    grid-template-columns: 1fr;
+  .dashboard-header {
+    padding: var(--spacing-sm);
   }
   
-  .date-range {
-    grid-template-columns: 1fr;
+  .dashboard-header h2 {
+    font-size: var(--font-size-md);
   }
   
-  .financial-kpis {
-    grid-template-columns: 1fr;
+  .dashboard-content {
+    padding: var(--spacing-sm);
+  }
+  
+  .chart-container, .metric-card {
+    padding: var(--spacing-sm);
+    margin-bottom: var(--spacing-sm);
+  }
+  
+  .metric-value {
+    font-size: var(--font-size-xl);
+  }
+  
+  .metric-change {
+    font-size: var(--font-size-xs);
+  }
+}
+
+/* Ajustes específicos para notebooks com zoom */
+@media screen and (min-resolution: 1.25dppx) {
+  .dashboard-container {
+    max-height: var(--modal-max-height);
+  }
+  
+  .dashboard-content {
+    padding: var(--spacing-md);
+  }
+}
+
+/* Ajustes para telas 720p */
+@media (min-height: 720px) and (max-height: 768px) {
+  .modal-overlay {
+    align-items: flex-start;
+    padding-top: 2vh;
+  }
+  
+  .dashboard-container {
+    max-height: 85vh;
+  }
+}
+
+/* Ajustes para monitores pequenos de 14 polegadas */
+@media screen and (max-width: 1366px) and (max-height: 768px) {
+  .dashboard-container {
+    width: var(--modal-width-md);
+    padding: var(--spacing-md);
+  }
+  
+  .metrics-grid {
+    gap: var(--spacing-sm);
   }
 }
 

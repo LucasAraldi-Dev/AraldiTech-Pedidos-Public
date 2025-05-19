@@ -56,6 +56,9 @@ html, body {
   color: #fff;
 }
 
+/* Importar arquivo de responsividade para garantir acesso global às variáveis */
+@import url('./assets/responsive.css');
+
 #app {
   display: flex;
   flex-direction: column;
@@ -266,6 +269,119 @@ input:focus, select:focus, textarea:focus {
   
   .container {
     padding: 0 var(--spacing-xs);
+  }
+}
+
+/* Regras globais para modais */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.85); 
+  z-index: var(--z-index-modal);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: opacity 0.3s ease-in-out;
+  overflow-y: auto;
+  padding: var(--spacing-md);
+  box-sizing: border-box;
+}
+
+.order-form,
+.print-modal,
+.dashboard-container,
+.modal-content,
+.modal-responsive {
+  background-color: #1f1f1f; 
+  color: #f5f5f5;
+  padding: var(--spacing-lg); 
+  border-radius: var(--border-radius-lg);
+  width: var(--modal-width-md);
+  max-width: var(--modal-max-width); 
+  max-height: var(--modal-max-height);
+  overflow-y: auto;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+/* Ajustes globais de responsividade para todos os modais */
+@media (max-width: 1024px) {
+  .order-form,
+  .print-modal,
+  .dashboard-container,
+  .modal-content,
+  .modal-responsive {
+    width: var(--modal-width-md);
+    max-width: var(--modal-max-width);
+    padding: var(--spacing-md);
+  }
+}
+
+@media (max-width: 768px) {
+  .order-form,
+  .print-modal,
+  .dashboard-container,
+  .modal-content,
+  .modal-responsive {
+    width: var(--modal-width-lg);
+    max-width: var(--modal-max-width);
+    padding: var(--spacing-md);
+  }
+}
+
+@media (max-width: 480px) {
+  .modal-overlay {
+    padding: var(--spacing-xs);
+  }
+  
+  .order-form,
+  .print-modal,
+  .dashboard-container,
+  .modal-content,
+  .modal-responsive {
+    width: var(--modal-width-lg);
+    max-width: var(--modal-max-width);
+    padding: var(--spacing-sm);
+  }
+}
+
+/* Ajustes para telas com zoom (notebooks, etc) */
+@media screen and (min-resolution: 1.25dppx) {
+  .order-form,
+  .print-modal,
+  .dashboard-container,
+  .modal-content,
+  .modal-responsive {
+    max-height: var(--modal-max-height);
+  }
+}
+
+/* Ajustes para telas 720p */
+@media (min-height: 720px) and (max-height: 768px) {
+  .modal-overlay {
+    align-items: flex-start;
+    padding-top: 2vh;
+  }
+  
+  .order-form,
+  .print-modal,
+  .dashboard-container,
+  .modal-content,
+  .modal-responsive {
+    max-height: 85vh;
+  }
+}
+
+/* Ajustes para monitores pequenos de 14 polegadas */
+@media screen and (max-width: 1366px) and (max-height: 768px) {
+  .order-form,
+  .print-modal,
+  .dashboard-container,
+  .modal-content,
+  .modal-responsive {
+    padding: var(--spacing-md);
   }
 }
 </style>

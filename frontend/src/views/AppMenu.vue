@@ -187,6 +187,7 @@ import html2canvas from "html2canvas";
 import * as axiosModule from "axios";
 const axios = axiosModule.default || axiosModule;
 import { Chart, registerables } from 'chart.js';
+import authService from '@/api/authService';
 
 // Registrar todos os componentes do Chart.js
 Chart.register(...registerables);
@@ -442,15 +443,17 @@ export default {
       // Abrir a tela de criação de novo pedido
       this.isCreateOrderSectionOpen = true;
     },
-    logout() {
-      // Remove todos os itens relacionados à autenticação
-      localStorage.removeItem("user");
-      localStorage.removeItem("tipo_usuario");
-      localStorage.removeItem("token_type");
-      localStorage.removeItem("access_token");
-      
-      console.log("Logout realizado, redirecionando para Login");
-      this.$router.push({ name: "Login" });
+    async logout() {
+      try {
+        // Usa o serviço de autenticação para fazer logout
+        await authService.logout();
+        console.log("Logout realizado, redirecionando para Login");
+      } catch (error) {
+        console.error("Erro durante logout:", error);
+      } finally {
+        // Redireciona para a página de login independentemente do resultado
+        this.$router.push({ name: "Login" });
+      }
     },
     toggleMenu() {
       this.isMenuOpen = !this.isMenuOpen;

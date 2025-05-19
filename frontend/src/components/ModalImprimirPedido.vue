@@ -190,6 +190,14 @@ export default {
       if (status === 'em andamento') return 'status-progress';
       if (status === 'cancelado') return 'status-canceled';
       return 'status-pending';
+    },
+    // Detectar se é um dispositivo móvel
+    isMobile() {
+      return window.innerWidth <= 600;
+    },
+    // Detectar a orientação do dispositivo
+    isPortrait() {
+      return window.innerHeight > window.innerWidth;
     }
   },
   created() {
@@ -380,6 +388,10 @@ export default {
           return;
         }
 
+        // Usar as propriedades computadas para detectar dispositivo móvel e orientação
+        const isMobile = this.isMobile;
+        const isPortrait = this.isPortrait;
+        
         // Criando um clone do elemento para ser usado na captura
         // Isso evita modificar o elemento original e possíveis efeitos colaterais
         const cloneDiv = orderElement.cloneNode(true);
@@ -389,7 +401,7 @@ export default {
         cloneDiv.style.position = 'absolute';
         cloneDiv.style.top = '-9999px';
         cloneDiv.style.left = '-9999px';
-        cloneDiv.style.width = `${orderElement.offsetWidth}px`;
+        cloneDiv.style.width = isMobile ? '100%' : `${orderElement.offsetWidth}px`;
         cloneDiv.style.maxHeight = 'none';
         cloneDiv.style.height = 'auto';
         cloneDiv.style.overflowY = 'visible';
@@ -406,6 +418,65 @@ export default {
         
         // Adicionar uma classe especial para captura
         cloneDiv.setAttribute('data-capture-clone', 'true');
+        
+        // Configurações específicas para dispositivos móveis
+        if (isMobile) {
+          cloneDiv.style.width = '540px'; // Largura fixa para evitar distorção
+          cloneDiv.style.fontSize = '14px'; // Reduzir tamanho da fonte
+          
+          // Ajustar layout com base na orientação
+          const cloneGrid = cloneDiv.querySelector('.order-details-grid');
+          if (cloneGrid) {
+            cloneGrid.style.display = 'grid';
+            cloneGrid.style.gridTemplateColumns = '1fr'; // Sempre uma coluna em mobile
+            cloneGrid.style.gap = '12px';
+          }
+          
+          // Ajustar tamanho de elementos específicos
+          const detailItems = cloneDiv.querySelectorAll('.detail-item');
+          detailItems.forEach(item => {
+            item.style.padding = '10px';
+            item.style.margin = '0';
+          });
+          
+          // Ajustar cabeçalho para ocupar menos espaço vertical
+          const modalHeader = cloneDiv.querySelector('.modal-header');
+          if (modalHeader) {
+            modalHeader.style.marginBottom = '8px';
+          }
+          
+          // Ajustar logo com base na orientação
+          const logo = cloneDiv.querySelector('.logo');
+          if (logo) {
+            logo.style.width = isPortrait ? '100px' : '120px';
+            logo.style.marginBottom = '10px';
+          }
+          
+          // Ajustar título
+          const title = cloneDiv.querySelector('.modal-header h2');
+          if (title) {
+            title.style.fontSize = isPortrait ? '1.1rem' : '1.2rem';
+            title.style.marginBottom = '10px';
+          }
+          
+          // Ajustar ID do pedido
+          const orderId = cloneDiv.querySelector('.order-id p');
+          if (orderId) {
+            orderId.style.fontSize = isPortrait ? '0.9rem' : '1rem';
+          }
+          
+          // Garantir que a imagem final tenha tamanho adequado para visualização no dispositivo
+          cloneDiv.setAttribute('data-orientation', isPortrait ? 'portrait' : 'landscape');
+        } else {
+          // Configurações específicas para desktop para evitar cortes
+          cloneDiv.style.width = `${orderElement.offsetWidth}px`;
+          
+          // Reorganizar completamente o grid para desktop na geração de imagem
+          this.reorganizeGridForImageCapture(cloneDiv);
+          
+          // Adicionar padding extra na parte de baixo do clone
+          cloneDiv.style.paddingBottom = '60px';
+        }
         
         // Garantir que elementos fixos sejam renderizados corretamente
         const fixElements = (container) => {
@@ -426,6 +497,11 @@ export default {
                 child.style.visibility = 'visible';
                 child.style.overflow = 'visible';
                 child.style.display = child.classList.contains('order-details-grid') ? 'grid' : 'flex';
+                
+                // Ajuste adicional para dispositivos móveis
+                if (isMobile && child.classList.contains('detail-item')) {
+                  child.style.minHeight = 'auto';
+                }
               }
             }
             
@@ -454,14 +530,26 @@ export default {
         const cloneGrid = cloneDiv.querySelector('.order-details-grid');
         if (cloneGrid) {
           cloneGrid.style.display = 'grid';
-          cloneGrid.style.gridTemplateColumns = '1fr 1fr';
-          cloneGrid.style.gap = '16px';
+          cloneGrid.style.gridTemplateColumns = isMobile ? '1fr' : '1fr 1fr';
+          cloneGrid.style.gap = isMobile ? '12px' : '16px';
         }
         
         // Dar tempo para o DOM renderizar o clone completamente
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Adicionar um elemento de espaçamento extra no final
+        if (!isMobile) {
+          const spacer = document.createElement('div');
+          spacer.style.height = '50px';
+          spacer.style.width = '100%';
+          cloneDiv.appendChild(spacer);
+        }
+        
+        // Forçar recálculo de layout
+        void cloneDiv.offsetHeight;
         
         console.log('[DEBUG] Dimensões do clone para captura:', {
+          isMobile,
           scrollHeight: cloneDiv.scrollHeight,
           offsetHeight: cloneDiv.offsetHeight,
           clientHeight: cloneDiv.clientHeight,
@@ -469,15 +557,19 @@ export default {
         });
         
         try {
+          // Certificar que a altura do clone foi calculada corretamente
+          const fullHeight = cloneDiv.scrollHeight || cloneDiv.offsetHeight;
+          console.log('[DEBUG] Altura final para captura:', fullHeight);
+          
           // Usar html2canvas com configurações otimizadas
           const canvas = await html2canvas(cloneDiv, {
             useCORS: true,
             allowTaint: true,
             backgroundColor: "#1c1c1c",
-            scale: 2, // Bom equilíbrio entre qualidade e tamanho
-            height: cloneDiv.scrollHeight,
+            scale: isMobile ? 1.5 : 2, // Reduzir escala para dispositivos móveis
+            height: fullHeight + 100, // Aumentar margem extra para evitar cortes
             width: cloneDiv.offsetWidth,
-            windowHeight: cloneDiv.scrollHeight,
+            windowHeight: fullHeight + 100, // Margem maior para desktop
             windowWidth: cloneDiv.offsetWidth,
             scrollY: 0,
             scrollX: 0,
@@ -521,11 +613,16 @@ export default {
       try {
         console.log('[DEBUG] Utilizando método de fallback para captura');
         
+        // Usar as propriedades computadas para detectar dispositivo móvel e orientação
+        const isMobile = this.isMobile;
+        const isPortrait = this.isPortrait;
+        
         // 1. Salvar as configurações originais
         const originalOverflow = document.body.style.overflow;
         const originalOverflowY = orderElement.style.overflowY;
         const originalHeight = orderElement.style.height;
         const originalMaxHeight = orderElement.style.maxHeight;
+        const originalWidth = orderElement.style.width;
         
         // 2. Armazenar estado da seção de auditoria
         const auditInfoExpandedOriginal = this.auditInfoExpanded;
@@ -544,16 +641,58 @@ export default {
         orderElement.style.height = 'auto';
         orderElement.style.maxHeight = 'none';
         
-        try {
-          // 5. Aguardar rendering
-          await new Promise(resolve => setTimeout(resolve, 500));
+        // 5. Configurações específicas para dispositivos móveis
+        if (isMobile) {
+          // Fixar largura para evitar distorção
+          orderElement.style.width = '540px';
           
-          // 6. Capturar com configurações mais básicas
+          // Ajustar grid para uma coluna com base na orientação
+          const grid = orderElement.querySelector('.order-details-grid');
+          if (grid) {
+            const originalGridStyle = grid.style.gridTemplateColumns;
+            grid.style.gridTemplateColumns = '1fr';
+            grid.style.gap = '12px';
+            
+            // Restaurar depois
+            setTimeout(() => {
+              grid.style.gridTemplateColumns = originalGridStyle;
+            }, 2000);
+          }
+          
+          // Marcar o elemento com a orientação
+          orderElement.setAttribute('data-orientation', isPortrait ? 'portrait' : 'landscape');
+        } else {
+          // Configurações específicas para desktop para evitar cortes
+          orderElement.style.width = `${orderElement.offsetWidth}px`;
+          
+          // Reorganizar completamente o grid para desktop na geração de imagem
+          this.reorganizeGridForImageCapture(orderElement);
+          
+          // Adicionar padding extra na parte de baixo 
+          orderElement.style.paddingBottom = '60px';
+        }
+        
+        try {
+          // 6. Aguardar rendering
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          // Forçar recálculo de layout
+          void orderElement.offsetHeight;
+          
+          // Calcular a altura total do conteúdo
+          const fullHeight = orderElement.scrollHeight || orderElement.offsetHeight;
+          console.log('[DEBUG] Altura total no método fallback:', fullHeight);
+          
+          // 7. Capturar com configurações mais básicas
           const canvas = await html2canvas(orderElement, {
             useCORS: true,
             allowTaint: true,
             backgroundColor: "#1c1c1c",
-            scale: 2,
+            scale: isMobile ? 1.5 : 2, // Escala menor para dispositivos móveis
+            height: fullHeight + 100, // Aumentar margem extra para evitar cortes
+            width: orderElement.offsetWidth,
+            windowHeight: fullHeight + 100, // Margem maior para desktop
+            windowWidth: orderElement.offsetWidth,
             scrollY: 0,
             scrollX: 0,
             onclone: (document, clonedOrderElement) => {
@@ -563,6 +702,13 @@ export default {
                 item.style.opacity = '1';
                 item.style.visibility = 'visible';
                 item.style.display = 'flex';
+                
+                // Ajustes específicos para mobile
+                if (isMobile) {
+                  item.style.padding = '10px';
+                  item.style.margin = '0';
+                  item.style.minHeight = 'auto';
+                }
               });
               
               // Ocultar botões e seção de auditoria
@@ -571,10 +717,51 @@ export default {
               
               const auditSection = clonedOrderElement.querySelector('.audit-section');
               if (auditSection) auditSection.style.display = 'none';
+              
+              // Configurações específicas para dispositivos móveis
+              if (isMobile) {
+                const grid = clonedOrderElement.querySelector('.order-details-grid');
+                if (grid) {
+                  grid.style.gridTemplateColumns = '1fr';
+                  grid.style.gap = '12px';
+                }
+                
+                // Ajustar cabeçalho
+                const header = clonedOrderElement.querySelector('.modal-header');
+                if (header) {
+                  header.style.marginBottom = '8px';
+                }
+                
+                // Ajustar logo com base na orientação
+                const logo = clonedOrderElement.querySelector('.logo');
+                if (logo) {
+                  logo.style.width = isPortrait ? '100px' : '120px';
+                  logo.style.marginBottom = '10px';
+                }
+                
+                // Ajustar título
+                const title = clonedOrderElement.querySelector('.modal-header h2');
+                if (title) {
+                  title.style.fontSize = isPortrait ? '1.1rem' : '1.2rem';
+                  title.style.marginBottom = '10px';
+                }
+                
+                // Ajustar ID do pedido
+                const orderId = clonedOrderElement.querySelector('.order-id p');
+                if (orderId) {
+                  orderId.style.fontSize = isPortrait ? '0.9rem' : '1rem';
+                }
+                
+                // Marcar o elemento com a orientação
+                clonedOrderElement.setAttribute('data-orientation', isPortrait ? 'portrait' : 'landscape');
+              } else {
+                // Aplicar o mesmo método de reorganização do grid no clone
+                this.reorganizeClonedGrid(clonedOrderElement);
+              }
             }
           });
           
-          // 7. Baixar imagem
+          // 8. Baixar imagem
           const imgData = canvas.toDataURL('image/png');
           const link = document.createElement('a');
           link.href = imgData;
@@ -588,11 +775,12 @@ export default {
           console.error("Erro no método de fallback:", error);
           toast.error("Não foi possível gerar a imagem. Tente novamente mais tarde.");
         } finally {
-          // 8. Restaurar configurações originais
+          // 9. Restaurar configurações originais
           document.body.style.overflow = originalOverflow;
           orderElement.style.overflowY = originalOverflowY;
           orderElement.style.height = originalHeight;
           orderElement.style.maxHeight = originalMaxHeight;
+          orderElement.style.width = originalWidth;
           this.auditInfoExpanded = auditInfoExpandedOriginal;
           
           if (actionButtons && originalButtonsDisplay !== null) {
@@ -603,6 +791,107 @@ export default {
         console.error("Erro no método de fallback:", error);
         toast.error("Não foi possível gerar a imagem. Tente novamente mais tarde.");
       }
+    },
+    // Método para reorganizar o grid durante a captura de imagem
+    reorganizeGridForImageCapture(container) {
+      // Obter o grid principal
+      const grid = container.querySelector('.order-details-grid');
+      if (!grid) return;
+      
+      // Configurar o grid para 2 colunas uniformes
+      grid.style.display = 'grid';
+      grid.style.gridTemplateColumns = '1fr 1fr';
+      grid.style.gap = '16px';
+      grid.style.marginBottom = '20px';
+      
+      // Obter todos os itens do grid
+      const items = grid.querySelectorAll('.detail-item');
+      
+      // Retirar todos os items do grid para reordená-los
+      const itemsArray = Array.from(items);
+      itemsArray.forEach(item => grid.removeChild(item));
+      
+      // Identificar o campo de observação
+      const observacaoItem = itemsArray.find(item => {
+        const label = item.querySelector('strong');
+        return label && label.textContent.includes('OBSERVAÇÃO');
+      });
+      
+      // Remover o campo de observação do array se encontrado
+      if (observacaoItem) {
+        const index = itemsArray.indexOf(observacaoItem);
+        if (index > -1) {
+          itemsArray.splice(index, 1);
+        }
+      }
+      
+      // Organizar os itens em duas colunas, exceto observação
+      itemsArray.forEach(item => {
+        // Remover classes que possam afetar o grid
+        item.classList.remove('full-width');
+        item.style.gridColumn = 'auto';
+        
+        // Adicionar de volta ao grid
+        grid.appendChild(item);
+      });
+      
+      // Adicionar o campo de observação como última linha ocupando toda a largura
+      if (observacaoItem) {
+        observacaoItem.style.gridColumn = '1 / -1'; // Ocupar todas as colunas
+        observacaoItem.classList.add('full-width');
+        grid.appendChild(observacaoItem);
+      }
+      
+      // Adicionar espaçamento para garantir que nada seja cortado
+      const lastItems = Array.from(grid.querySelectorAll('.detail-item')).slice(-3);
+      lastItems.forEach(item => {
+        item.style.marginBottom = '10px';
+        item.style.paddingBottom = '15px';
+      });
+    },
+    // Método para reorganizar o grid do clone no método de fallback
+    reorganizeClonedGrid(container) {
+      // Obter o grid principal
+      const grid = container.querySelector('.order-details-grid');
+      if (!grid) return;
+      
+      // Configurar o grid para 2 colunas uniformes
+      grid.style.display = 'grid';
+      grid.style.gridTemplateColumns = '1fr 1fr';
+      grid.style.gap = '16px';
+      grid.style.marginBottom = '20px';
+      
+      // Obter todos os itens do grid
+      const items = grid.querySelectorAll('.detail-item');
+      const itemsArray = Array.from(items);
+      
+      // Remover classes e configurações que possam afetar o grid
+      itemsArray.forEach(item => {
+        item.classList.remove('full-width');
+        item.style.gridColumn = 'auto';
+      });
+      
+      // Identificar o campo de observação
+      const observacaoItem = itemsArray.find(item => {
+        const label = item.querySelector('strong');
+        return label && label.textContent.includes('OBSERVAÇÃO');
+      });
+      
+      // Configurar o campo de observação para ocupar toda a largura
+      if (observacaoItem) {
+        observacaoItem.style.gridColumn = '1 / -1';
+        observacaoItem.classList.add('full-width');
+        
+        // Mover para o final do grid
+        grid.appendChild(observacaoItem);
+      }
+      
+      // Adicionar espaçamento para garantir que nada seja cortado
+      const lastItems = Array.from(grid.querySelectorAll('.detail-item')).slice(-3);
+      lastItems.forEach(item => {
+        item.style.marginBottom = '10px';
+        item.style.paddingBottom = '15px';
+      });
     },
   },
 };
@@ -1027,6 +1316,31 @@ button.primary-btn:hover:not(:disabled) {
 }
 
 /* Responsividade */
+@media screen and (max-width: 1024px) {
+  .print-modal {
+    width: var(--modal-width-md);
+    max-width: var(--modal-max-width);
+    padding: var(--spacing-md);
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .order-details-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-sm);
+  }
+
+  .print-modal {
+    width: var(--modal-width-lg);
+    max-width: var(--modal-max-width);
+    padding: var(--spacing-md);
+  }
+  
+  .action-buttons {
+    gap: var(--spacing-sm);
+  }
+}
+
 @media screen and (max-width: 600px) {
   .order-details-grid {
     grid-template-columns: 1fr;
@@ -1037,8 +1351,10 @@ button.primary-btn:hover:not(:disabled) {
   }
   
   .print-modal {
-    padding: 20px;
-    border-radius: 12px;
+    padding: var(--spacing-sm);
+    border-radius: var(--border-radius-lg);
+    width: var(--modal-width-lg);
+    max-width: var(--modal-max-width);
   }
   
   .action-buttons {
@@ -1050,16 +1366,42 @@ button.primary-btn:hover:not(:disabled) {
   }
 
   .order-id p {
-    font-size: 1.1rem;
+    font-size: var(--font-size-lg);
   }
 
   .modal-header h2 {
-    font-size: 1.2rem;
+    font-size: var(--font-size-lg);
   }
 
   button {
-    padding: 12px;
-    font-size: 0.85rem;
+    padding: var(--spacing-sm);
+    font-size: var(--font-size-sm);
+  }
+}
+
+/* Ajustes específicos para notebooks com zoom */
+@media screen and (min-resolution: 1.25dppx) {
+  .print-modal {
+    max-height: var(--modal-max-height);
+  }
+}
+
+/* Ajustes para telas 720p */
+@media (min-height: 720px) and (max-height: 768px) {
+  .modal-overlay {
+    align-items: flex-start;
+    padding-top: 2vh;
+  }
+  
+  .print-modal {
+    max-height: 85vh;
+  }
+}
+
+/* Ajustes para monitores pequenos de 14 polegadas */
+@media screen and (max-width: 1366px) and (max-height: 768px) {
+  .print-modal {
+    padding: var(--spacing-md);
   }
 }
 
@@ -1101,6 +1443,141 @@ button.primary-btn:hover:not(:disabled) {
   /* Mostrar todos os detalhes */
   display: flex !important;
   flex-direction: column !important;
+}
+
+/* Estilos específicos para o clone em dispositivos móveis */
+@media screen and (max-width: 600px) {
+  [data-capture-clone="true"] {
+    width: 540px !important;
+    font-size: 14px !important;
+  }
+  
+  [data-capture-clone="true"] .order-details-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+  
+  [data-capture-clone="true"] .detail-item {
+    padding: 10px !important;
+    margin: 0 !important;
+    min-height: auto !important;
+  }
+  
+  [data-capture-clone="true"] .logo {
+    width: 120px !important;
+    margin-bottom: 10px !important;
+  }
+  
+  [data-capture-clone="true"] .modal-header h2 {
+    font-size: 1.2rem !important;
+    margin-bottom: 10px !important;
+  }
+  
+  [data-capture-clone="true"] .order-id p {
+    font-size: 1rem !important;
+  }
+  
+  /* Ajustes específicos para orientação retrato */
+  [data-capture-clone="true"][data-orientation="portrait"] {
+    width: 480px !important; /* Largura um pouco menor para retrato */
+  }
+  
+  [data-capture-clone="true"][data-orientation="portrait"] .logo {
+    width: 100px !important;
+  }
+  
+  [data-capture-clone="true"][data-orientation="portrait"] .modal-header h2 {
+    font-size: 1.1rem !important;
+  }
+  
+  [data-capture-clone="true"][data-orientation="portrait"] .order-id p {
+    font-size: 0.9rem !important;
+  }
+  
+  /* Garantir que elementos do componente original não afetem a captura */
+  .print-modal {
+    transform: none !important;
+  }
+}
+
+/* Estilos específicos para desktop na captura de imagem */
+@media screen and (min-width: 601px) {
+  [data-capture-clone="true"] {
+    max-width: 650px !important; /* Largura máxima mais ampla para desktop */
+    padding: 40px 30px !important; /* Padding maior para evitar cortes */
+    padding-bottom: 80px !important; /* Padding extra na parte inferior */
+  }
+  
+  [data-capture-clone="true"] .detail-item {
+    padding: 15px !important;
+    margin-bottom: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+    align-items: flex-start !important;
+  }
+  
+  /* Garantir que os últimos itens não sejam cortados */
+  [data-capture-clone="true"] .detail-item:nth-last-child(-n+3) {
+    padding-bottom: 20px !important;
+    margin-bottom: 15px !important;
+  }
+  
+  /* Estilo específico para o campo de observação */
+  [data-capture-clone="true"] .detail-item.full-width {
+    grid-column: 1 / -1 !important;
+    width: 100% !important;
+    background-color: #333 !important;
+    border: 1px solid rgba(255, 111, 97, 0.4) !important;
+    padding: 20px !important;
+    margin-top: 15px !important;
+  }
+  
+  /* Garantir que o texto da observação tenha uma apresentação adequada */
+  [data-capture-clone="true"] .detail-item.full-width span {
+    white-space: pre-wrap !important;
+    word-break: break-word !important;
+    line-height: 1.6 !important;
+  }
+  
+  [data-capture-clone="true"] .order-details-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 16px !important;
+    padding: 20px !important;
+    margin-bottom: 30px !important; /* Margem extra no final do grid */
+  }
+}
+
+/* Estilos globais para o clone de captura em dispositivos móveis */
+@media print, screen and (max-width: 600px) {
+  [data-capture-clone="true"] {
+    /* Garantir que o clone tenha tamanho adequado em dispositivos móveis */
+    width: 540px !important;
+    transform: none !important;
+    background-color: #1c1c1c !important;
+  }
+  
+  /* Ajustar para orientação retrato */
+  [data-capture-clone="true"][data-orientation="portrait"] {
+    width: 480px !important;
+  }
+}
+
+/* Estilos específicos para o clone de captura em desktops */
+@media print, screen and (min-width: 601px) {
+  [data-capture-clone="true"] {
+    max-width: 650px !important;
+    background-color: #1c1c1c !important;
+    transform: none !important;
+  }
+  
+  /* Destacar o campo de observação na captura */
+  [data-capture-clone="true"] .detail-item.full-width strong {
+    color: #ff6f61 !important;
+    margin-bottom: 15px !important;
+    font-size: 1rem !important;
+  }
 }
 </style>
 

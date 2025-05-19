@@ -1064,12 +1064,13 @@ button i {
 /* Tablets e telas menores (1024x768) */
 @media (max-width: 1024px) {
   .order-form {
-    max-width: 90%;
-    padding: 25px;
+    width: var(--modal-width-md);
+    max-width: var(--modal-max-width);
+    padding: var(--spacing-md);
   }
   
   .form-header h2 {
-    font-size: 1.3rem;
+    font-size: var(--font-size-lg);
   }
 }
 
@@ -1080,8 +1081,9 @@ button i {
   }
   
   .order-form {
-    max-width: 95%;
-    padding: 20px;
+    width: var(--modal-width-lg);
+    max-width: var(--modal-max-width);
+    padding: var(--spacing-md);
   }
   
   .form-header {
@@ -1090,7 +1092,7 @@ button i {
   }
   
   .user-info {
-    margin-top: 10px;
+    margin-top: var(--spacing-xs);
   }
   
   .history-list {
@@ -1101,16 +1103,17 @@ button i {
 /* Dispositivos móveis */
 @media (max-width: 480px) {
   .modal-overlay {
-    padding: 10px;
+    padding: var(--spacing-xs);
   }
   
   .order-form {
-    padding: 15px;
-    max-width: 100%;
+    padding: var(--spacing-sm);
+    width: var(--modal-width-lg);
+    max-width: var(--modal-max-width);
   }
   
   .form-header h2 {
-    font-size: 1.2rem;
+    font-size: var(--font-size-lg);
   }
   
   .form-buttons {
@@ -1118,7 +1121,37 @@ button i {
   }
   
   button {
-    margin-top: 10px;
+    margin-top: var(--spacing-sm);
+  }
+}
+
+/* Ajustes específicos para notebooks com zoom */
+@media screen and (min-resolution: 1.25dppx) {
+  .order-form {
+    max-height: var(--modal-max-height);
+  }
+  
+  .form-grid {
+    gap: var(--spacing-sm);
+  }
+}
+
+/* Ajustes para telas 720p */
+@media (min-height: 720px) and (max-height: 768px) {
+  .modal-overlay {
+    align-items: flex-start;
+    padding-top: 2vh;
+  }
+  
+  .order-form {
+    max-height: 85vh;
+  }
+}
+
+/* Ajustes para monitores pequenos de 14 polegadas */
+@media screen and (max-width: 1366px) and (max-height: 768px) {
+  .order-form {
+    padding: var(--spacing-md);
   }
 }
 

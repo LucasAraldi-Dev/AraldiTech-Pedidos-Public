@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from typing import List, Optional
 from pydantic import parse_obj_as
-from . import crud, models, schemas, database, auth, csrf
+from . import crud, models, schemas, database, auth, csrf, utils
 from .auth import get_current_user
 from .utils import registrar_atividade
 import logging
@@ -318,8 +318,14 @@ def convert_dates_to_datetime(data_dict):
 
 # Rota para login e geração de token
 @app.post("/token", response_model=schemas.Token)
-async def login_for_access_token(form_data: schemas.LoginRequest, db=Depends(database.get_db)):
+async def login_for_access_token(form_data: schemas.LoginRequest, request: Request, db=Depends(database.get_db)):
     logger.info(f"Tentativa de login para usuário: {form_data.username}")
+    
+    # Capturar IP e User-Agent
+    ip_address = utils.get_client_ip(request)
+    user_agent = request.headers.get("User-Agent", "Desconhecido")
+    
+    logger.info(f"Tentativa de login a partir do IP: {ip_address} | User-Agent: {user_agent[:50]}...")
     
     user = await auth.authenticate_user(db, form_data.username, form_data.senha)
     if not user:
@@ -329,8 +335,14 @@ async def login_for_access_token(form_data: schemas.LoginRequest, db=Depends(dat
             tipo="login",
             descricao=f"Tentativa de login falhou para o usuário: {form_data.username}",
             usuario_nome=form_data.username,
+            ip_address=ip_address,
+            user_agent=user_agent,
+            dados_adicionais={
+                "status": "falha",
+                "motivo": "Credenciais inválidas"
+            }
         )
-        logger.warning(f"Credenciais inválidas fornecidas para usuário: {form_data.username}")
+        logger.warning(f"Credenciais inválidas fornecidas para usuário: {form_data.username} - IP: {ip_address}")
         raise HTTPException(status_code=401, detail="Credenciais inválidas")
     
     # Registrar atividade de login bem-sucedido
@@ -338,7 +350,12 @@ async def login_for_access_token(form_data: schemas.LoginRequest, db=Depends(dat
         db=db,
         tipo="login",
         descricao=f"Login bem-sucedido para o usuário: {user['nome']}",
-        usuario_nome=user["nome"]
+        usuario_nome=user["nome"],
+        ip_address=ip_address,
+        user_agent=user_agent,
+        dados_adicionais={
+            "status": "sucesso"
+        }
     )
     
     # Gerar dados para o token
@@ -352,7 +369,7 @@ async def login_for_access_token(form_data: schemas.LoginRequest, db=Depends(dat
     # Criar token de acesso
     access_token = auth.create_access_token(data=data)
     
-    logger.info(f"Token gerado com sucesso para {user['nome']} com tipo {user.get('tipo_usuario')}")
+    logger.info(f"Token gerado com sucesso para {user['nome']} com tipo {user.get('tipo_usuario')} - IP: {ip_address}")
     
     # Retornar o token e os dados do usuário
     return {
@@ -398,12 +415,16 @@ async def get_last_id(db):
 
 # Rota para criação de pedidos
 @app.post("/pedidos/", response_model=models.Pedido)
-async def criar_pedido(pedido: schemas.PedidoCreate, db=Depends(database.get_db), current_user=Depends(get_current_user)):
+async def criar_pedido(pedido: schemas.PedidoCreate, request: Request, db=Depends(database.get_db), current_user=Depends(get_current_user)):
     try:
         next_id = await get_last_id(db)
 
         pedido_dict = pedido.dict()
         pedido_dict["id"] = next_id
+
+        # Capturar IP e User-Agent
+        ip_address = utils.get_client_ip(request)
+        user_agent = request.headers.get("User-Agent", "Desconhecido")
 
         # Obter o nome do usuário autenticado do token
         usuario_nome = current_user.get("nome")
@@ -442,19 +463,51 @@ async def criar_pedido(pedido: schemas.PedidoCreate, db=Depends(database.get_db)
             tipo="criacao",
             descricao=f"Pedido #{next_id} '{pedido.descricao[:50]}...' criado",
             usuario_nome=usuario_nome,
-            pedido_id=next_id
+            pedido_id=next_id,
+            ip_address=ip_address,
+            user_agent=user_agent,
+            dados_adicionais={
+                "setor": pedido_dict.get("setor", setor_usuario),
+                "titulo": pedido.descricao
+            }
         )
 
         logger.info(f"Pedido criado com sucesso: {pedido_dict}")
         return pedido_dict
     except Exception as e:
         logger.error(f"Erro ao criar pedido: {e}")
+        
+        # Se temos as informações do usuário e IP, registramos o erro
+        if 'usuario_nome' in locals() and 'ip_address' in locals():
+            await registrar_atividade(
+                db=db,
+                tipo="erro",
+                descricao=f"Erro ao criar pedido: {str(e)}",
+                usuario_nome=locals()['usuario_nome'],
+                ip_address=locals()['ip_address'],
+                user_agent=locals()['user_agent'] if 'user_agent' in locals() else "Desconhecido",
+                dados_adicionais={
+                    "status": "falha", 
+                    "detalhes": str(e),
+                    "descricao_pedido": pedido.descricao if hasattr(pedido, 'descricao') else "Desconhecido"
+                }
+            )
+            
         raise HTTPException(status_code=500, detail="Erro ao criar pedido.")
 
 # Rota para listar pedidos
 @app.get("/pedidos/", response_model=List[models.Pedido])
-async def listar_pedidos(db=Depends(database.get_db), current_user=Depends(get_current_user)):
+async def listar_pedidos(request: Request, db=Depends(database.get_db), current_user=Depends(get_current_user)):
     try:
+        # Capturar IP e User-Agent
+        ip_address = utils.get_client_ip(request)
+        user_agent = request.headers.get("User-Agent", "Desconhecido")
+        
+        # Obter o nome do usuário
+        usuario_nome = current_user.get("nome")
+        if not usuario_nome:
+            usuario_nome = current_user.get("username", "Sistema")
+        
         # Verificar se o usuário é admin
         is_admin = current_user.get("tipo_usuario") == "admin"
         
@@ -463,11 +516,41 @@ async def listar_pedidos(db=Depends(database.get_db), current_user=Depends(get_c
         
         # Se for admin, retorna todos os pedidos, caso contrário filtra por setor
         if is_admin:
-            logger.info(f"Listando todos os pedidos para o administrador: {current_user.get('nome')}")
+            logger.info(f"Listando todos os pedidos para o administrador: {usuario_nome}")
             pedidos = await db["pedidos"].find().to_list(None)
+            
+            # Registrar consulta de todos os pedidos (admin)
+            await registrar_atividade(
+                db=db,
+                tipo="consulta",
+                descricao=f"Listagem de todos os pedidos ({len(pedidos)} pedidos)",
+                usuario_nome=usuario_nome,
+                ip_address=ip_address,
+                user_agent=user_agent,
+                dados_adicionais={
+                    "tipo_listagem": "todos", 
+                    "quantidade": len(pedidos),
+                    "admin": True
+                }
+            )
         else:
-            logger.info(f"Listando pedidos do setor {setor_usuario} para o usuário: {current_user.get('nome')}")
+            logger.info(f"Listando pedidos do setor {setor_usuario} para o usuário: {usuario_nome}")
             pedidos = await db["pedidos"].find({"setor": setor_usuario}).to_list(None)
+            
+            # Registrar consulta filtrada por setor
+            await registrar_atividade(
+                db=db,
+                tipo="consulta",
+                descricao=f"Listagem de pedidos do setor {setor_usuario} ({len(pedidos)} pedidos)",
+                usuario_nome=usuario_nome,
+                ip_address=ip_address,
+                user_agent=user_agent,
+                dados_adicionais={
+                    "tipo_listagem": "por_setor", 
+                    "setor": setor_usuario,
+                    "quantidade": len(pedidos)
+                }
+            )
         
         for pedido in pedidos:
             pedido["_id"] = str(pedido["_id"])
@@ -476,41 +559,131 @@ async def listar_pedidos(db=Depends(database.get_db), current_user=Depends(get_c
         return pedidos
     except Exception as e:
         logger.error(f"Erro ao listar pedidos: {e}")
+        
+        # Registrar erro se tivermos o contexto
+        if 'usuario_nome' in locals() and 'ip_address' in locals():
+            await registrar_atividade(
+                db=db,
+                tipo="erro",
+                descricao=f"Erro ao listar pedidos: {str(e)}",
+                usuario_nome=locals()['usuario_nome'],
+                ip_address=locals()['ip_address'],
+                user_agent=locals()['user_agent'] if 'user_agent' in locals() else "Desconhecido",
+                dados_adicionais={"status": "falha", "detalhes": str(e)}
+            )
+            
         raise HTTPException(status_code=500, detail="Erro ao listar pedidos.")
 
 @app.get("/pedidos/{pedido_id}")
-async def obter_pedido(pedido_id: int, db=Depends(database.get_db), current_user=Depends(get_current_user)):
-    # Buscar o pedido
-    pedido = await db["pedidos"].find_one({"id": pedido_id})
-    if not pedido:
-        raise HTTPException(status_code=404, detail="Pedido não encontrado.")
-    
-    # Verificar se o usuário é admin
-    is_admin = current_user.get("tipo_usuario") == "admin"
-    
-    # Obter o setor do usuário
-    setor_usuario = current_user.get("setor", "Escritório")
-    
-    # Verificar se o usuário tem permissão para ver este pedido
-    if not is_admin and pedido.get("setor") != setor_usuario:
-        logger.warning(f"Usuário {current_user.get('nome')} (setor: {setor_usuario}) tentou visualizar um pedido do setor {pedido.get('setor')}")
-        raise HTTPException(
-            status_code=403, 
-            detail="Você não tem permissão para visualizar pedidos de outros setores."
+async def obter_pedido(pedido_id: int, request: Request, db=Depends(database.get_db), current_user=Depends(get_current_user)):
+    try:
+        # Capturar IP e User-Agent
+        ip_address = utils.get_client_ip(request)
+        user_agent = request.headers.get("User-Agent", "Desconhecido")
+        
+        # Obter o nome do usuário
+        usuario_nome = current_user.get("nome")
+        if not usuario_nome:
+            usuario_nome = current_user.get("username", "Sistema")
+            
+        # Buscar o pedido
+        pedido = await db["pedidos"].find_one({"id": pedido_id})
+        if not pedido:
+            # Registrar consulta para pedido não encontrado
+            await registrar_atividade(
+                db=db,
+                tipo="consulta",
+                descricao=f"Tentativa de consulta ao pedido #{pedido_id} - não encontrado",
+                usuario_nome=usuario_nome,
+                ip_address=ip_address,
+                user_agent=user_agent,
+                dados_adicionais={
+                    "status": "falha",
+                    "motivo": "Pedido não encontrado"
+                }
+            )
+            raise HTTPException(status_code=404, detail="Pedido não encontrado.")
+        
+        # Verificar se o usuário é admin
+        is_admin = current_user.get("tipo_usuario") == "admin"
+        
+        # Obter o setor do usuário
+        setor_usuario = current_user.get("setor", "Escritório")
+        
+        # Verificar se o usuário tem permissão para ver este pedido
+        if not is_admin and pedido.get("setor") != setor_usuario:
+            # Registrar tentativa de acesso não autorizado
+            await registrar_atividade(
+                db=db,
+                tipo="seguranca",
+                descricao=f"Tentativa de acesso não autorizado ao pedido #{pedido_id} do setor {pedido.get('setor')}",
+                usuario_nome=usuario_nome,
+                pedido_id=pedido_id,
+                ip_address=ip_address,
+                user_agent=user_agent,
+                dados_adicionais={
+                    "status": "falha",
+                    "motivo": "Acesso entre setores",
+                    "setor_usuario": setor_usuario,
+                    "setor_pedido": pedido.get("setor")
+                }
+            )
+            
+            logger.warning(f"Usuário {usuario_nome} (setor: {setor_usuario}) tentou visualizar um pedido do setor {pedido.get('setor')}")
+            raise HTTPException(
+                status_code=403, 
+                detail="Você não tem permissão para visualizar pedidos de outros setores."
+            )
+        
+        # Registrar atividade de consulta bem-sucedida
+        await registrar_atividade(
+            db=db,
+            tipo="consulta",
+            descricao=f"Consulta ao pedido #{pedido_id} - {pedido.get('descricao', '')[:30]}...",
+            usuario_nome=usuario_nome,
+            pedido_id=pedido_id,
+            ip_address=ip_address,
+            user_agent=user_agent,
+            dados_adicionais={
+                "status": "sucesso",
+                "setor": pedido.get("setor")
+            }
         )
-    
-    return pedido
+        
+        return pedido
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        logger.error(f"Erro ao consultar pedido #{pedido_id}: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao consultar pedido.")
 
 # Rota para atualização de pedidos
 @app.put("/pedidos/{pedido_id}")
-async def atualizar_pedido(pedido_id: int, pedido: schemas.PedidoCreate, db=Depends(database.get_db), current_user=Depends(get_current_user)):
+async def atualizar_pedido(pedido_id: int, pedido: schemas.PedidoCreate, request: Request, db=Depends(database.get_db), current_user=Depends(get_current_user)):
     try:
         logger.info(f"Requisição PUT recebida para o pedido ID: {pedido_id}")
         logger.info(f"Dados recebidos para atualização: {pedido}")
+        
+        # Capturar IP e User-Agent
+        ip_address = utils.get_client_ip(request)
+        user_agent = request.headers.get("User-Agent", "Desconhecido")
 
         # Buscar o pedido atual para comparações
         pedido_atual = await db["pedidos"].find_one({"id": pedido_id})
         if not pedido_atual:
+            # Registrar erro de pedido não encontrado
+            await registrar_atividade(
+                db=db,
+                tipo="erro",
+                descricao=f"Tentativa de atualização de pedido inexistente #{pedido_id}",
+                usuario_nome=current_user.get("nome", "Sistema"),
+                ip_address=ip_address,
+                user_agent=user_agent,
+                dados_adicionais={
+                    "status": "falha",
+                    "motivo": "Pedido não encontrado"
+                }
+            )
             raise HTTPException(status_code=404, detail="Pedido não encontrado.")
             
         # Verificar se o usuário é admin ou gestor
@@ -535,6 +708,25 @@ async def atualizar_pedido(pedido_id: int, pedido: schemas.PedidoCreate, db=Depe
             msg_erro = "Você não tem permissão para editar este pedido."
             if current_user.get("tipo_usuario") == "comum":
                 msg_erro += " Apenas o criador do pedido, gestores e administradores podem editar."
+            
+            # Registrar tentativa não autorizada
+            await registrar_atividade(
+                db=db,
+                tipo="seguranca",
+                descricao=f"Tentativa não autorizada de edição do pedido #{pedido_id}",
+                usuario_nome=usuario_nome,
+                pedido_id=pedido_id,
+                ip_address=ip_address,
+                user_agent=user_agent,
+                dados_adicionais={
+                    "status": "falha",
+                    "motivo": "Permissão negada",
+                    "tipo_usuario": current_user.get("tipo_usuario", "comum"),
+                    "setor_usuario": setor_usuario,
+                    "setor_pedido": pedido_atual.get("setor")
+                }
+            )
+            
             logger.warning(f"Usuário {usuario_nome} (tipo: {current_user.get('tipo_usuario')}) tentou editar pedido #{pedido_id} sem permissão")
             raise HTTPException(status_code=403, detail=msg_erro)
             
@@ -615,7 +807,13 @@ async def atualizar_pedido(pedido_id: int, pedido: schemas.PedidoCreate, db=Depe
                 tipo="orcamento",
                 descricao=f"Orçamento previsto do pedido #{pedido_id} atualizado para R$ {update_data['orcamento_previsto']:.2f}",
                 usuario_nome=usuario_nome,
-                pedido_id=pedido_id
+                pedido_id=pedido_id,
+                ip_address=ip_address,
+                user_agent=user_agent,
+                dados_adicionais={
+                    "valor": float(update_data['orcamento_previsto']),
+                    "data": datetime.now().isoformat()
+                }
             )
             
         if "custo_real" in update_data:
@@ -628,7 +826,13 @@ async def atualizar_pedido(pedido_id: int, pedido: schemas.PedidoCreate, db=Depe
                 tipo="orcamento",
                 descricao=f"Custo real do pedido #{pedido_id} registrado em R$ {update_data['custo_real']:.2f}",
                 usuario_nome=usuario_nome,
-                pedido_id=pedido_id
+                pedido_id=pedido_id,
+                ip_address=ip_address,
+                user_agent=user_agent,
+                dados_adicionais={
+                    "valor": float(update_data['custo_real']),
+                    "data": datetime.now().isoformat()
+                }
             )
 
         logger.info(f"Dados para atualização após transformação: {update_data}")
@@ -679,9 +883,14 @@ async def atualizar_pedido(pedido_id: int, pedido: schemas.PedidoCreate, db=Depe
                 await registrar_atividade(
                     db,
                     tipo="conclusao",
-                    descricao=f"Pedido #{pedido_id} concluído",
+                    descricao=f"Pedido #{pedido_id} marcado como concluído",
                     usuario_nome=usuario_nome,
-                    pedido_id=pedido_id
+                    pedido_id=pedido_id,
+                    ip_address=ip_address,
+                    user_agent=user_agent,
+                    dados_adicionais={
+                        "status_anterior": status_original
+                    }
                 )
             # Ou registrar atividade de edição para outros casos
             else:
@@ -690,8 +899,28 @@ async def atualizar_pedido(pedido_id: int, pedido: schemas.PedidoCreate, db=Depe
                     tipo="edicao",
                     descricao=f"Status do pedido #{pedido_id} alterado de '{status_original}' para '{update_data['status']}'",
                     usuario_nome=usuario_nome,
-                    pedido_id=pedido_id
+                    pedido_id=pedido_id,
+                    ip_address=ip_address,
+                    user_agent=user_agent,
+                    dados_adicionais={
+                        "status_anterior": status_original,
+                        "novo_status": update_data["status"]
+                    }
                 )
+        else:
+            # Registrar atividade de edição genérica se não houve mudança de status
+            await registrar_atividade(
+                db,
+                tipo="edicao",
+                descricao=f"Dados do pedido #{pedido_id} atualizados",
+                usuario_nome=usuario_nome,
+                pedido_id=pedido_id,
+                ip_address=ip_address,
+                user_agent=user_agent,
+                dados_adicionais={
+                    "campos_alterados": list(update_data.keys())
+                }
+            )
 
         logger.info(f"Pedido atualizado com sucesso: ID {pedido_id}")
         return {"message": "Pedido atualizado com sucesso!"}
@@ -706,15 +935,33 @@ async def atualizar_pedido(pedido_id: int, pedido: schemas.PedidoCreate, db=Depe
 async def atualizar_pedido_com_historico(
     pedido_id: int, 
     pedido: schemas.PedidoCreate, 
+    request: Request,
     db=Depends(database.get_db),
     current_user=Depends(get_current_user)
 ):
     try:
         logger.info(f"Requisição PUT recebida para o pedido ID: {pedido_id} com histórico")
         
+        # Capturar IP e User-Agent
+        ip_address = utils.get_client_ip(request)
+        user_agent = request.headers.get("User-Agent", "Desconhecido")
+            
         # Buscar o pedido atual para comparações
         pedido_atual = await db["pedidos"].find_one({"id": pedido_id})
         if not pedido_atual:
+            # Registrar erro de pedido não encontrado
+            await registrar_atividade(
+                db=db,
+                tipo="erro",
+                descricao=f"Tentativa de atualização com histórico de pedido inexistente #{pedido_id}",
+                usuario_nome=current_user.get("nome", "Sistema"),
+                ip_address=ip_address,
+                user_agent=user_agent,
+                dados_adicionais={
+                    "status": "falha",
+                    "motivo": "Pedido não encontrado"
+                }
+            )
             raise HTTPException(status_code=404, detail="Pedido não encontrado.")
             
         # Verificar se o usuário é admin ou gestor
@@ -739,6 +986,25 @@ async def atualizar_pedido_com_historico(
             msg_erro = "Você não tem permissão para editar este pedido."
             if current_user.get("tipo_usuario") == "comum":
                 msg_erro += " Apenas o criador do pedido, gestores e administradores podem editar."
+                
+            # Registrar tentativa não autorizada
+            await registrar_atividade(
+                db=db,
+                tipo="seguranca",
+                descricao=f"Tentativa não autorizada de edição do pedido #{pedido_id} com histórico",
+                usuario_nome=usuario_nome,
+                pedido_id=pedido_id,
+                ip_address=ip_address,
+                user_agent=user_agent,
+                dados_adicionais={
+                    "status": "falha",
+                    "motivo": "Permissão negada",
+                    "tipo_usuario": current_user.get("tipo_usuario", "comum"),
+                    "setor_usuario": setor_usuario,
+                    "setor_pedido": pedido_atual.get("setor")
+                }
+            )
+            
             logger.warning(f"Usuário {usuario_nome} (tipo: {current_user.get('tipo_usuario')}) tentou editar pedido #{pedido_id} sem permissão")
             raise HTTPException(status_code=403, detail=msg_erro)
         
@@ -843,16 +1109,29 @@ async def atualizar_pedido_com_historico(
                 tipo=tipo_atividade,
                 descricao=f"Status do pedido #{pedido_id} alterado de '{status_anterior}' para '{status_novo}'",
                 usuario_nome=usuario_nome,
-                pedido_id=pedido_id
+                pedido_id=pedido_id,
+                ip_address=ip_address,
+                user_agent=user_agent,
+                dados_adicionais={
+                    "status_anterior": status_anterior,
+                    "novo_status": status_novo,
+                    "com_historico": True
+                }
             )
         else:
             # Registra atividade de edição genérica
             await registrar_atividade(
                 db,
                 tipo="edicao",
-                descricao=f"Pedido #{pedido_id} editado",
+                descricao=f"Pedido #{pedido_id} editado com histórico",
                 usuario_nome=usuario_nome,
-                pedido_id=pedido_id
+                pedido_id=pedido_id,
+                ip_address=ip_address,
+                user_agent=user_agent,
+                dados_adicionais={
+                    "campos_alterados": list(update_data.keys()),
+                    "historico_adicionado": historico is not None and len(historico) > 0
+                }
             )
         
         return {"message": "Pedido atualizado com sucesso!"}
@@ -868,13 +1147,31 @@ async def atualizar_pedido_com_historico(
 async def adicionar_historico_pedido(
     pedido_id: int,
     dados: dict,
+    request: Request,
     db=Depends(database.get_db),
     current_user=Depends(get_current_user)
 ):
     try:
+        # Capturar IP e User-Agent
+        ip_address = utils.get_client_ip(request)
+        user_agent = request.headers.get("User-Agent", "Desconhecido")
+        
         # Verificar se o pedido existe
         pedido = await db["pedidos"].find_one({"id": pedido_id})
         if not pedido:
+            # Registrar erro de pedido não encontrado
+            await registrar_atividade(
+                db=db,
+                tipo="erro",
+                descricao=f"Tentativa de adicionar histórico a pedido inexistente #{pedido_id}",
+                usuario_nome=current_user.get("nome", "Sistema"),
+                ip_address=ip_address,
+                user_agent=user_agent,
+                dados_adicionais={
+                    "status": "falha",
+                    "motivo": "Pedido não encontrado"
+                }
+            )
             raise HTTPException(status_code=404, detail="Pedido não encontrado.")
         
         # Obter o nome do usuário autenticado do token
@@ -897,6 +1194,22 @@ async def adicionar_historico_pedido(
         # Inserir o registro no histórico
         result = await db["pedido_historico"].insert_one(hist_data)
         
+        # Registrar atividade de adição de histórico
+        await registrar_atividade(
+            db=db,
+            tipo="edicao",
+            descricao=f"Adicionado comentário/histórico ao pedido #{pedido_id}: {dados.get('campo_alterado', '')}",
+            usuario_nome=usuario_nome,
+            pedido_id=pedido_id,
+            ip_address=ip_address,
+            user_agent=user_agent,
+            dados_adicionais={
+                "campo": dados.get("campo_alterado", ""),
+                "valor_anterior": dados.get("valor_anterior", ""),
+                "valor_novo": dados.get("valor_novo", "")
+            }
+        )
+        
         logger.info(f"Registro de histórico adicionado para o pedido {pedido_id}")
         return {"message": "Registro de histórico adicionado com sucesso!"}
         
@@ -908,13 +1221,36 @@ async def adicionar_historico_pedido(
 @app.get("/pedidos/{pedido_id}/historico")
 async def obter_historico_pedido(
     pedido_id: int,
+    request: Request,
     db=Depends(database.get_db),
     current_user=Depends(get_current_user)
 ):
     try:
+        # Capturar IP e User-Agent
+        ip_address = utils.get_client_ip(request)
+        user_agent = request.headers.get("User-Agent", "Desconhecido")
+        
+        # Obter o nome do usuário
+        usuario_nome = current_user.get("nome")
+        if not usuario_nome:
+            usuario_nome = current_user.get("username", "Sistema")
+        
         # Buscar o pedido para verificar permissões
         pedido = await db["pedidos"].find_one({"id": pedido_id})
         if not pedido:
+            # Registrar erro de pedido não encontrado
+            await registrar_atividade(
+                db=db,
+                tipo="erro",
+                descricao=f"Tentativa de consultar histórico de pedido inexistente #{pedido_id}",
+                usuario_nome=usuario_nome,
+                ip_address=ip_address,
+                user_agent=user_agent,
+                dados_adicionais={
+                    "status": "falha",
+                    "motivo": "Pedido não encontrado"
+                }
+            )
             raise HTTPException(status_code=404, detail="Pedido não encontrado.")
         
         # Verificar se o usuário é admin
@@ -926,12 +1262,44 @@ async def obter_historico_pedido(
         # Verificar se o usuário tem permissão para ver o histórico deste pedido
         if not is_admin and pedido.get("setor") != setor_usuario:
             logger.warning(f"Usuário {current_user.get('nome')} (setor: {setor_usuario}) tentou visualizar o histórico de um pedido do setor {pedido.get('setor')}")
+            
+            # Registrar tentativa de acesso não autorizado
+            await registrar_atividade(
+                db,
+                tipo="seguranca",
+                descricao=f"Acesso negado ao histórico do pedido #{pedido_id}",
+                usuario_nome=usuario_nome,
+                pedido_id=pedido_id,
+                ip_address=ip_address,
+                user_agent=user_agent,
+                dados_adicionais={
+                    "status": "negado", 
+                    "motivo": "Acesso entre setores",
+                    "setor_usuario": setor_usuario,
+                    "setor_pedido": pedido.get("setor")
+                }
+            )
+            
             raise HTTPException(
                 status_code=403, 
                 detail="Você não tem permissão para visualizar o histórico de pedidos de outros setores."
             )
         
         historico = await db["pedido_historico"].find({"pedido_id": pedido_id}).sort("data_edicao", -1).to_list(None)
+        
+        # Registrar atividade de consulta ao histórico
+        await registrar_atividade(
+            db=db,
+            tipo="consulta",
+            descricao=f"Consulta ao histórico do pedido #{pedido_id}",
+            usuario_nome=usuario_nome,
+            pedido_id=pedido_id,
+            ip_address=ip_address,
+            user_agent=user_agent,
+            dados_adicionais={
+                "quantidade_registros": len(historico)
+            }
+        )
         
         # Formata os dados para resposta
         for item in historico:
@@ -1026,6 +1394,7 @@ async def gerar_relatorio(
     tipo: str,
     periodo: str,
     formato: str,
+    request: Request,
     dataInicial: Optional[str] = None,
     dataFinal: Optional[str] = None,
     db=Depends(database.get_db),
@@ -1039,6 +1408,15 @@ async def gerar_relatorio(
         )
     
     try:
+        # Capturar IP e User-Agent
+        ip_address = utils.get_client_ip(request)
+        user_agent = request.headers.get("User-Agent", "Desconhecido")
+        
+        # Obter o nome do usuário
+        usuario_nome = current_user.get("nome")
+        if not usuario_nome:
+            usuario_nome = current_user.get("username", "Sistema")
+        
         # Determinar o intervalo de datas para o relatório
         data_final = datetime.now()
         data_inicial = data_final
@@ -1234,6 +1612,23 @@ async def gerar_relatorio(
             # Posicionar o buffer no início para leitura
             buffer.seek(0)
             
+            # Registrar atividade de geração de relatório
+            await registrar_atividade(
+                db=db,
+                tipo="consulta",
+                descricao=f"Geração de relatório de {tipo} - período: {periodo} - formato: {formato}",
+                usuario_nome=usuario_nome,
+                ip_address=ip_address,
+                user_agent=user_agent,
+                dados_adicionais={
+                    "tipo_relatorio": tipo,
+                    "periodo": periodo,
+                    "formato": formato,
+                    "data_inicial": data_inicial.isoformat(),
+                    "data_final": data_final.isoformat()
+                }
+            )
+            
             # Retornar o Excel como resposta
             return StreamingResponse(
                 buffer,
@@ -1257,6 +1652,7 @@ async def gerar_relatorio(
 
 @app.get("/relatorios/financeiro")
 async def gerar_relatorio_financeiro(
+    request: Request,
     periodo: str = "mensal",
     formato: str = "pdf",
     dataInicial: Optional[str] = None,
@@ -1275,6 +1671,15 @@ async def gerar_relatorio_financeiro(
         )
     
     try:
+        # Capturar IP e User-Agent
+        ip_address = utils.get_client_ip(request)
+        user_agent = request.headers.get("User-Agent", "Desconhecido")
+        
+        # Obter o nome do usuário
+        usuario_nome = current_user.get("nome")
+        if not usuario_nome:
+            usuario_nome = current_user.get("username", "Sistema")
+        
         # Determinar o intervalo de datas para o relatório
         data_final = datetime.now()
         data_inicial = data_final
@@ -1463,6 +1868,26 @@ async def gerar_relatorio_financeiro(
             # Resetar o buffer para o início
             buffer.seek(0)
             
+            # Registrar atividade de geração de relatório
+            await registrar_atividade(
+                db=db,
+                tipo="consulta",
+                descricao=f"Geração de relatório financeiro - período: {periodo} - formato: PDF",
+                usuario_nome=usuario_nome,
+                ip_address=ip_address,
+                user_agent=user_agent,
+                dados_adicionais={
+                    "tipo_relatorio": "financeiro",
+                    "periodo": periodo,
+                    "formato": "pdf",
+                    "data_inicial": data_inicial.isoformat(),
+                    "data_final": data_final.isoformat(),
+                    "total_orcamentos": float(total_orcamento),
+                    "total_custos": float(total_custo),
+                    "saldo": float(total_orcamento - total_custo)
+                }
+            )
+            
             # Retornar o PDF como resposta
             return StreamingResponse(
                 buffer, 
@@ -1554,6 +1979,22 @@ async def gerar_relatorio_financeiro(
             # Resetar o buffer para o início
             buffer.seek(0)
             
+            # Registrar atividade de geração de relatório
+            await registrar_atividade(
+                db=db,
+                tipo="consulta",
+                descricao=f"Geração de relatório financeiro - período: {periodo} - formato: {formato}",
+                usuario_nome=usuario_nome,
+                ip_address=ip_address,
+                user_agent=user_agent,
+                dados_adicionais={
+                    "periodo": periodo,
+                    "formato": formato,
+                    "data_inicial": data_inicial.isoformat(),
+                    "data_final": data_final.isoformat()
+                }
+            )
+            
             # Retornar o Excel como resposta
             return StreamingResponse(
                 buffer,
@@ -1574,3 +2015,35 @@ async def gerar_relatorio_financeiro(
             status_code=500,
             detail=f"Erro ao gerar relatório financeiro: {str(e)}"
         )
+
+# Rota para logout
+@app.post("/auth/logout")
+async def logout(request: Request, db=Depends(database.get_db), current_user=Depends(get_current_user)):
+    try:
+        # Capturar IP e User-Agent
+        ip_address = utils.get_client_ip(request)
+        user_agent = request.headers.get("User-Agent", "Desconhecido")
+        
+        # Obter o nome do usuário
+        usuario_nome = current_user.get("nome")
+        if not usuario_nome:
+            usuario_nome = current_user.get("username", "Sistema")
+        
+        # Registrar atividade de logout
+        await registrar_atividade(
+            db=db,
+            tipo="logout",
+            descricao=f"Logout realizado pelo usuário: {usuario_nome}",
+            usuario_nome=usuario_nome,
+            ip_address=ip_address,
+            user_agent=user_agent,
+            dados_adicionais={
+                "status": "sucesso"
+            }
+        )
+        
+        logger.info(f"Logout registrado para o usuário {usuario_nome} - IP: {ip_address}")
+        return {"message": "Logout realizado com sucesso"}
+    except Exception as e:
+        logger.error(f"Erro ao registrar logout: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao processar logout")

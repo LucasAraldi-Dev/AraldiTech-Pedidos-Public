@@ -69,7 +69,7 @@
           <li>Perda de dados ou interrupções de negócios decorrentes do uso do Sistema</li>
         </ul>
         
-        <h3>9. Indemnização</h3>
+        <h3>9. Indenização</h3>
         <p>Você concorda em defender, indenizar e isentar a AraldiTech, seus diretores, funcionários e agentes de e contra quaisquer reclamações, danos, obrigações, perdas, responsabilidades, custos ou dívidas e despesas (incluindo, mas não se limitando a honorários advocatícios) decorrentes de:</p>
         <ul>
           <li>Seu uso e acesso ao Sistema</li>

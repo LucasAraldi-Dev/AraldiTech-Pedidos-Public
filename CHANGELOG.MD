@@ -1,6 +1,12 @@
 # Changelog
 Todas as alterações notáveis deste projeto serão documentadas neste arquivo.
 
+## [0.8.6] - 2025-05-19
+### Corrigido
+- **Visualizador de logs**: Correção nas informações presentes do modal de logs.
+- **ModalImprimirPedido**: Adaptação da opção de gerar imagem , para caber totalmente o form para sair a impressão correta.
+
+
 ## [0.8.5] - 2025-05-18
 ### Adicionado
 - **Segurança Aprimorada**: Implementação de proteção CSRF em todos os endpoints, com validação avançada de dados e proteção contra XSS e injeção SQL.

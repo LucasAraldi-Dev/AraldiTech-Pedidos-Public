@@ -105,11 +105,29 @@ const authService = {
   },
 
   // Realiza logout
-  logout() {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('token_type');
-    localStorage.removeItem('user');
-    localStorage.removeItem('tipo_usuario');
+  async logout() {
+    try {
+      // Tenta chamar a API de logout apenas se estiver autenticado
+      const token = localStorage.getItem('access_token');
+      if (token) {
+        try {
+          await axiosService.post('/auth/logout', {}, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          console.log('Logout registrado no servidor');
+        } catch (error) {
+          console.warn('Erro ao registrar logout no servidor:', error);
+          // Continuamos com o logout local mesmo se o servidor falhar
+        }
+      }
+    } finally {
+      // Limpa os dados locais independentemente do resultado do servidor
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('token_type');
+      localStorage.removeItem('user');
+      localStorage.removeItem('tipo_usuario');
+      console.log('Dados locais de autenticação removidos');
+    }
   }
 };
 

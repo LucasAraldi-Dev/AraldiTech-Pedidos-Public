@@ -15,8 +15,10 @@
             <select v-model="filters.type" id="logTypeFilter">
               <option value="TODOS">TODOS</option>
               <option value="login">AUTENTICAÇÃO</option>
+              <option value="logout">LOGOUT</option>
               <option value="criacao">CRIAÇÃO</option>
               <option value="edicao">EDIÇÃO</option>
+              <option value="consulta">CONSULTA</option>
               <option value="conclusao">CONCLUSÃO</option>
               <option value="orcamento">ORÇAMENTO</option>
               <option value="erro">ERRO</option>
@@ -477,8 +479,10 @@ export default {
     formatLogType(type) {
       const types = {
         login: 'AUTENTICAÇÃO',
+        logout: 'LOGOUT',
         criacao: 'CRIAÇÃO',
         edicao: 'EDIÇÃO',
+        consulta: 'CONSULTA',
         conclusao: 'CONCLUSÃO',
         orcamento: 'ORÇAMENTO',
         erro: 'ERRO',
@@ -492,8 +496,10 @@ export default {
     getLogTypeIcon(type) {
       const icons = {
         login: 'login',
+        logout: 'logout',
         criacao: 'add_circle',
         edicao: 'edit',
+        consulta: 'search',
         conclusao: 'check_circle',
         orcamento: 'attach_money',
         erro: 'error',
@@ -1127,12 +1133,20 @@ export default {
   border-left-color: #3498db;
 }
 
+.log-type-logout {
+  border-left-color: #34495e;
+}
+
 .log-type-criacao {
   border-left-color: #2ecc71;
 }
 
 .log-type-edicao {
   border-left-color: #f39c12;
+}
+
+.log-type-consulta {
+  border-left-color: #1abc9c;
 }
 
 .log-type-conclusao {
@@ -1327,12 +1341,20 @@ export default {
   background-color: #3498db;
 }
 
+.indicator-logout {
+  background-color: #34495e;
+}
+
 .indicator-criacao {
   background-color: #2ecc71;
 }
 
 .indicator-edicao {
   background-color: #f39c12;
+}
+
+.indicator-consulta {
+  background-color: #1abc9c;
 }
 
 .indicator-conclusao {

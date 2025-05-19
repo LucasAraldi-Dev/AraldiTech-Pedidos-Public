@@ -19,9 +19,8 @@ Este roadmap detalha o plano de desenvolvimento do AraldiTech - Pedidos, sistema
 
 ### Versão 0.8.5 - Melhorias de UX e Correções de Bugs
 - [ ] **Correção de Bugs:**
-  - [ ] Corrigir inconsistências nos formulários de pedidos
-  - [ ] Resolver problemas de responsividade em telas específicas
-  - [ ] Estabilizar a geração de relatórios
+  - [x] Corrigir inconsistências nos formulários de pedidos
+  - [ ] Resolver problemas de responsividade em telas específicas - PARCIALMENTE RESOLVIDO
 - [ ] **Melhorias de UX:**
   - [ ] Feedback visual aprimorado para ações do usuário
   - [X] Tooltips informativos em campos complexos

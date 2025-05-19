@@ -123,7 +123,34 @@
   <div v-if="showConfirmation" class="confirm-modal-overlay" @click.self="cancelConfirmation">
     <div class="confirm-modal">
       <h3>Confirmar Conclusão do Pedido</h3>
-              <div class="confirm-order-details" v-if="selectedOrder">          <div class="confirm-order-header">            <span class="confirm-order-id">#{{ selectedOrder.id }}</span>          </div>          <h4 class="confirm-order-title">{{ sanitizeHtml(selectedOrder.descricao) }}</h4>          <div class="confirm-order-info">            <p>              <i class="material-icons">format_list_numbered</i>              <strong>Quantidade:</strong> {{ selectedOrder.quantidade }}            </p>            <p>              <i class="material-icons">category</i>              <strong>Categoria:</strong> {{ sanitizeHtml(selectedOrder.categoria) }}            </p>            <p>              <i class="material-icons">priority_high</i>              <strong>Urgência:</strong> {{ sanitizeHtml(selectedOrder.urgencia) }}            </p>            <p>              <i class="material-icons">event</i>              <strong>Data do Pedido:</strong> {{ formatDate(selectedOrder.deliveryDate) }}            </p>            <p>              <i class="material-icons">person</i>              <strong>Usuário Solicitante:</strong> {{ sanitizeHtml(selectedOrder.usuario_nome) }}            </p>          </div>        </div>
+      <div class="confirm-order-details" v-if="selectedOrder">
+        <div class="confirm-order-header">
+          <span class="confirm-order-id">#{{ selectedOrder.id }}</span>
+        </div>
+        <h4 class="confirm-order-title">{{ sanitizeHtml(selectedOrder.descricao) }}</h4>
+        <div class="confirm-order-info">
+          <p>
+            <i class="material-icons">format_list_numbered</i>
+            <strong>Quantidade:</strong> {{ selectedOrder.quantidade }}
+          </p>
+          <p>
+            <i class="material-icons">category</i>
+            <strong>Categoria:</strong> {{ sanitizeHtml(selectedOrder.categoria) }}
+          </p>
+          <p>
+            <i class="material-icons">priority_high</i>
+            <strong>Urgência:</strong> {{ sanitizeHtml(selectedOrder.urgencia) }}
+          </p>
+          <p>
+            <i class="material-icons">event</i>
+            <strong>Data do Pedido:</strong> {{ formatDate(selectedOrder.deliveryDate) }}
+          </p>
+          <p>
+            <i class="material-icons">person</i>
+            <strong>Usuário Solicitante:</strong> {{ sanitizeHtml(selectedOrder.usuario_nome) }}
+          </p>
+        </div>
+      </div>
       
       <!-- Campo de data de conclusão -->
       <div class="completion-date-container">
@@ -365,7 +392,15 @@ export default {
       this.completionDate = new Date().toISOString().split('T')[0];
       this.showConfirmation = true;
       
+      // Melhoria para dispositivos móveis: desfoca qualquer input ativo para esconder o teclado virtual
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+      
       console.log(`Modal de conclusão aberto para o pedido #${order.id}. Data mínima: ${this.minDate}`);
+      
+      // Impedir que o body role enquanto o modal estiver aberto
+      document.body.style.overflow = 'hidden';
     },
     
     // Cancela a confirmação e fecha o modal
@@ -373,6 +408,9 @@ export default {
       this.showConfirmation = false;
       this.selectedOrder = null;
       this.completionDate = null;
+      
+      // Restaurar a rolagem do body quando o modal for fechado
+      document.body.style.overflow = '';
     },
     
     // Confirma a conclusão do pedido após confirmação no modal
@@ -475,6 +513,8 @@ export default {
           this.showConfirmation = false;
           this.selectedOrder = null;
           this.completionDate = null;
+          // Restaurar a rolagem do body
+          document.body.style.overflow = '';
           // Notificação estilizada com as cores do sistema
           this.toast.success("Pedido concluído com sucesso!", {
             toastClassName: "custom-toast-success",
@@ -482,8 +522,11 @@ export default {
             closeButtonClassName: "custom-toast-close"
           });
         })
-        .catch(error => {
+        .catch((error) => {
           console.error("Erro ao concluir pedido:", error);
+          
+          // Restaurar a rolagem do body mesmo em caso de erro
+          document.body.style.overflow = '';
           
           // Determinar a mensagem de erro adequada
           let errorMessage = "Erro ao concluir pedido. Por favor, tente novamente.";
@@ -955,6 +998,7 @@ export default {
   transition: opacity 0.3s ease-in-out;
   padding: 15px;
   box-sizing: border-box;
+  overflow-y: auto; /* Permitir rolagem caso o conteúdo seja grande */
 }
 
 .confirm-modal {
@@ -969,6 +1013,9 @@ export default {
   text-transform: none;
   font-size: 1.1rem;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  max-height: 90vh; /* Altura máxima para não estourar a tela */
+  overflow-y: auto; /* Adicionar rolagem se necessário */
+  margin: auto; /* Centralizar horizontalmente */
 }
 
 .confirm-modal h3 {
@@ -986,6 +1033,7 @@ export default {
   border-radius: 8px;
   margin-bottom: 20px;
   border: 1px solid #333;
+  word-break: break-word;
 }
 
 .confirm-order-header {
@@ -1009,6 +1057,7 @@ export default {
   margin-bottom: 15px;
   border-bottom: 1px solid #444;
   padding-bottom: 8px;
+  word-wrap: break-word;
 }
 
 .confirm-order-info p {
@@ -1016,13 +1065,15 @@ export default {
   font-size: 0.9rem;
   color: #dfe6e9;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+  flex-wrap: wrap;
 }
 
 .confirm-order-info p i {
   margin-right: 8px;
   color: #ff6f61;
   font-size: 16px;
+  min-width: 18px;
 }
 
 .completion-date-container {
@@ -1062,12 +1113,43 @@ export default {
   flex: 1;
   min-width: 200px;
   transition: all 0.3s ease;
+  width: 100%;
+  max-width: 100%;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .completion-date-container input:focus {
   border-color: #ff6f61;
   outline: none;
   box-shadow: 0 0 0 2px rgba(255, 111, 97, 0.2);
+}
+
+/* Estilização específica para calendários em dispositivos móveis */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  opacity: 0.8;
+  cursor: pointer;
+  width: 20px;
+  height: 20px;
+  margin-left: 10px;
+  padding: 4px;
+  background-color: rgba(255, 111, 97, 0.1);
+  border-radius: 3px;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+  background-color: rgba(255, 111, 97, 0.2);
+}
+
+@media (max-width: 480px) {
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    width: 24px;
+    height: 24px;
+    padding: 5px;
+  }
 }
 
 .date-helper-text {
@@ -1087,6 +1169,7 @@ export default {
   font-size: 16px;
   margin-right: 8px;
   margin-top: 2px;
+  flex-shrink: 0;
 }
 
 .confirm-message {
@@ -1118,6 +1201,8 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
+  -webkit-tap-highlight-color: transparent; /* Remover highlight em dispositivos touch */
+  touch-action: manipulation; /* Melhorar resposta ao toque */
 }
 
 .confirm-yes i,
@@ -1144,29 +1229,59 @@ export default {
   background-color: #e55b55;
 }
 
+/* Adicionar estados ativos para melhor feedback em dispositivos touch */
+.confirm-yes:active {
+  background-color: #3d8b40;
+  transform: translateY(1px);
+}
+
+.confirm-no:active {
+  background-color: #cc5a4e;
+  transform: translateY(1px);
+}
+
+/* Aumentar área clicável para dispositivos touch */
+@media (pointer: coarse) {
+  .confirm-yes,
+  .confirm-no {
+    padding: 14px 0;
+    min-height: 50px;
+  }
+  
+  .completion-date-container input {
+    min-height: 44px; /* Altura mínima para facilitar toque */
+  }
+  
+  /* Aumentar espaçamento vertical entre elementos para evitar toques acidentais */
+  .confirm-order-info p {
+    padding: 4px 0;
+  }
+}
+
 /* Responsividade para diferentes dispositivos */
 /* Tablets e telas menores (1024x768) */
 @media (max-width: 1024px) {
   .order-form {
-    max-width: 90%;
-    padding: 25px;
+    width: var(--modal-width-md);
+    max-width: var(--modal-max-width);
+    padding: var(--spacing-md);
   }
   
   .orders-list {
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 15px;
+    gap: var(--spacing-md);
   }
   
   .form-header h2 {
-    font-size: 1.3rem;
+    font-size: var(--font-size-lg);
   }
   
   .order-card {
-    padding: 15px;
+    padding: var(--spacing-md);
   }
   
   .filters-container {
-    margin-top: 15px;
+    margin-top: var(--spacing-md);
     width: 100%;
   }
   
@@ -1180,12 +1295,13 @@ export default {
 @media (max-width: 768px) {
   .orders-list {
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 12px;
+    gap: var(--spacing-sm);
   }
   
   .confirm-modal {
-    max-width: 90%;
-    padding: 20px;
+    width: var(--modal-width-lg);
+    max-width: var(--modal-max-width);
+    padding: var(--spacing-md);
   }
   
   .filter-item {
@@ -1194,7 +1310,7 @@ export default {
   }
   
   .form-header h2 {
-    font-size: 1.2rem;
+    font-size: var(--font-size-lg);
   }
   
   .order-id {
@@ -1202,20 +1318,20 @@ export default {
   }
   
   .order-title {
-    font-size: 1.1rem;
+    font-size: var(--font-size-md);
   }
   
   .order-card p {
-    font-size: 0.85rem;
+    font-size: var(--font-size-sm);
   }
   
   .pagination {
-    gap: 10px;
+    gap: var(--spacing-sm);
   }
   
   .pagination button {
-    padding: 8px 12px;
-    font-size: 0.9rem;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    font-size: var(--font-size-sm);
   }
 }
 
@@ -1223,12 +1339,15 @@ export default {
 @media (max-width: 480px) {
   .modal-overlay,
   .confirm-modal-overlay {
-    padding: 10px;
+    padding: var(--spacing-xs);
+    align-items: center; /* Centralizar verticalmente */
+    overflow-y: auto;
   }
   
   .order-form {
-    padding: 15px;
-    max-width: 100%;
+    padding: var(--spacing-sm);
+    width: var(--modal-width-lg);
+    max-width: var(--modal-max-width);
   }
   
   .orders-list {
@@ -1259,26 +1378,184 @@ export default {
   
   .confirm-modal {
     padding: 15px;
+    margin: 10px;
+    max-height: 85vh; /* Reduzir altura máxima para deixar espaço para rolagem */
+    width: calc(100% - 20px); /* Garantir que o modal não ultrapasse a tela */
   }
   
   .confirm-modal h3 {
     font-size: 1.4rem;
+    padding-bottom: 8px;
+    margin-bottom: 15px;
+  }
+  
+  .confirm-order-details {
+    padding: 12px;
+    margin-bottom: 15px;
+  }
+  
+  .confirm-order-id {
+    font-size: 1.3em;
+  }
+  
+  .confirm-order-title {
+    font-size: 1.1em;
+    padding-bottom: 6px;
+    margin-bottom: 10px;
+  }
+  
+  .confirm-order-info p {
+    font-size: 0.85rem;
+    margin: 6px 0;
+  }
+  
+  .completion-date-container {
+    padding: 12px;
+    margin: 12px 0;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .completion-date-container label {
+    margin-bottom: 8px;
+    width: 100%;
+  }
+  
+  .completion-date-container input {
+    width: 100%;
+    min-width: 100%;
+    padding: 10px;
+    font-size: 16px; /* Tamanho mínimo para evitar zoom em dispositivos iOS */
+  }
+  
+  .date-helper-text {
+    font-size: 0.8rem;
+    padding: 8px;
+  }
+  
+  .confirm-message {
+    font-size: 1.1rem;
+    margin: 15px 0;
+    padding: 8px;
   }
   
   .confirm-buttons {
     flex-direction: column;
+    gap: 10px;
   }
   
   .confirm-yes,
   .confirm-no {
     width: 100%;
-    margin-bottom: 8px;
+    padding: 12px 0;
+    margin: 0;
+    font-size: 1rem;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+  }
+  
+  .confirm-yes i,
+  .confirm-no i {
+    font-size: 20px; /* Ícones ligeiramente maiores em mobile */
   }
   
   .close-btn {
     font-size: 0.9rem;
     padding: 10px 15px;
     margin-top: 15px;
+  }
+  
+  /* Ajuste para telas com teclado virtual ativo */
+  @media (max-height: 450px) {
+    .confirm-modal {
+      max-height: 100vh;
+      overflow-y: auto;
+    }
+    
+    .confirm-modal-overlay {
+      align-items: flex-start;
+      padding-top: 5px;
+    }
+  }
+}
+
+/* Dispositivos móveis muito pequenos */
+@media (max-width: 360px) {
+  .confirm-modal {
+    padding: 12px;
+    margin: 8px;
+  }
+  
+  .confirm-modal h3 {
+    font-size: 1.3rem;
+  }
+  
+  .confirm-order-details {
+    padding: 10px;
+  }
+  
+  .confirm-order-info p {
+    font-size: 0.8rem;
+  }
+  
+  .completion-date-container {
+    padding: 10px;
+  }
+  
+  .date-helper-text {
+    font-size: 0.75rem;
+  }
+  
+  .confirm-message {
+    font-size: 1rem;
+  }
+}
+
+/* Ajustes específicos para notebooks com zoom */
+@media screen and (min-resolution: 1.25dppx) {
+  .order-form {
+    max-height: var(--modal-max-height);
+  }
+  
+  .orders-list {
+    gap: var(--spacing-sm);
+  }
+}
+
+/* Ajustes para telas 720p */
+@media (min-height: 720px) and (max-height: 768px) {
+  .modal-overlay {
+    align-items: flex-start;
+    padding-top: 2vh;
+  }
+  
+  .order-form {
+    max-height: 85vh;
+  }
+}
+
+/* Ajustes para monitores pequenos de 14 polegadas */
+@media screen and (max-width: 1366px) and (max-height: 768px) {
+  .order-form {
+    padding: var(--spacing-md);
+  }
+  
+  .order-card {
+    padding: var(--spacing-sm);
+  }
+}
+
+/* Ajuste para telas muito pequenas onde a rolagem pode ser necessária */
+@media (max-height: 640px) {
+  .confirm-modal-overlay {
+    align-items: flex-start; /* Alinhar ao topo para permitir rolagem */
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+  
+  .confirm-modal {
+    margin-top: 10px;
+    margin-bottom: 10px;
   }
 }
 </style>
