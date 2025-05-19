@@ -1,0 +1,149 @@
+/* Variáveis CSS Globais para Responsividade */
+:root {
+  /* Espaçamentos */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  --spacing-xxl: 3rem;
+
+  /* Tamanhos de fonte */
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-md: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.25rem;
+  --font-size-xxl: 1.5rem;
+  --font-size-3xl: 1.875rem;
+  --font-size-4xl: 2.25rem;
+
+  /* Larguras de componentes */
+  --modal-width-sm: 90%;
+  --modal-width-md: 80%;
+  --modal-width-lg: 70%;
+  --modal-width-xl: 60%;
+  
+  /* Alturas de componentes */
+  --input-height: 2.5rem;
+  --button-height: 2.75rem;
+  
+  /* Bordas */
+  --border-radius-sm: 0.25rem;
+  --border-radius-md: 0.5rem;
+  --border-radius-lg: 0.75rem;
+  --border-radius-xl: 1rem;
+  
+  /* Camadas (z-index) */
+  --z-index-modal: 1000;
+  --z-index-overlay: 990;
+  --z-index-header: 900;
+  --z-index-footer: 900;
+}
+
+/* Media queries para ajustar variáveis por tamanho de tela */
+@media (max-width: 480px) {
+  :root {
+    --spacing-md: 0.75rem;
+    --spacing-lg: 1.25rem;
+    --spacing-xl: 1.5rem;
+    --spacing-xxl: 2rem;
+    
+    --font-size-md: 0.9rem;
+    --font-size-lg: 1rem;
+    --font-size-xl: 1.125rem;
+    --font-size-xxl: 1.25rem;
+    
+    --modal-width-sm: 95%;
+    --modal-width-md: 95%;
+    --modal-width-lg: 98%;
+  }
+}
+
+@media (min-width: 481px) and (max-width: 768px) {
+  :root {
+    --spacing-xl: 1.75rem;
+    --spacing-xxl: 2.5rem;
+    
+    --modal-width-sm: 92%;
+    --modal-width-md: 90%;
+    --modal-width-lg: 95%;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  :root {
+    --modal-width-md: 85%;
+    --modal-width-lg: 80%;
+    --modal-width-xl: 70%;
+  }
+}
+
+/* Classes utilitárias para aplicação de responsividade */
+.responsive-container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--spacing-md);
+}
+
+.responsive-text {
+  font-size: var(--font-size-md);
+}
+
+.responsive-heading {
+  font-size: var(--font-size-xl);
+}
+
+.responsive-button {
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-size-md);
+  height: var(--button-height);
+}
+
+.responsive-input {
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-size-md);
+  height: var(--input-height);
+}
+
+/* Utilidades de espaçamento */
+.responsive-padding {
+  padding: var(--spacing-md);
+}
+
+.responsive-margin {
+  margin: var(--spacing-md);
+}
+
+/* Utilidades de grid responsivo */
+.responsive-grid {
+  display: grid;
+  gap: var(--spacing-md);
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+}
+
+/* Classes específicas para responsividade em rem/em */
+.overflow-control {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
+.modal-responsive {
+  width: var(--modal-width-md);
+  max-height: 90vh;
+  overflow-y: auto;
+  border-radius: var(--border-radius-lg);
+}
+
+/* Acessibilidade para touch em dispositivos móveis */
+@media (max-width: 768px) {
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  input, button, select, textarea {
+    font-size: 16px !important; /* Previne zoom automático em iOS */
+  }
+} 

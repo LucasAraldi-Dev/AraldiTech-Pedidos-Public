@@ -418,19 +418,40 @@ export default {
         this.orderSender = this.userName || "Usuário do sistema";
       }
 
-      // Criar o payload para o pedido
+      // Capturar informações adicionais para auditoria
+      let userAgent = navigator.userAgent;
+      let browserInfo = {
+        userAgent: userAgent,
+        platform: navigator.platform,
+        language: navigator.language,
+        screenWidth: window.screen.width,
+        screenHeight: window.screen.height
+      };
+
+      // Data e hora exata da criação
+      const creationDateTime = new Date().toISOString();
+
+      // Criar o payload para o pedido com informações de auditoria
       const payload = {
         descricao: this.orderDescription,
         quantidade: this.orderQuantity,
         categoria: this.orderCategory,
         urgencia: this.orderUrgency,
-        deliveryDate: new Date().toISOString(), // Sempre usa a data e hora atual, ignorando o valor do input
+        deliveryDate: this.orderDeliveryDate,
         observacao: this.orderNotes || "",
         sender: this.orderSender,
         setor: this.orderSenderSector,
         usuario_nome: this.userName || "Usuário do Sistema",
         file: this.orderFileBase64 || null,
         status: "Pendente",
+        // Informações de auditoria
+        audit_info: {
+          created_at_exact: creationDateTime,
+          browser_info: browserInfo,
+          user_email: this.userEmail,
+          user_type: this.userType,
+          created_by_id: localStorage.getItem("user_id") || null
+        }
       };
 
       console.log("Enviando pedido com nome de usuário:", this.userName);
@@ -541,7 +562,6 @@ export default {
     validateDescription() {
       const result = validateText(this.orderDescription, {
         required: true,
-        minLength: 10,
         fieldName: "Descrição do pedido"
       });
       this.validationErrors.description = result.isValid ? "" : result.message;
@@ -556,6 +576,16 @@ export default {
       return result.isValid;
     },
     validateDate() {
+      // Se o usuário não for admin, a data já está definida como hoje
+      // então não precisa validar se está no passado
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Se data selecionada for hoje (data atual) para usuário comum, retorna como válido
+      if (!this.isAdmin && this.orderDeliveryDate === today) {
+        this.validationErrors.date = "";
+        return true;
+      }
+      
       const result = validateDate(this.orderDeliveryDate, {
         required: true,
         allowPastDates: this.isAdmin // Apenas admin pode selecionar datas passadas

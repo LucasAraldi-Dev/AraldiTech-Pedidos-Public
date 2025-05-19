@@ -5,6 +5,7 @@ from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from .database import get_user_by_id, get_db
+import logging
 
 # Configurações de autenticação
 SECRET_KEY = "e4b72b4175f5e0b453881b8648bbf0d42ef56fc4c25a1c7b347fbf88c0f601ef"  # Alterar ou mascarar depois
@@ -25,21 +26,51 @@ def hash_password(password):
 # Função para autenticar usuário
 async def authenticate_user(db, username: str, senha: str):
     """Valida o usuário a partir do banco e verifica a senha."""
-    user = await db["users"].find_one({"username": username})
-    if not user or not verify_password(senha, user["senha"]):
+    try:
+        user = await db["users"].find_one({"username": username})
+        
+        if not user:
+            logging.warning(f"Usuário não encontrado: {username}")
+            return None
+            
+        if not verify_password(senha, user["senha"]):
+            logging.warning(f"Senha incorreta para usuário: {username}")
+            return None
+        
+        # Logging detalhado para diagnóstico
+        logging.info(f"Tentativa de login para {username} - ID: {user.get('_id')}")
+        logging.info(f"Tipo de usuário: {user.get('tipo_usuario', 'não definido')}")
+        logging.info(f"Sessão expirada: {user.get('sessao_expirada', False)}")
+        
+        # Garante que todos os usuários tenham campos necessários definidos
+        update_operations = {}
+        
+        # Campo tipo_usuario
+        if "tipo_usuario" not in user:
+            update_operations["tipo_usuario"] = "comum"
+            logging.info(f"Campo tipo_usuario não definido para {username}, definindo como 'comum'")
+        
+        # Verifica se o usuário precisa renovar a sessão após alteração de permissões
+        if user.get("sessao_expirada", False):
+            logging.info(f"Removendo flag de sessao_expirada para {username} após login bem-sucedido")
+            update_operations["sessao_expirada"] = False
+            
+        # Se há operações de atualização, aplicá-las
+        if update_operations:
+            logging.info(f"Atualizando campos do usuário {username}: {update_operations}")
+            await db["users"].update_one(
+                {"_id": user["_id"]},
+                {"$set": update_operations}
+            )
+            # Atualizar os valores localmente também
+            for key, value in update_operations.items():
+                user[key] = value
+        
+        logging.info(f"Usuário autenticado com sucesso: {user.get('nome')} - Tipo: {user.get('tipo_usuario')}")
+        return user
+    except Exception as e:
+        logging.error(f"Erro durante autenticação de {username}: {str(e)}")
         return None
-    
-    # Garante que todos os usuários tenham um tipo_usuario definido
-    if "tipo_usuario" not in user:
-        user["tipo_usuario"] = "comum"
-        # Atualiza o usuário no banco se necessário
-        await db["users"].update_one(
-            {"_id": user["_id"]},
-            {"$set": {"tipo_usuario": "comum"}}
-        )
-    
-    print(f"Usuário autenticado: {user.get('nome')} - Tipo: {user.get('tipo_usuario')}")
-    return user
 
 # Função para criar o token de acesso
 def create_access_token(data: dict):
@@ -62,14 +93,26 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db=Depends(get_d
                 detail="Token inválido ou expirado",
                 headers={"WWW-Authenticate": "Bearer"},
             )
+        
+        # Buscar o usuário no banco de dados para verificar suas informações atuais
         user = await db["users"].find_one({"username": username})
         if user is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Usuário não encontrado"
             )
+        
+        # Verificar se há diferença entre o tipo_usuario no token e no banco de dados
+        tipo_usuario_token = payload.get("tipo_usuario")
+        tipo_usuario_db = user.get("tipo_usuario", "comum")
+        
+        if tipo_usuario_token and tipo_usuario_token != tipo_usuario_db:
+            logging.warning(f"Diferença detectada no tipo_usuario: Token={tipo_usuario_token}, DB={tipo_usuario_db}")
+            logging.info(f"Priorizando tipo_usuario do banco de dados: {tipo_usuario_db}")
+        
         return user
-    except JWTError:
+    except JWTError as e:
+        logging.error(f"Erro ao decodificar token JWT: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token inválido ou expirado",

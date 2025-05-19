@@ -5,8 +5,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from typing import List, Optional
 from pydantic import parse_obj_as
-from . import crud, models, schemas, database, auth
+from . import crud, models, schemas, database, auth, csrf
 from .auth import get_current_user
+from .utils import registrar_atividade
 import logging
 from fastapi import status
 import io
@@ -20,11 +21,13 @@ import xlsxwriter
 import secrets
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.datastructures import MutableHeaders
+import os
 
 # Importar e incluir o router de usuários
 from .user_routes import router as user_router
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 app = FastAPI()
 app.include_router(user_router)
@@ -38,80 +41,236 @@ origins = [
     "http://192.168.10.27:8080",
     "http://192.168.1.5",
     "http://192.168.1.5:8000",
-    "http://192.168.1.5:8080"
+    "http://192.168.1.5:8080",
+    "http://127.0.0.1:8000",
+    "http://127.0.0.1:8080",
+    "*"  # Permitir todas as origens em desenvolvimento
 ]
 
-# Adiciona o middleware CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization", "X-CSRF-Token"],
-)
+# Definir modo de ambiente (desenvolvimento/produção)
+ENVIRONMENT = os.environ.get("ENVIRONMENT", "development")
+# Defina para True para aplicar proteção CSRF mesmo em modo de desenvolvimento
+ENFORCE_CSRF = os.environ.get("ENFORCE_CSRF", "False").lower() in ["true", "1", "yes"]
 
-# Middleware para validar CSRF em métodos sensíveis - Movido para APÓS o CORS
+# Middleware para adicionar cabeçalhos de segurança
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        try:
+            # Executar a requisição
+            response = await call_next(request)
+
+            # Adicionar ou atualizar cabeçalhos de segurança
+            headers = dict(response.headers)
+            
+            # 1. Prevenir clickjacking
+            headers["X-Frame-Options"] = "DENY"
+            
+            # 2. Prevenir MIME sniffing
+            headers["X-Content-Type-Options"] = "nosniff"
+            
+            # 3. Habilitar proteção XSS no navegador
+            headers["X-XSS-Protection"] = "1; mode=block"
+            
+            # 4. Referrer Policy - controlar informações enviadas na header Referer
+            headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+            
+            # 5. Configurações CSP (Content Security Policy)
+            if ENVIRONMENT == "development":
+                # Política mais permissiva para desenvolvimento
+                headers["Content-Security-Policy"] = (
+                    "default-src 'self'; "
+                    "script-src 'self' 'unsafe-inline'; "
+                    "style-src 'self' 'unsafe-inline'; "
+                    "img-src 'self' data:; "
+                    "connect-src 'self'; "
+                    "font-src 'self'; "
+                    "object-src 'none'; "
+                    "media-src 'self'; "
+                    "frame-src 'none'; "
+                    "form-action 'self';"
+                )
+            else:
+                # Política mais restritiva para produção
+                headers["Content-Security-Policy"] = (
+                    "default-src 'self'; "
+                    "script-src 'self'; "
+                    "style-src 'self'; "
+                    "img-src 'self'; "
+                    "connect-src 'self'; "
+                    "font-src 'self'; "
+                    "object-src 'none'; "
+                    "media-src 'self'; "
+                    "frame-ancestors 'none'; "
+                    "form-action 'self';"
+                )
+                
+                # 6. HSTS (Strict-Transport-Security) - apenas em produção
+                headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
+            
+            # 7. Permissões - limitar recursos do navegador
+            headers["Permissions-Policy"] = (
+                "camera=(), "
+                "microphone=(), "
+                "geolocation=(), "
+                "payment=()"
+            )
+            
+            # Atualizar os cabeçalhos da resposta
+            for key, value in headers.items():
+                response.headers[key] = value
+                
+            # Log para verificar cabeçalhos aplicados
+            logger.debug(f"Cabeçalhos de segurança aplicados: {dict(response.headers)}")
+                
+            return response
+        except Exception as e:
+            logger.error(f"Erro ao aplicar cabeçalhos de segurança: {e}")
+            # Re-levantar a exceção para não ocultar erros
+            raise
+
+# Middleware para validar CSRF em métodos sensíveis
 class CSRFMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request, call_next):
-        # Ignorar verificação CSRF para o endpoint de login e OPTIONS
-        if request.url.path == "/token" or request.method == "OPTIONS":
+    async def dispatch(self, request: Request, call_next):
+        # Caminhos que estão isentos de verificação CSRF
+        exempt_paths = ["/token", "/security/csrf-token"]
+        
+        # Ignorar verificação CSRF para o endpoint de login, token CSRF e OPTIONS
+        if request.url.path in exempt_paths or request.method == "OPTIONS":
+            logger.info(f"CSRF ignorado para caminho isento: {request.url.path}")
             return await call_next(request)
             
         # Verificar CSRF apenas em métodos sensíveis
-        if request.method in ("POST", "PUT", "DELETE"):
-            # Tenta obter o token do header
-            header_token = request.headers.get(CSRF_HEADER_NAME)
-            # Tenta obter o token do cookie
-            cookie_token = request.cookies.get(CSRF_COOKIE_NAME)
+        if request.method in ("POST", "PUT", "DELETE", "PATCH"):
+            # Tenta obter o token do header e cookie
+            header_token = request.headers.get(csrf.CSRF_HEADER_NAME)
+            cookie_token = request.cookies.get(csrf.CSRF_COOKIE_NAME)
             
-            # Em desenvolvimento, apenas logar avisos
-            # Em produção, isto deve ser alterado para rejeitar a requisição
-            if not header_token or not cookie_token:
-                logging.warning(f"CSRF Warning: Token ausente - Header: {bool(header_token)}, Cookie: {bool(cookie_token)}")
-            elif header_token != cookie_token:
-                logging.warning(f"CSRF Warning: Tokens não correspondem - Header: {header_token[:10]}..., Cookie: {cookie_token[:10]}...")
+            # Log detalhado para diagnóstico
+            logger.info(f"[CSRF] Método: {request.method}, URL: {request.url.path}")
+            logger.info(f"[CSRF] Token no header: {bool(header_token)}, Token no cookie: {bool(cookie_token)}")
+            
+            if header_token:
+                logger.info(f"[CSRF] Primeiros 10 caracteres do token header: {header_token[:10] if len(header_token) >= 10 else header_token}...")
+            if cookie_token:
+                logger.info(f"[CSRF] Primeiros 10 caracteres do token cookie: {cookie_token[:10] if len(cookie_token) >= 10 else cookie_token}...")
+            
+            if not ENFORCE_CSRF and ENVIRONMENT == "development":
+                # Modo permissivo para desenvolvimento (apenas logging)
+                if not header_token or not cookie_token:
+                    logger.warning(f"CSRF Warning: Token ausente - Header: {bool(header_token)}, Cookie: {bool(cookie_token)}")
+                elif header_token != cookie_token:
+                    logger.warning(f"CSRF Warning: Tokens não correspondem - Header: {header_token[:10] if len(header_token) >= 10 else header_token}..., Cookie: {cookie_token[:10] if len(cookie_token) >= 10 else cookie_token}...")
+                else:
+                    logger.info(f"[CSRF] Validação bem-sucedida para {request.url.path}")
+            else:
+                # Validação RIGOROSA (seja em produção ou desenvolvimento com ENFORCE_CSRF=True)
+                if not header_token or not cookie_token:
+                    logger.warning(f"CSRF Error: Token ausente - Header: {bool(header_token)}, Cookie: {bool(cookie_token)}")
+                    return JSONResponse(
+                        status_code=403, 
+                        content={"detail": "CSRF token ausente. Recarregue a página e tente novamente."}
+                    )
+                elif header_token != cookie_token:
+                    logger.warning(f"CSRF Error: Tokens não correspondem - Header: {header_token[:10] if len(header_token) >= 10 else header_token}..., Cookie: {cookie_token[:10] if len(cookie_token) >= 10 else cookie_token}...")
+                    return JSONResponse(
+                        status_code=403, 
+                        content={"detail": "CSRF token inválido. Recarregue a página e tente novamente."}
+                    )
                 
-            # AMBIENTE DE DESENVOLVIMENTO: Permitir a requisição de qualquer forma
-            # PRODUÇÃO: Descomente a linha abaixo para rejeitar requisições sem CSRF válido
-            # return JSONResponse(status_code=403, content={"detail": "CSRF token inválido ou ausente."})
+                # Verificar a validade do token (expiração, formato)
+                if not csrf.verify_csrf_token(header_token):
+                    logger.warning(f"CSRF Error: Token inválido ou expirado")
+                    return JSONResponse(
+                        status_code=403, 
+                        content={"detail": "CSRF token expirado ou inválido. Recarregue a página e tente novamente."}
+                    )
+                
+                logger.info(f"[CSRF] Validação bem-sucedida para {request.url.path}")
         
+        # Executar o próximo middleware ou rota
         response = await call_next(request)
         return response
 
-# Adiciona o middleware CSRF APÓS o CORS
+# Usar a chave secreta do módulo CSRF
+CSRF_SECRET = csrf.CSRF_SECRET_KEY
+CSRF_COOKIE_NAME = csrf.CSRF_COOKIE_NAME
+CSRF_HEADER_NAME = csrf.CSRF_HEADER_NAME
+
+# Adicionar os middlewares na ordem correta
+# 1. Primeiro o middleware de segurança para garantir que ele seja aplicado em todas as respostas
+app.add_middleware(SecurityHeadersMiddleware)
+
+# 2. Em seguida, o middleware CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:8080",
+        "http://localhost",
+        "http://localhost:8000",
+        "http://192.168.10.27",
+        "http://192.168.10.27:8080",
+        "http://192.168.1.5",
+        "http://192.168.1.5:8000",
+        "http://192.168.1.5:8080",
+        "http://127.0.0.1:8000",
+        "http://127.0.0.1:8080",
+        "*"  # Permitir todas as origens em desenvolvimento
+    ],  # Utilizando a lista de origens definida acima
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],  # Métodos específicos
+    allow_headers=["*"],  # Permitir todos os cabeçalhos
+    expose_headers=["Content-Type", "X-CSRF-Token"],
+    max_age=86400,  # Cache preflight por 24 horas
+)
+
+# 3. Por último, o middleware CSRF
 app.add_middleware(CSRFMiddleware)
-
-# Chave secreta para CSRF (ideal: carregar de .env)
-CSRF_SECRET = getattr(app.state, 'CSRF_SECRET', None)
-if not CSRF_SECRET:
-    CSRF_SECRET = secrets.token_urlsafe(32)
-    app.state.CSRF_SECRET = CSRF_SECRET
-
-CSRF_COOKIE_NAME = "csrf_token"
-CSRF_HEADER_NAME = "x-csrf-token"
 
 # Endpoint para gerar e retornar o token CSRF
 @app.get("/security/csrf-token")
 async def get_csrf_token():
-    token = secrets.token_urlsafe(32)
+    token = csrf.generate_csrf_token()
     response = JSONResponse(content={"csrf_token": token})
-    # Em desenvolvimento, use samesite="none" para permitir cookies cross-origin
-    response.set_cookie(
-        key=CSRF_COOKIE_NAME,
-        value=token,
-        httponly=False,
-        samesite="none",
-        secure=False  # Use True em produção com HTTPS
-    )
+    
+    # Logs para depuração
+    logger.info(f"Gerando novo token CSRF: {token[:10] if len(token) >= 10 else token}...")
+    
+    # Configurações de cookie baseadas no ambiente
+    cookie_config = {
+        "key": CSRF_COOKIE_NAME,
+        "value": token,
+        "max_age": 3600  # Expira em 1 hora
+    }
+    
+    if ENVIRONMENT == "development":
+        # Configurações mais permissivas para desenvolvimento
+        cookie_config.update({
+            "httponly": False,  # Permite acesso via JavaScript para testes
+            "samesite": "lax",  # Menos restritivo
+            "secure": False     # Não requer HTTPS
+        })
+    else:
+        # Configurações seguras para produção
+        cookie_config.update({
+            "httponly": True,   # Previne acesso via JavaScript
+            "samesite": "strict",  # Mais restritivo
+            "secure": True      # Requer HTTPS
+        })
+    
+    response.set_cookie(**cookie_config)
+    
+    # Adicionar o token também como um cabeçalho para facilitar testes
+    response.headers["X-CSRF-Token"] = token
+    
     return response
 
 @app.middleware("http")
 async def log_auth_middleware(request: Request, call_next):
     token = request.headers.get("Authorization")
     if token:
-        logging.info(f"Token recebido: {token}")
+        logger.info(f"Token recebido: {token[:15]}...")
     else:
-        logging.warning("Nenhum token fornecido")
+        logger.warning("Nenhum token fornecido")
     response = await call_next(request)
     return response
 
@@ -124,25 +283,6 @@ def validate_and_convert_date(date_str):
             status_code=422,
             detail=f"Formato de data inválido: {date_str}. Esperado: yyyy-MM-dd."
         )
-
-# Função para registrar uma nova atividade
-async def registrar_atividade(db, tipo, descricao, usuario_nome, pedido_id=None):
-    try:
-        atividade = models.Atividade(
-            tipo=tipo,
-            descricao=descricao,
-            usuario_nome=usuario_nome,
-            pedido_id=pedido_id,
-            data=datetime.now()
-        )
-        
-        result = await db["atividades"].insert_one(atividade.dict())
-        atividade.id = str(result.inserted_id)
-        logging.info(f"Atividade registrada: {atividade}")
-        return atividade
-    except Exception as e:
-        logging.error(f"Erro ao registrar atividade: {e}")
-        # Não lançamos exceção para não interromper o fluxo principal
 
 # Função para converter objetos datetime.date em datetime.datetime
 def convert_dates_to_datetime(data_dict):
@@ -179,72 +319,73 @@ def convert_dates_to_datetime(data_dict):
 # Rota para login e geração de token
 @app.post("/token", response_model=schemas.Token)
 async def login_for_access_token(form_data: schemas.LoginRequest, db=Depends(database.get_db)):
+    logger.info(f"Tentativa de login para usuário: {form_data.username}")
+    
     user = await auth.authenticate_user(db, form_data.username, form_data.senha)
     if not user:
         # Registrar atividade de login com falha
-        await db["atividades"].insert_one({
-            "tipo": "login",
-            "descricao": f"Tentativa de login falhou para o usuário: {form_data.username}",
-            "usuario_nome": form_data.username,
-            "data": datetime.now(),
-            "sucesso": False
-        })
-        logging.warning("Credenciais inválidas fornecidas.")
+        await registrar_atividade(
+            db=db,
+            tipo="login",
+            descricao=f"Tentativa de login falhou para o usuário: {form_data.username}",
+            usuario_nome=form_data.username,
+        )
+        logger.warning(f"Credenciais inválidas fornecidas para usuário: {form_data.username}")
         raise HTTPException(status_code=401, detail="Credenciais inválidas")
     
-    access_token = auth.create_access_token(data={"sub": user["username"], "nome": user["nome"]})
-    logging.info(f"Token gerado com sucesso para o usuário: {user['username']}")
-    
-    # Log para verificar se o tipo_usuario existe no objeto user
-    logging.info(f"Tipo de usuário encontrado: {user.get('tipo_usuario', 'Não encontrado')}")
-    logging.info(f"Setor do usuário: {user.get('setor', 'Não encontrado')}")
-    
-    # Verificar se é o primeiro login do usuário
-    is_primeiro_login = user.get("primeiro_login", True)
-    
-    # Se for o primeiro login, atualizar no banco de dados
-    if is_primeiro_login:
-        logging.info(f"Primeiro login do usuário: {user['username']}")
-        await db["users"].update_one(
-            {"username": user["username"]},
-            {"$set": {"primeiro_login": False}}
-        )
-    
-    response_data = {
-        "access_token": access_token, 
-        "token_type": "bearer", 
-        "nome": user["nome"],
-        "tipo_usuario": user.get("tipo_usuario", "comum"),  # Define "comum" como padrão se não existir
-        "setor": user.get("setor", "Escritório"),  # Define "Escritório" como padrão se não existir
-        "primeiro_login": is_primeiro_login  # Adiciona a informação se é o primeiro login
-    }
-    
-    # Registra a atividade de login
+    # Registrar atividade de login bem-sucedido
     await registrar_atividade(
-        db,
+        db=db,
         tipo="login",
-        descricao=f"Login realizado",
+        descricao=f"Login bem-sucedido para o usuário: {user['nome']}",
         usuario_nome=user["nome"]
     )
     
-    # Log do objeto de resposta completo
-    logging.info(f"Resposta completa: {response_data}")
+    # Gerar dados para o token
+    data = {
+        "sub": user["username"],
+        "nome": user["nome"],
+        "tipo_usuario": user.get("tipo_usuario", "comum"),
+        "setor": user.get("setor", "")
+    }
     
-    return response_data
+    # Criar token de acesso
+    access_token = auth.create_access_token(data=data)
+    
+    logger.info(f"Token gerado com sucesso para {user['nome']} com tipo {user.get('tipo_usuario')}")
+    
+    # Retornar o token e os dados do usuário
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "nome": user["nome"],
+        "tipo_usuario": user.get("tipo_usuario", "comum"),
+        "setor": user.get("setor", "")
+    }
 
 # Rota para validação de token
 @app.get("/auth/validate-token")
 async def validate_token(token: str = Depends(auth.oauth2_scheme), db=Depends(database.get_db)):
     try:
         user = await auth.get_current_user(token=token, db=db)
+        
+        # Log detalhado
+        logger.info(f"Token validado para {user.get('username')}")
+        
         # Converte o _id para string para evitar problemas de serialização
         if "_id" in user:
             user["_id"] = str(user["_id"])
         
-        logging.info(f"Token validado para o usuário: {user['username']}")
-        return {"status": "valid", "user": user}
+        # Remover campo senha da resposta por segurança
+        if "senha" in user:
+            del user["senha"]
+        
+        return {
+            "status": "valid", 
+            "user": user
+        }
     except Exception as e:
-        logging.error(f"Erro na validação do token: {str(e)}")
+        logger.error(f"Erro na validação do token: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token inválido ou expirado"
@@ -276,7 +417,7 @@ async def criar_pedido(pedido: schemas.PedidoCreate, db=Depends(database.get_db)
         is_admin = current_user.get("tipo_usuario") == "admin"
         is_gestor = current_user.get("tipo_usuario") == "gestor"
             
-        logging.info(f"Usuário autenticado: {usuario_nome}, Setor: {setor_usuario}")
+        logger.info(f"Usuário autenticado: {usuario_nome}, Setor: {setor_usuario}")
         
         # Sobrescreve o campo usuario_nome, ignorando o enviado pelo cliente
         pedido_dict["usuario_nome"] = usuario_nome
@@ -290,7 +431,7 @@ async def criar_pedido(pedido: schemas.PedidoCreate, db=Depends(database.get_db)
 
         # Insere o pedido no banco
         if pedido_dict.get('file'):
-            logging.info(f"Arquivo Base64 recebido: {pedido_dict['file'][:30]}...")  # Exibe parte do conteúdo
+            logger.info(f"Arquivo Base64 recebido: {pedido_dict['file'][:30]}...")  # Exibe parte do conteúdo
         pedido_dict['anexo'] = pedido_dict.pop('file')  # Renomeia o campo - IMPORTANTE - NÃO ALTERAR
 
         await db["pedidos"].insert_one(pedido_dict)
@@ -304,10 +445,10 @@ async def criar_pedido(pedido: schemas.PedidoCreate, db=Depends(database.get_db)
             pedido_id=next_id
         )
 
-        logging.info(f"Pedido criado com sucesso: {pedido_dict}")
+        logger.info(f"Pedido criado com sucesso: {pedido_dict}")
         return pedido_dict
     except Exception as e:
-        logging.error(f"Erro ao criar pedido: {e}")
+        logger.error(f"Erro ao criar pedido: {e}")
         raise HTTPException(status_code=500, detail="Erro ao criar pedido.")
 
 # Rota para listar pedidos
@@ -322,19 +463,19 @@ async def listar_pedidos(db=Depends(database.get_db), current_user=Depends(get_c
         
         # Se for admin, retorna todos os pedidos, caso contrário filtra por setor
         if is_admin:
-            logging.info(f"Listando todos os pedidos para o administrador: {current_user.get('nome')}")
+            logger.info(f"Listando todos os pedidos para o administrador: {current_user.get('nome')}")
             pedidos = await db["pedidos"].find().to_list(None)
         else:
-            logging.info(f"Listando pedidos do setor {setor_usuario} para o usuário: {current_user.get('nome')}")
+            logger.info(f"Listando pedidos do setor {setor_usuario} para o usuário: {current_user.get('nome')}")
             pedidos = await db["pedidos"].find({"setor": setor_usuario}).to_list(None)
         
         for pedido in pedidos:
             pedido["_id"] = str(pedido["_id"])
         
-        logging.info(f"Pedidos encontrados: {len(pedidos)}")
+        logger.info(f"Pedidos encontrados: {len(pedidos)}")
         return pedidos
     except Exception as e:
-        logging.error(f"Erro ao listar pedidos: {e}")
+        logger.error(f"Erro ao listar pedidos: {e}")
         raise HTTPException(status_code=500, detail="Erro ao listar pedidos.")
 
 @app.get("/pedidos/{pedido_id}")
@@ -352,7 +493,7 @@ async def obter_pedido(pedido_id: int, db=Depends(database.get_db), current_user
     
     # Verificar se o usuário tem permissão para ver este pedido
     if not is_admin and pedido.get("setor") != setor_usuario:
-        logging.warning(f"Usuário {current_user.get('nome')} (setor: {setor_usuario}) tentou visualizar um pedido do setor {pedido.get('setor')}")
+        logger.warning(f"Usuário {current_user.get('nome')} (setor: {setor_usuario}) tentou visualizar um pedido do setor {pedido.get('setor')}")
         raise HTTPException(
             status_code=403, 
             detail="Você não tem permissão para visualizar pedidos de outros setores."
@@ -364,8 +505,8 @@ async def obter_pedido(pedido_id: int, db=Depends(database.get_db), current_user
 @app.put("/pedidos/{pedido_id}")
 async def atualizar_pedido(pedido_id: int, pedido: schemas.PedidoCreate, db=Depends(database.get_db), current_user=Depends(get_current_user)):
     try:
-        logging.info(f"Requisição PUT recebida para o pedido ID: {pedido_id}")
-        logging.info(f"Dados recebidos para atualização: {pedido}")
+        logger.info(f"Requisição PUT recebida para o pedido ID: {pedido_id}")
+        logger.info(f"Dados recebidos para atualização: {pedido}")
 
         # Buscar o pedido atual para comparações
         pedido_atual = await db["pedidos"].find_one({"id": pedido_id})
@@ -394,14 +535,14 @@ async def atualizar_pedido(pedido_id: int, pedido: schemas.PedidoCreate, db=Depe
             msg_erro = "Você não tem permissão para editar este pedido."
             if current_user.get("tipo_usuario") == "comum":
                 msg_erro += " Apenas o criador do pedido, gestores e administradores podem editar."
-            logging.warning(f"Usuário {usuario_nome} (tipo: {current_user.get('tipo_usuario')}) tentou editar pedido #{pedido_id} sem permissão")
+            logger.warning(f"Usuário {usuario_nome} (tipo: {current_user.get('tipo_usuario')}) tentou editar pedido #{pedido_id} sem permissão")
             raise HTTPException(status_code=403, detail=msg_erro)
             
         # Armazena o status original
         status_original = pedido_atual.get("status", "Pendente")
 
         update_data = pedido.dict(exclude_unset=True)
-        logging.info(f"Dados iniciais: {update_data}")
+        logger.info(f"Dados iniciais: {update_data}")
         
         # Sobrescreve o campo usuario_nome, ignorando o enviado pelo cliente
         update_data["usuario_nome"] = usuario_nome
@@ -413,10 +554,10 @@ async def atualizar_pedido(pedido_id: int, pedido: schemas.PedidoCreate, db=Depe
         # Manter a data original do pedido, permitindo alteração apenas para administradores
         if "deliveryDate" in update_data:
             if not is_admin:
-                logging.info(f"Usuário não é admin, mantendo a data original do pedido: {pedido_atual.get('deliveryDate')}")
+                logger.info(f"Usuário não é admin, mantendo a data original do pedido: {pedido_atual.get('deliveryDate')}")
                 del update_data["deliveryDate"]
             else:
-                logging.info(f"Admin alterando a data do pedido para: {update_data['deliveryDate']}")
+                logger.info(f"Admin alterando a data do pedido para: {update_data['deliveryDate']}")
                 # Se for admin, registrar a alteração no histórico
                 hist_data_date = {
                     "pedido_id": pedido_id,
@@ -430,19 +571,19 @@ async def atualizar_pedido(pedido_id: int, pedido: schemas.PedidoCreate, db=Depe
 
         # Processar a data de conclusão
         if "completionDate" in update_data:
-            logging.info(f"Processando data de conclusão: {update_data['completionDate']}")
+            logger.info(f"Processando data de conclusão: {update_data['completionDate']}")
             if update_data["completionDate"] is None:
                 update_data["conclusao_data"] = datetime.now()
             elif isinstance(update_data["completionDate"], str):
                 try:
                     update_data["conclusao_data"] = validate_and_convert_date(update_data["completionDate"])
                 except Exception as e:
-                    logging.error(f"Erro ao converter completionDate: {e}")
+                    logger.error(f"Erro ao converter completionDate: {e}")
                     update_data["conclusao_data"] = datetime.now()
             elif isinstance(update_data["completionDate"], date):
                 update_data["conclusao_data"] = datetime.combine(update_data["completionDate"], datetime.min.time())
             else:
-                logging.warning(f"Tipo desconhecido para completionDate: {type(update_data['completionDate'])}")
+                logger.warning(f"Tipo desconhecido para completionDate: {type(update_data['completionDate'])}")
                 update_data["conclusao_data"] = datetime.now()
             
             # Remover o campo completionDate original
@@ -490,11 +631,11 @@ async def atualizar_pedido(pedido_id: int, pedido: schemas.PedidoCreate, db=Depe
                 pedido_id=pedido_id
             )
 
-        logging.info(f"Dados para atualização após transformação: {update_data}")
+        logger.info(f"Dados para atualização após transformação: {update_data}")
         
         # Converter todos os objetos datetime.date para datetime.datetime
         update_data = convert_dates_to_datetime(update_data)
-        logging.info(f"Dados após conversão de datas: {update_data}")
+        logger.info(f"Dados após conversão de datas: {update_data}")
 
         # Atualizar o pedido
         result = await db["pedidos"].update_one(
@@ -503,7 +644,7 @@ async def atualizar_pedido(pedido_id: int, pedido: schemas.PedidoCreate, db=Depe
         )
 
         if result.matched_count == 0:
-            logging.warning(f"Nenhum pedido encontrado para o ID: {pedido_id}")
+            logger.warning(f"Nenhum pedido encontrado para o ID: {pedido_id}")
             raise HTTPException(status_code=404, detail="Pedido não encontrado.")
 
         # Registrar a mudança de status no histórico se necessário
@@ -552,12 +693,12 @@ async def atualizar_pedido(pedido_id: int, pedido: schemas.PedidoCreate, db=Depe
                     pedido_id=pedido_id
                 )
 
-        logging.info(f"Pedido atualizado com sucesso: ID {pedido_id}")
+        logger.info(f"Pedido atualizado com sucesso: ID {pedido_id}")
         return {"message": "Pedido atualizado com sucesso!"}
 
     except Exception as e:
-        logging.error(f"Erro ao atualizar pedido: {e}")
-        logging.exception("Detalhes do erro:")
+        logger.error(f"Erro ao atualizar pedido: {e}")
+        logger.exception("Detalhes do erro:")
         raise HTTPException(status_code=500, detail=f"Erro ao atualizar pedido: {str(e)}")
 
 # Rota para atualizar pedido com histórico de alterações
@@ -569,7 +710,7 @@ async def atualizar_pedido_com_historico(
     current_user=Depends(get_current_user)
 ):
     try:
-        logging.info(f"Requisição PUT recebida para o pedido ID: {pedido_id} com histórico")
+        logger.info(f"Requisição PUT recebida para o pedido ID: {pedido_id} com histórico")
         
         # Buscar o pedido atual para comparações
         pedido_atual = await db["pedidos"].find_one({"id": pedido_id})
@@ -598,7 +739,7 @@ async def atualizar_pedido_com_historico(
             msg_erro = "Você não tem permissão para editar este pedido."
             if current_user.get("tipo_usuario") == "comum":
                 msg_erro += " Apenas o criador do pedido, gestores e administradores podem editar."
-            logging.warning(f"Usuário {usuario_nome} (tipo: {current_user.get('tipo_usuario')}) tentou editar pedido #{pedido_id} sem permissão")
+            logger.warning(f"Usuário {usuario_nome} (tipo: {current_user.get('tipo_usuario')}) tentou editar pedido #{pedido_id} sem permissão")
             raise HTTPException(status_code=403, detail=msg_erro)
         
         # Obter os dados atualizados e o histórico de alterações
@@ -614,19 +755,19 @@ async def atualizar_pedido_com_historico(
         
         # Processar a data de conclusão
         if "completionDate" in update_data:
-            logging.info(f"Processando data de conclusão: {update_data['completionDate']}")
+            logger.info(f"Processando data de conclusão: {update_data['completionDate']}")
             if update_data["completionDate"] is None:
                 update_data["conclusao_data"] = datetime.now()
             elif isinstance(update_data["completionDate"], str):
                 try:
                     update_data["conclusao_data"] = validate_and_convert_date(update_data["completionDate"])
                 except Exception as e:
-                    logging.error(f"Erro ao converter completionDate: {e}")
+                    logger.error(f"Erro ao converter completionDate: {e}")
                     update_data["conclusao_data"] = datetime.now()
             elif isinstance(update_data["completionDate"], date):
                 update_data["conclusao_data"] = datetime.combine(update_data["completionDate"], datetime.min.time())
             else:
-                logging.warning(f"Tipo desconhecido para completionDate: {type(update_data['completionDate'])}")
+                logger.warning(f"Tipo desconhecido para completionDate: {type(update_data['completionDate'])}")
                 update_data["conclusao_data"] = datetime.now()
             
             # Remover o campo completionDate original
@@ -649,7 +790,7 @@ async def atualizar_pedido_com_historico(
         
         # Converter todos os objetos datetime.date para datetime.datetime
         update_data = convert_dates_to_datetime(update_data)
-        logging.info(f"Dados após conversão de datas: {update_data}")
+        logger.info(f"Dados após conversão de datas: {update_data}")
         
         # Atualiza o pedido
         result = await db["pedidos"].update_one(
@@ -659,7 +800,7 @@ async def atualizar_pedido_com_historico(
         
         # Salvar registros de histórico na coleção pedido_historico
         if historico and isinstance(historico, list):
-            logging.info(f"Processando {len(historico)} registros de histórico para o pedido {pedido_id}")
+            logger.info(f"Processando {len(historico)} registros de histórico para o pedido {pedido_id}")
             
             for modificacao in historico:
                 # Adicionar timestamp e garantir pedido_id
@@ -673,9 +814,9 @@ async def atualizar_pedido_com_historico(
                 # Inserir no banco de dados
                 await db["pedido_historico"].insert_one(modificacao)
             
-            logging.info(f"{len(historico)} registros de histórico salvos com sucesso")
+            logger.info(f"{len(historico)} registros de histórico salvos com sucesso")
         else:
-            logging.warning(f"Nenhum histórico válido recebido para o pedido {pedido_id}")
+            logger.warning(f"Nenhum histórico válido recebido para o pedido {pedido_id}")
         
         # Se houve alteração no status, registramos a atividade específica
         if status_anterior != status_novo:
@@ -716,7 +857,7 @@ async def atualizar_pedido_com_historico(
         
         return {"message": "Pedido atualizado com sucesso!"}
     except Exception as e:
-        logging.error(f"Erro ao atualizar pedido com histórico: {e}")
+        logger.error(f"Erro ao atualizar pedido com histórico: {e}")
         raise HTTPException(
             status_code=500, 
             detail=f"Erro ao atualizar pedido: {str(e)}"
@@ -741,7 +882,7 @@ async def adicionar_historico_pedido(
         if not usuario_nome:
             usuario_nome = current_user.get("username", "Sistema")
             
-        logging.info(f"Usuário autenticado: {usuario_nome}")
+        logger.info(f"Usuário autenticado: {usuario_nome}")
         
         # Preparar os dados do histórico
         hist_data = {
@@ -756,11 +897,11 @@ async def adicionar_historico_pedido(
         # Inserir o registro no histórico
         result = await db["pedido_historico"].insert_one(hist_data)
         
-        logging.info(f"Registro de histórico adicionado para o pedido {pedido_id}")
+        logger.info(f"Registro de histórico adicionado para o pedido {pedido_id}")
         return {"message": "Registro de histórico adicionado com sucesso!"}
         
     except Exception as e:
-        logging.error(f"Erro ao adicionar histórico: {e}")
+        logger.error(f"Erro ao adicionar histórico: {e}")
         raise HTTPException(status_code=500, detail=f"Erro ao adicionar histórico: {str(e)}")
 
 # Rota para obter histórico de edições de um pedido
@@ -784,7 +925,7 @@ async def obter_historico_pedido(
         
         # Verificar se o usuário tem permissão para ver o histórico deste pedido
         if not is_admin and pedido.get("setor") != setor_usuario:
-            logging.warning(f"Usuário {current_user.get('nome')} (setor: {setor_usuario}) tentou visualizar o histórico de um pedido do setor {pedido.get('setor')}")
+            logger.warning(f"Usuário {current_user.get('nome')} (setor: {setor_usuario}) tentou visualizar o histórico de um pedido do setor {pedido.get('setor')}")
             raise HTTPException(
                 status_code=403, 
                 detail="Você não tem permissão para visualizar o histórico de pedidos de outros setores."
@@ -798,7 +939,7 @@ async def obter_historico_pedido(
             
         return historico
     except Exception as e:
-        logging.error(f"Erro ao buscar histórico do pedido: {e}")
+        logger.error(f"Erro ao buscar histórico do pedido: {e}")
         raise HTTPException(status_code=500, detail=f"Erro ao buscar histórico: {str(e)}")
 
 # Endpoint para listar atividades
@@ -806,8 +947,18 @@ async def obter_historico_pedido(
 async def listar_atividades(
     db=Depends(database.get_db), 
     current_user=Depends(get_current_user),
-    limit: int = Query(50, ge=1, le=100)
+    limit: int = Query(1000, ge=1, le=5000),
+    tipo: str = Query(None),
+    start_date: str = Query(None),
+    end_date: str = Query(None),
+    search: str = Query(None),
+    incluir_logs_sistema: bool = Query(False)
 ):
+    """
+    Endpoint centralizado para listar todas as atividades do sistema.
+    Permite filtrar por tipo, data, texto e limite.
+    Apenas gestores e admins podem acessar.
+    """
     # Verifica se o usuário é gestor ou admin
     if current_user.get("tipo_usuario") not in ["gestor", "admin"]:
         raise HTTPException(
@@ -816,8 +967,42 @@ async def listar_atividades(
         )
     
     try:
+        # Construir filtro baseado nos parâmetros
+        filtro = {}
+        if tipo:
+            filtro["tipo"] = tipo
+            
+        if start_date and end_date:
+            try:
+                filtro["data"] = {
+                    "$gte": datetime.fromisoformat(start_date),
+                    "$lte": datetime.fromisoformat(end_date)
+                }
+            except ValueError:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Formato de data inválido. Use o formato ISO (YYYY-MM-DD)."
+                )
+                
+        if search:
+            filtro["$or"] = [
+                {"descricao": {"$regex": search, "$options": "i"}},
+                {"usuario_nome": {"$regex": search, "$options": "i"}},
+                {"tipo": {"$regex": search, "$options": "i"}}
+            ]
+            # Adiciona busca por pedido_id como número ou string
+            if search.isdigit():
+                filtro["$or"].append({"pedido_id": int(search)})
+        
+        # Log para diagnóstico
+        logger.info(f"Filtro de atividades: {filtro}, Limite: {limit}")
+        
+        # Listar os tipos disponíveis para diagnóstico
+        tipos_atividades = await db["atividades"].distinct("tipo")
+        logger.info(f"Tipos de atividades disponíveis: {tipos_atividades}")
+        
         # Busca as atividades mais recentes primeiro
-        atividades = await db["atividades"].find().sort("data", -1).limit(limit).to_list(limit)
+        atividades = await db["atividades"].find(filtro).sort("data", -1).limit(limit).to_list(limit)
         
         # Converte ObjectId para string em cada atividade
         for atividade in atividades:
@@ -825,9 +1010,11 @@ async def listar_atividades(
                 atividade["id"] = str(atividade["_id"])
                 del atividade["_id"]
         
+        logger.info(f"Encontradas {len(atividades)} atividades")
         return atividades
     except Exception as e:
-        logging.error(f"Erro ao listar atividades: {e}")
+        logger.error(f"Erro ao listar atividades: {e}")
+        logger.exception("Detalhes do erro:")
         raise HTTPException(
             status_code=500,
             detail="Erro ao buscar atividades."
@@ -1028,8 +1215,7 @@ async def gerar_relatorio(
                 # Formatar cabeçalho
                 formato_cabecalho = writer.book.add_format({
                     'bold': True,
-                    'bg_color': '#4F81BD',
-                    'font_color': 'white',
+                    'bg_color': '#CCCCCC',
                     'border': 1
                 })
                 
@@ -1063,7 +1249,7 @@ async def gerar_relatorio(
             )
             
     except Exception as e:
-        logging.error(f"Erro ao gerar relatório: {e}")
+        logger.error(f"Erro ao gerar relatório: {e}")
         raise HTTPException(
             status_code=500,
             detail=f"Erro ao gerar relatório: {str(e)}"
@@ -1382,49 +1568,9 @@ async def gerar_relatorio_financeiro(
             )
             
     except Exception as e:
-        logging.error(f"Erro ao gerar relatório financeiro: {e}")
-        logging.exception("Detalhes do erro:")
+        logger.error(f"Erro ao gerar relatório financeiro: {e}")
+        logger.exception("Detalhes do erro:")
         raise HTTPException(
             status_code=500,
             detail=f"Erro ao gerar relatório financeiro: {str(e)}"
         )
-
-@app.get("/logs")
-async def listar_logs(
-    tipo: str = Query(None),
-    start_date: str = Query(None),
-    end_date: str = Query(None),
-    search: str = Query(None),
-    db=Depends(database.get_db),
-    current_user=Depends(get_current_user)
-):
-    """
-    Endpoint para listar logs do sistema (coleção 'atividades').
-    Permite filtrar por tipo, data e texto.
-    Apenas gestores e admins podem acessar.
-    """
-    if current_user.get("tipo_usuario") not in ["gestor", "admin"]:
-        raise HTTPException(status_code=403, detail="Acesso não autorizado. Apenas gestores podem visualizar logs.")
-
-    filtro = {}
-    if tipo:
-        filtro["tipo"] = tipo
-    if start_date and end_date:
-        from datetime import datetime
-        filtro["data"] = {
-            "$gte": datetime.fromisoformat(start_date),
-            "$lte": datetime.fromisoformat(end_date)
-        }
-    if search:
-        filtro["$or"] = [
-            {"descricao": {"$regex": search, "$options": "i"}},
-            {"usuario_nome": {"$regex": search, "$options": "i"}},
-            {"tipo": {"$regex": search, "$options": "i"}},
-            {"pedido_id": {"$regex": search, "$options": "i"}}
-        ]
-    logs = await db["atividades"].find(filtro).sort("data", -1).to_list(200)
-    for log in logs:
-        if "_id" in log:
-            log["id"] = str(log["_id"])
-            del log["_id"]
-    return logs

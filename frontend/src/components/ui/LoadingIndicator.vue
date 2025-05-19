@@ -65,13 +65,13 @@ export default {
   width: 100%;
   height: 100%;
   background-color: rgba(0, 0, 0, 0.6);
-  z-index: 9999;
-  backdrop-filter: blur(2px);
+  z-index: var(--z-index-overlay);
+  backdrop-filter: blur(0.125rem);
 }
 
 .loading-container.inline {
   display: inline-flex;
-  margin: 0 10px;
+  margin: 0 var(--spacing-xs);
 }
 
 .loading-indicator {
@@ -79,18 +79,18 @@ export default {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 15px;
-  border-radius: 8px;
+  padding: var(--spacing-sm);
+  border-radius: var(--border-radius-md);
   background-color: rgba(0, 0, 0, 0.7);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.2);
   transition: all 0.3s ease;
 }
 
 .loading-message {
   color: #fff;
-  margin-top: 15px;
+  margin-top: var(--spacing-sm);
   text-align: center;
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   font-weight: 500;
 }
 
@@ -103,9 +103,9 @@ export default {
 
 .circle {
   display: inline-block;
-  width: 12px;
-  height: 12px;
-  margin: 0 4px;
+  width: 0.75rem;
+  height: 0.75rem;
+  margin: 0 0.25rem;
   border-radius: 50%;
   background-color: #ff6f61;
   animation: bounce 1.4s infinite ease-in-out both;
@@ -121,23 +121,23 @@ export default {
 
 /* Tamanhos */
 .size-small .circle {
-  width: 8px;
-  height: 8px;
-  margin: 0 3px;
+  width: 0.5rem;
+  height: 0.5rem;
+  margin: 0 0.1875rem;
 }
 
 .size-small .loading-message {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
 }
 
 .size-large .circle {
-  width: 16px;
-  height: 16px;
-  margin: 0 5px;
+  width: 1rem;
+  height: 1rem;
+  margin: 0 0.3125rem;
 }
 
 .size-large .loading-message {
-  font-size: 16px;
+  font-size: var(--font-size-md);
 }
 
 /* Animação de bounce */
@@ -153,13 +153,13 @@ export default {
 /* Responsividade */
 @media (max-width: 768px) {
   .loading-indicator {
-    padding: 12px;
+    padding: 0.75rem;
     max-width: 90%;
   }
   
   .loading-message {
-    font-size: 13px;
-    margin-top: 12px;
+    font-size: var(--font-size-xs);
+    margin-top: 0.75rem;
   }
 }
 </style> 

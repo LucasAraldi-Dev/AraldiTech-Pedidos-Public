@@ -5,107 +5,97 @@
         <!-- Formulário de cadastro normal -->
         <div v-if="!isRegistering && !registerSuccess && !registerError">
           <h2>Cadastro</h2>
-          <form @submit.prevent="startRegistrationProcess">
-            <div class="form-group">
-              <label for="name" class="form-label">Nome Completo</label>
-              <div class="input-container">
-                <div class="input-icon">
-                  <i class="fa-user"></i>
+          <form @submit.prevent="startRegistrationProcess" class="register-form">
+            <div class="form-grid">
+              <!-- Nome e Username -->
+              <div class="form-group">
+                <label for="name" class="form-label">Nome Completo</label>
+                <div class="input-container">
+                  <div class="input-icon">
+                    <i class="fa-user"></i>
+                  </div>
+                  <input id="name" type="text" v-model="name" required />
                 </div>
-                <input
-                  id="name"
-                  type="text"
-                  v-model="name"
-                  required
-                />
               </div>
-            </div>
 
-            <div class="form-group">
-              <label for="username" class="form-label">Nome de Usuário</label>
-              <div class="input-container">
-                <div class="input-icon">
-                  <i class="fa-user-tag"></i>
+              <div class="form-group">
+                <label for="username" class="form-label">Nome de Usuário</label>
+                <div class="input-container">
+                  <div class="input-icon">
+                    <i class="fa-user-tag"></i>
+                  </div>
+                  <input id="username" type="text" v-model="username" required />
                 </div>
-                <input
-                  id="username"
-                  type="text"
-                  v-model="username"
-                  required
-                />
               </div>
-            </div>
 
-            <div class="form-group">
-              <label for="signupEmail" class="form-label">E-mail</label>
-              <div class="input-container">
-                <div class="input-icon">
-                  <i class="fa-envelope"></i>
+              <!-- Email e Setor -->
+              <div class="form-group">
+                <label for="signupEmail" class="form-label">E-mail</label>
+                <div class="input-container">
+                  <div class="input-icon">
+                    <i class="fa-envelope"></i>
+                  </div>
+                  <input id="signupEmail" type="email" v-model="signupEmail" required />
                 </div>
-                <input
-                  id="signupEmail"
-                  type="email"
-                  v-model="signupEmail"
-                  required
-                />
               </div>
-            </div>
 
-            <div class="form-group">
-              <label for="signupPassword" class="form-label">Senha</label>
-              <div class="input-container">
-                <div class="input-icon">
-                  <i class="fa-lock"></i>
+              <div class="form-group">
+                <label for="setor" class="form-label">Setor</label>
+                <div class="input-container">
+                  <div class="input-icon">
+                    <i class="fa-building"></i>
+                  </div>
+                  <select v-model="setor" id="setor" required>
+                    <option value="" disabled selected>Selecione um setor</option>
+                    <option value="Escritório">Escritório</option>
+                    <option value="Fábrica de Ração">Fábrica de Ração</option>
+                    <option value="CPO">CPO</option>
+                    <option value="Granjas">Granjas</option>
+                    <option value="Abatedouro">Abatedouro</option>
+                    <option value="Transporte">Transporte</option>
+                    <option value="Incubatório">Incubatório</option>
+                    <option value="Favorito">Favorito</option>
+                  </select>
                 </div>
-                <input
-                  id="signupPassword"
-                  type="password"
-                  v-model="signupPassword"
-                  required
-                  @input="checkPasswordStrength"
-                />
               </div>
-              <div class="password-strength" :class="passwordStrengthClass">
-                {{ passwordStrengthMessage }}
-              </div>
-            </div>
 
-            <div class="form-group">
-              <label for="confirmPassword" class="form-label">Repetir Senha</label>
-              <div class="input-container">
-                <div class="input-icon">
-                  <i class="fa-shield"></i>
+              <!-- Senha e Confirmação -->
+              <div class="form-group span-full">
+                <label for="signupPassword" class="form-label">Senha</label>
+                <div class="input-container">
+                  <div class="input-icon">
+                    <i class="fa-lock"></i>
+                  </div>
+                  <input
+                    id="signupPassword"
+                    type="password"
+                    v-model="signupPassword"
+                    required
+                    @input="checkPasswordStrength"
+                  />
                 </div>
-                <input
-                  id="confirmPassword"
-                  type="password"
-                  v-model="confirmPassword"
-                  required
-                  @input="checkPasswordMatch"
-                />
+                <div class="password-strength" :class="passwordStrengthClass">
+                  {{ passwordStrengthMessage }}
+                </div>
               </div>
-              <div v-if="!passwordsMatch && confirmPassword" class="password-error">
-                As senhas não coincidem
-              </div>
-            </div>
 
-            <div class="form-group">
-              <label for="setor" class="form-label">Setor</label>
-              <div class="input-container">
-                <div class="input-icon">
-                  <i class="fa-building"></i>
+              <div class="form-group span-full">
+                <label for="confirmPassword" class="form-label">Repetir Senha</label>
+                <div class="input-container">
+                  <div class="input-icon">
+                    <i class="fa-shield"></i>
+                  </div>
+                  <input
+                    id="confirmPassword"
+                    type="password"
+                    v-model="confirmPassword"
+                    required
+                    @input="checkPasswordMatch"
+                  />
                 </div>
-                <select v-model="setor" id="setor" required>
-                  <option value="" disabled selected>Selecione um setor</option>
-                  <option value="Escritório">Escritório</option>
-                  <option value="Fábrica de Ração">Fábrica de Ração</option>
-                  <option value="CPO">CPO</option>
-                  <option value="Granjas">Granjas</option>
-                  <option value="Abatedouro">Abatedouro</option>
-                  <option value="Transporte">Transporte</option>
-                  <option value="Incubatório">Incubatório</option>
-                  <option value="Favorito">Favorito</option>
-                </select>
+                <div v-if="!passwordsMatch && confirmPassword" class="password-error">
+                  As senhas não coincidem
+                </div>
               </div>
             </div>
 
@@ -1210,5 +1200,77 @@ h2 {
 
 .terms-link:hover {
   color: #99ddff;
+}
+
+/* Adicionando grid para o formulário */
+.register-form .form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.register-form .span-full {
+  grid-column: 1 / -1;
+}
+
+@media (min-width: 1200px) {
+  .register-form .form-grid {
+    gap: 24px;
+  }
+  
+  .modal {
+    max-width: 600px;
+    padding: 50px;
+  }
+  
+  h2 {
+    font-size: 28px;
+    margin-bottom: 30px;
+  }
+  
+  .input-container input, 
+  .input-container select {
+    padding: 16px 22px;
+    padding-left: 50px;
+    font-size: 17px;
+  }
+  
+  .input-icon {
+    left: 18px;
+  }
+  
+  .form-label {
+    font-size: 17px;
+  }
+  
+  .submit-button, .cancel-button {
+    padding: 16px 22px;
+    font-size: 17px;
+  }
+}
+
+@media (max-width: 768px) {
+  .register-form .form-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .modal {
+    padding: 30px;
+    max-width: 450px;
+  }
+  
+  .input-container input, 
+  .input-container select {
+    padding: 12px 15px;
+    padding-left: 40px;
+  }
+  
+  .input-icon {
+    left: 12px;
+  }
+  
+  .form-label {
+    font-size: 15px;
+  }
 }
 </style>

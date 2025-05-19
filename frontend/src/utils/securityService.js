@@ -5,9 +5,13 @@
  * a aplicação contra vulnerabilidades comuns como CSRF, XSS e injeção.
  */
 
-import axiosService, { axiosInstance } from '../api/axiosService';
+import axiosService from '@/api/axiosService';
 
 const CSRF_TOKEN_KEY = 'csrf_token';
+
+let csrfToken = null;
+// Exportar a constante para uso em outros arquivos
+export const CSRF_HEADER_NAME = 'X-CSRF-Token';
 
 /**
  * Inicializa o token CSRF solicitando um novo token do servidor
@@ -30,235 +34,141 @@ export async function initCsrfProtection() {
 }
 
 /**
- * Obtém o token CSRF atual
- * @returns {string|null} - Token CSRF ou null se não estiver inicializado
+ * Obtém o token CSRF atual do armazenamento em memória
+ * @returns {string|null} Token CSRF ou null se não existir
  */
 export function getCsrfToken() {
-  return localStorage.getItem(CSRF_TOKEN_KEY);
+  return csrfToken;
 }
 
 /**
- * Garantir que temos um token CSRF válido antes de operações protegidas
- * @returns {Promise<string>} Token CSRF
+ * Atualiza o token CSRF chamando a API
+ * @param {boolean} [forceRefresh=false] Forçar atualização mesmo se já existir um token
+ * @returns {Promise<string|null>} Token CSRF atualizado ou null em caso de erro
  */
-export async function ensureCsrfToken() {
-  // Verificar se já existe um token
-  const existingToken = getCsrfToken();
-  if (existingToken) {
-    return existingToken;
+export async function ensureCsrfToken(forceRefresh = false) {
+  try {
+    // Se já temos um token e não estamos forçando atualização, retorna o existente
+    if (csrfToken && !forceRefresh) {
+      console.log('Usando token CSRF existente');
+      return csrfToken;
+    }
+    
+    console.log('Buscando novo token CSRF...');
+    
+    // Chamar o endpoint para gerar um novo token
+    const response = await axiosService.get('/security/csrf-token');
+    
+    if (response && response.data && response.data.csrf_token) {
+      csrfToken = response.data.csrf_token;
+      console.log('Token CSRF atualizado com sucesso');
+      return csrfToken;
+    } else {
+      console.error('Resposta inválida do servidor para token CSRF:', response);
+      return null;
+    }
+  } catch (error) {
+    console.error('Erro ao obter token CSRF:', error);
+    
+    // Logs adicionais para diagnóstico
+    if (error.response) {
+      console.error('Status:', error.response.status);
+      console.error('Dados:', error.response.data);
+      console.error('Headers:', error.response.headers);
+    } else if (error.request) {
+      console.error('Sem resposta do servidor. Requisição:', error.request);
+    } else {
+      console.error('Erro:', error.message);
+    }
+    
+    return null;
   }
-  
-  // Se não existir, inicializar
-  return initCsrfProtection();
 }
 
 /**
- * Sanitiza texto para prevenir ataques XSS
- * @param {string} input - Texto a ser sanitizado
- * @returns {string} - Texto sanitizado
+ * Sanitiza strings HTML para prevenir ataques XSS
+ * @param {string} html String HTML potencialmente perigosa
+ * @returns {string} String sanitizada
  */
-export const sanitizeHtml = (input) => {
-  if (!input) return '';
+export function sanitizeHtml(html) {
+  if (!html) return '';
   
-  return String(input)
+  // Substituição básica de caracteres especiais
+  return String(html)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-};
+    .replace(/'/g, '&#039;');
+}
 
 /**
- * Valida um objeto inteiro contra regras de validação
- * @param {Object} data - Objeto a ser validado
- * @param {Object} rules - Regras de validação
- * @returns {Object} - Resultado da validação {isValid, errors}
+ * Verifica a força de uma senha e retorna uma pontuação com feedback
+ * @param {string} password A senha a ser verificada
+ * @returns {Object} Objeto contendo score (0-4) e feedback para o usuário
  */
-export const validateObject = (data, rules) => {
-  const result = {
-    isValid: true,
-    errors: {}
+export function checkPasswordStrength(password) {
+  // Critérios básicos de força de senha
+  const criteria = {
+    length: password.length >= 8,
+    lowercase: /[a-z]/.test(password),
+    uppercase: /[A-Z]/.test(password),
+    numbers: /[0-9]/.test(password),
+    symbols: /[!@#$%^&*(),.?":{}|<>]/.test(password)
   };
   
-  // Verificar cada campo conforme as regras definidas
-  Object.keys(rules).forEach(field => {
-    const fieldRules = rules[field];
-    const value = data[field];
-    
-    // Verificar se o campo é obrigatório
-    if (fieldRules.required && (value === undefined || value === null || value === '')) {
-      result.isValid = false;
-      result.errors[field] = 'Este campo é obrigatório';
-      return;
-    }
-    
-    // Verificar padrão (regex)
-    if (fieldRules.pattern && value) {
-      const regex = new RegExp(fieldRules.pattern);
-      if (!regex.test(value)) {
-        result.isValid = false;
-        result.errors[field] = fieldRules.patternMessage || 'Formato inválido';
-        return;
-      }
-    }
-    
-    // Verificar comprimento mínimo
-    if (fieldRules.minLength && value && value.length < fieldRules.minLength) {
-      result.isValid = false;
-      result.errors[field] = `Deve ter pelo menos ${fieldRules.minLength} caracteres`;
-      return;
-    }
-    
-    // Verificar comprimento máximo
-    if (fieldRules.maxLength && value && value.length > fieldRules.maxLength) {
-      result.isValid = false;
-      result.errors[field] = `Deve ter no máximo ${fieldRules.maxLength} caracteres`;
-      return;
-    }
-    
-    // Verificar valor mínimo (para números)
-    if (fieldRules.min !== undefined && value !== undefined && value < fieldRules.min) {
-      result.isValid = false;
-      result.errors[field] = `Deve ser maior ou igual a ${fieldRules.min}`;
-      return;
-    }
-    
-    // Verificar valor máximo (para números)
-    if (fieldRules.max !== undefined && value !== undefined && value > fieldRules.max) {
-      result.isValid = false;
-      result.errors[field] = `Deve ser menor ou igual a ${fieldRules.max}`;
-      return;
-    }
-    
-    // Verificação personalizada
-    if (fieldRules.custom && typeof fieldRules.custom === 'function') {
-      const customResult = fieldRules.custom(value, data);
-      if (customResult !== true) {
-        result.isValid = false;
-        result.errors[field] = customResult || 'Valor inválido';
-        return;
-      }
-    }
-  });
-  
-  return result;
-};
-
-/**
- * Detecta potenciais tentativas de injeção de script
- * @param {string} input - Texto a ser verificado
- * @returns {boolean} - true se parecer uma tentativa de injeção
- */
-export const detectScriptInjection = (input) => {
-  if (!input || typeof input !== 'string') return false;
-  
-  // Padrões comuns de injeção de scripts
-  const suspiciousPatterns = [
-    /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/i,
-    /javascript:/i,
-    /on\w+\s*=/i,
-    /document\.cookie/i,
-    /\balert\s*\(/i,
-    /\beval\s*\(/i
-  ];
-  
-  return suspiciousPatterns.some(pattern => pattern.test(input));
-};
-
-/**
- * Detecta potenciais tentativas de injeção SQL
- * @param {string} input - Texto a ser verificado
- * @returns {boolean} - true se parecer uma tentativa de injeção SQL
- */
-export const detectSqlInjection = (input) => {
-  if (!input || typeof input !== 'string') return false;
-  
-  // Padrões comuns de injeção SQL
-  const suspiciousPatterns = [
-    /\b(union|select|insert|update|delete|drop|alter)\b/i,
-    /['"].*?--/i,
-    /\bor\s+[\d'"]+=\s*[\d'"]+/i,
-    /;\s*\w+/i
-  ];
-  
-  return suspiciousPatterns.some(pattern => pattern.test(input));
-};
-
-/**
- * Verifica a força de uma senha
- * @param {string} password - Senha a ser verificada
- * @returns {Object} - Resultado {score, feedback}
- */
-export const checkPasswordStrength = (password) => {
-  if (!password) {
-    return { score: 0, feedback: 'Senha não fornecida' };
-  }
-  
+  // Calcular pontuação com base nos critérios atendidos
   let score = 0;
-  const feedback = [];
+  let feedback = '';
   
-  // Verificar comprimento
-  if (password.length < 8) {
-    feedback.push('A senha deve ter pelo menos 8 caracteres');
-  } else {
-    score += 1;
+  // Adicionar pontos por cada critério atendido
+  if (criteria.length) score++;
+  if (criteria.lowercase) score++;
+  if (criteria.uppercase) score++;
+  if (criteria.numbers) score++;
+  if (criteria.symbols) score++;
+  
+  // Ajustar pontuação para escala 0-4
+  score = Math.min(4, Math.floor(score * 0.8));
+  
+  // Gerar feedback baseado no score
+  switch (score) {
+    case 0:
+      feedback = "Muito fraca. Sua senha é extremamente vulnerável.";
+      break;
+    case 1:
+      feedback = "Fraca. Adicione mais caracteres e varie entre letras, números e símbolos.";
+      break;
+    case 2:
+      feedback = "Razoável. Tente adicionar letras maiúsculas, números ou símbolos.";
+      break;
+    case 3:
+      feedback = "Boa. Sua senha é relativamente segura.";
+      break;
+    case 4:
+      feedback = "Forte. Sua senha atende a todos os critérios de segurança.";
+      break;
   }
   
-  // Verificar presença de letras minúsculas
-  if (/[a-z]/.test(password)) {
-    score += 1;
-  } else {
-    feedback.push('Inclua pelo menos uma letra minúscula');
-  }
-  
-  // Verificar presença de letras maiúsculas
-  if (/[A-Z]/.test(password)) {
-    score += 1;
-  } else {
-    feedback.push('Inclua pelo menos uma letra maiúscula');
-  }
-  
-  // Verificar presença de números
-  if (/\d/.test(password)) {
-    score += 1;
-  } else {
-    feedback.push('Inclua pelo menos um número');
-  }
-  
-  // Verificar presença de caracteres especiais
-  if (/[^A-Za-z0-9]/.test(password)) {
-    score += 1;
-  } else {
-    feedback.push('Inclua pelo menos um caractere especial');
-  }
-  
-  return {
-    score, // 0-5, onde 5 é a mais forte
-    feedback: feedback.join('; ') || 'Senha forte'
-  };
-};
+  return { score, feedback };
+}
 
-// Interceptor para adicionar CSRF em métodos sensíveis
-axiosInstance.interceptors.request.use(config => {
-  const method = config.method && config.method.toUpperCase();
-  if (["POST", "PUT", "DELETE"].includes(method)) {
-    const csrfToken = getCsrfToken();
-    if (csrfToken) {
-      console.log(`Adicionando token CSRF para ${method} ${config.url}`);
-      config.headers['X-CSRF-Token'] = csrfToken;
-    } else {
-      console.warn(`AVISO: Token CSRF não encontrado para ${method} ${config.url}`);
-    }
+/**
+ * Inicializa todas as proteções de segurança necessárias
+ * @returns {Promise<boolean>} True se todas as proteções foram inicializadas com sucesso
+ */
+export async function inicializarProtecoesSeguranca() {
+  try {
+    // Inicializa a proteção CSRF
+    await initCsrfProtection();
+    
+    // Aqui poderiam ser adicionadas outras inicializações de segurança
+    // por exemplo: verificar a versão da API, configurar headers de segurança, etc.
+    
+    console.log('Todas as proteções de segurança foram inicializadas');
+    return true;
+  } catch (error) {
+    console.error('Falha ao inicializar proteções de segurança:', error);
+    return false;
   }
-  return config;
-});
-
-export default {
-  initCsrfProtection,
-  getCsrfToken,
-  sanitizeHtml,
-  validateObject,
-  detectScriptInjection,
-  detectSqlInjection,
-  checkPasswordStrength
-}; 
+} 

@@ -2,7 +2,7 @@
   <div v-if="isOpen" class="modal-overlay" @click.self="closeModal">
     <div class="log-viewer-modal" @click.stop>
       <div class="modal-header">
-        <h2>
+        <h2 class="modal-title">
           <i class="material-icons">history</i>
           LOGS DO SISTEMA
         </h2>
@@ -20,7 +20,9 @@
               <option value="conclusao">CONCLUSÃO</option>
               <option value="orcamento">ORÇAMENTO</option>
               <option value="erro">ERRO</option>
+              <option value="registro">CADASTRO</option>
               <option value="seguranca">SEGURANÇA</option>
+              <option value="cancelamento">CANCELAMENTO</option>
             </select>
           </div>
           <div class="filter-item">
@@ -45,6 +47,14 @@
                 <label for="endDate">Até:</label>
                 <input type="date" id="endDate" v-model="filters.endDate" />
               </div>
+              <button 
+                @click="fetchLogs" 
+                class="apply-date-btn"
+                :disabled="loading"
+              >
+                <i class="material-icons">check</i>
+                Aplicar
+              </button>
             </div>
           </div>
           <div class="filter-item search-filter">
@@ -55,6 +65,40 @@
               class="search-input"
             />
             <i class="material-icons search-icon">search</i>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dashboard de estatísticas -->
+      <div class="stats-dashboard" v-show="logs.length > 0">
+        <div class="stats-title">
+          <i class="material-icons">analytics</i>
+          Visão Geral da Auditoria
+        </div>
+        <div class="stats-cards">
+          <div class="stats-card">
+            <div class="stats-card-title">Total de Logs</div>
+            <div class="stats-card-value">{{ logs.length }}</div>
+          </div>
+          <div class="stats-card">
+            <div class="stats-card-title">Período</div>
+            <div class="stats-card-value">{{ getFilterPeriodLabel() }}</div>
+          </div>
+          <div class="stats-card">
+            <div class="stats-card-title">Logs por Tipo</div>
+            <div class="stats-card-content">
+              <div v-for="(count, type) in countLogsByType" :key="type" class="log-type-chip">
+                <span 
+                  class="log-type-indicator" 
+                  :class="`indicator-${type}`"
+                ></span>
+                {{ formatLogType(type) }}: {{ count }}
+              </div>
+            </div>
+          </div>
+          <div class="stats-card">
+            <div class="stats-card-title">Última Atualização</div>
+            <div class="stats-card-value">{{ formatDateTime(new Date()) }}</div>
           </div>
         </div>
       </div>
@@ -84,20 +128,45 @@
               <div class="log-icon">
                 <i class="material-icons">{{ getLogTypeIcon(log.tipo) }}</i>
               </div>
-              <div class="log-type">{{ formatLogType(log.tipo) }}</div>
-              <div class="log-date">{{ formatDateTime(log.data) }}</div>
+              <div class="log-type-tag">
+                {{ formatLogType(log.tipo) }}
+              </div>
+              <div class="log-date">
+                <i class="material-icons date-icon">event</i>
+                {{ formatDateTime(log.data) }}
+              </div>
             </div>
             <div class="log-content">
               <p class="log-description">{{ log.descricao }}</p>
               <div class="log-details">
-                <span class="log-user">
-                  <i class="material-icons">person</i>
-                  {{ log.usuario_nome || 'Sistema' }}
-                </span>
-                <span v-if="log.pedido_id" class="log-order-id">
-                  <i class="material-icons">receipt</i>
-                  Pedido #{{ log.pedido_id }}
-                </span>
+                <div class="log-tags">
+                  <span v-if="log.usuario_nome" class="log-tag log-tag-user">
+                    <i class="material-icons">person</i>
+                    {{ log.usuario_nome }}
+                  </span>
+                  <span v-if="log.pedido_id" class="log-tag log-tag-order" @click="showOrderInfo(log.pedido_id)">
+                    <i class="material-icons">receipt</i>
+                    Pedido #{{ log.pedido_id }}
+                  </span>
+                  <span class="log-tag log-tag-time">
+                    <i class="material-icons">schedule</i>
+                    {{ getTimeFromNow(log.data) }}
+                  </span>
+                </div>
+                <div class="log-actions">
+                  <button class="action-button" @click="viewLogDetails(log)">
+                    <i class="material-icons">info</i>
+                    Detalhes
+                  </button>
+                  <button v-if="log.pedido_id" class="action-button" @click="showOrderInfo(log.pedido_id)">
+                    <i class="material-icons">visibility</i>
+                    Ver Pedido
+                  </button>
+                  <button class="action-button" @click="copyLogToClipboard(log)">
+                    <i class="material-icons">content_copy</i>
+                    Copiar
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -143,20 +212,29 @@
         </button>
       </div>
     </div>
+    
+    <!-- Modal de Detalhes do Log -->
+    <ModalLogDetail
+      :isOpen="isLogDetailOpen"
+      :log="selectedLog"
+      :onClose="closeLogDetail"
+      @view-order="showOrderInfoFromDetail"
+    />
   </div>
 </template>
 
 <script>
 import { useToast } from "vue-toastification";
 import LoadingIndicator from "./ui/LoadingIndicator.vue";
-import { cachedRequest } from "../utils/cacheService";
 import axiosService from "../api/axiosService";
 import { validateDate } from "../utils/validationService";
+import ModalLogDetail from "./ModalLogDetail.vue";
 
 export default {
   name: "ModalLogViewer",
   components: {
-    LoadingIndicator
+    LoadingIndicator,
+    ModalLogDetail
   },
   props: {
     isOpen: {
@@ -181,13 +259,12 @@ export default {
         startDate: this.getDefaultStartDate(),
         endDate: this.formatDateForInput(new Date())
       },
-      cacheOptions: {
-        logs: {
-          enabled: true,
-          ttl: 2 * 60 * 1000 // 2 minutos para logs
-        }
-      },
-      toast: useToast()
+      toast: useToast(),
+      isAdmin: localStorage.getItem("user") ? 
+        JSON.parse(localStorage.getItem("user")).tipo_usuario === "admin" : 
+        false,
+      isLogDetailOpen: false,
+      selectedLog: null
     };
   },
   computed: {
@@ -198,19 +275,7 @@ export default {
           return false;
         }
         
-        // Filtrar por data
-        const logDate = new Date(log.data);
-        const startDate = this.filters.startDate 
-          ? new Date(this.filters.startDate) 
-          : new Date(0);
-        const endDate = this.filters.endDate 
-          ? new Date(this.filters.endDate) 
-          : new Date();
-        endDate.setHours(23, 59, 59, 999); // Fim do dia
-        
-        if (logDate < startDate || logDate > endDate) {
-          return false;
-        }
+        // Filtro de data já é aplicado na API, não precisamos filtrar novamente
         
         // Filtrar por texto de pesquisa
         if (this.filters.search && this.filters.search.trim() !== "") {
@@ -237,6 +302,17 @@ export default {
     },
     totalPages() {
       return Math.max(1, Math.ceil(this.filteredLogs.length / this.itemsPerPage));
+    },
+    // Contagem de logs por tipo para o dashboard de estatísticas
+    countLogsByType() {
+      const typeCounts = {};
+      
+      this.logs.forEach(log => {
+        const tipo = log.tipo || 'desconhecido';
+        typeCounts[tipo] = (typeCounts[tipo] || 0) + 1;
+      });
+      
+      return typeCounts;
     }
   },
   watch: {
@@ -265,14 +341,27 @@ export default {
         this.filters.startDate = this.formatDateForInput(thirtyDaysAgo);
         this.filters.endDate = this.formatDateForInput(today);
       }
+      
+      // Aplicar filtros imediatamente
+      if (this.isOpen) {
+        this.fetchLogs();
+      }
     },
     'filters.type'() {
       // Resetar paginação quando o filtro mudar
       this.currentPage = 1;
+      // Buscar dados filtrados imediatamente
+      if (this.isOpen) {
+        this.fetchLogs();
+      }
     },
     'filters.search'() {
       // Resetar paginação quando pesquisar
       this.currentPage = 1;
+      // Buscar dados com a pesquisa
+      if (this.isOpen && this.filters.search.trim().length > 2) {
+        this.fetchLogs();
+      }
     }
   },
   mounted() {
@@ -284,6 +373,7 @@ export default {
   methods: {
     async fetchLogs() {
       this.loading = true;
+      console.log("Iniciando busca de logs...");
       
       try {
         // Validar datas se estiver usando período personalizado
@@ -308,13 +398,17 @@ export default {
           }
         }
         
-        // Construir parâmetros para a requisição
-        const params = {};
+        // Preparar parâmetros para a requisição
+        const params = {
+          limit: 1000  // Limite alto para obter muitos logs
+        };
         
+        // Adicionar filtro de tipo se não for TODOS
         if (this.filters.type !== 'TODOS') {
           params.tipo = this.filters.type;
         }
         
+        // Adicionar filtros de data conforme o período selecionado
         if (this.filters.period === 'hoje') {
           const today = new Date();
           params.start_date = this.formatDateForAPI(today);
@@ -336,17 +430,29 @@ export default {
           params.end_date = this.formatDateForAPI(new Date(this.filters.endDate), true);
         }
         
-        // Fazer a requisição usando o cache
-        const response = await cachedRequest(
-          axiosService.get,
-          '/logs',
-          { params },
-          this.cacheOptions.logs
-        );
+        // Adicionar termo de busca se houver
+        if (this.filters.search && this.filters.search.trim() !== "") {
+          params.search = this.filters.search;
+        }
         
+        console.log("Buscando dados do endpoint /atividades com parâmetros:", params);
+        
+        // Fazer a requisição direta sem cache
+        const response = await axiosService.get('/atividades', { params });
+        
+        // Atualizar os logs
         this.logs = response.data || [];
+        console.log(`Recebidos ${this.logs.length} logs do endpoint /atividades`);
         
-        // Resetar para a primeira página quando novos dados são carregados
+        // Ordenar por data, do mais recente para o mais antigo
+        this.logs.sort((a, b) => new Date(b.data) - new Date(a.data));
+        
+        // Mostrar estatísticas no console
+        const tiposEncontrados = [...new Set(this.logs.map(log => log.tipo))];
+        console.log("Tipos de logs encontrados:", tiposEncontrados);
+        console.log("Total de logs:", this.logs.length);
+        
+        // Resetar para a primeira página
         this.currentPage = 1;
       } catch (error) {
         console.error('Erro ao carregar logs:', error);
@@ -376,7 +482,9 @@ export default {
         conclusao: 'CONCLUSÃO',
         orcamento: 'ORÇAMENTO',
         erro: 'ERRO',
-        seguranca: 'SEGURANÇA'
+        seguranca: 'SEGURANÇA',
+        registro: 'CADASTRO',
+        cancelamento: 'CANCELAMENTO'
       };
       
       return types[type] || type.toUpperCase();
@@ -389,7 +497,9 @@ export default {
         conclusao: 'check_circle',
         orcamento: 'attach_money',
         erro: 'error',
-        seguranca: 'security'
+        seguranca: 'security',
+        registro: 'person_add',
+        cancelamento: 'cancel'
       };
       
       return icons[type] || 'info';
@@ -398,6 +508,7 @@ export default {
       return `log-type-${type}`;
     },
     closeModal() {
+      console.log('[CRÍTICO] Método closeModal chamado - fechando ModalLogViewer');
       this.onClose();
     },
     nextPage() {
@@ -411,13 +522,8 @@ export default {
       }
     },
     refreshLogs() {
-      // Invalidar o cache para obter dados frescos
-      this.cacheOptions.logs.enabled = false;
-      this.fetchLogs().finally(() => {
-        // Reativar o cache após a atualização
-        this.cacheOptions.logs.enabled = true;
-      });
-      this.toast.info("Atualizando logs...");
+      this.fetchLogs();
+      this.toast.info("Atualizando logs do sistema...");
     },
     exportLogs() {
       // Criar CSV dos logs filtrados
@@ -475,6 +581,187 @@ export default {
         return endOfDayDate.toISOString().split('T')[0];
       }
       return formattedDate;
+    },
+    // Novos métodos adicionados para suportar funcionalidades
+    getTimeFromNow(dateString) {
+      if (!dateString) return '';
+      
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffMs = now - date;
+      
+      // Converter para segundos, minutos, horas e dias
+      const seconds = Math.floor(diffMs / 1000);
+      const minutes = Math.floor(seconds / 60);
+      const hours = Math.floor(minutes / 60);
+      const days = Math.floor(hours / 24);
+      
+      if (days > 0) {
+        return days === 1 ? 'há 1 dia' : `há ${days} dias`;
+      } else if (hours > 0) {
+        return hours === 1 ? 'há 1 hora' : `há ${hours} horas`;
+      } else if (minutes > 0) {
+        return minutes === 1 ? 'há 1 minuto' : `há ${minutes} minutos`;
+      } else {
+        return seconds <= 10 ? 'agora mesmo' : `há ${seconds} segundos`;
+      }
+    },
+    async showOrderInfo(pedidoId) {
+      try {
+        console.log(`[CRÍTICO] showOrderInfo chamado com pedidoId: ${pedidoId}`);
+        
+        // Adicionar um feedback visual claro para o usuário
+        this.toast.info(`Buscando detalhes do pedido #${pedidoId}...`, {
+          timeout: 3000,
+          closeButton: false
+        });
+        
+        // Método 1: Fazer uma busca específica pelo ID do pedido usando axios
+        const token = localStorage.getItem('access_token');
+        if (!token) {
+          console.error('[CRÍTICO] Token de autenticação não encontrado');
+          this.toast.error('Sessão expirada. Faça login novamente.');
+          return;
+        }
+        
+        // Garantir que pedidoId seja numérico
+        const pedidoIdNum = typeof pedidoId === 'string' ? parseInt(pedidoId, 10) : pedidoId;
+        console.log(`[CRÍTICO] ID do pedido convertido para número: ${pedidoIdNum}`);
+        
+        // Emitir evento para o componente pai (AppMenu) para abrir o modal de impressão
+        console.log(`[CRÍTICO] Emitindo evento open-order com pedidoId: ${pedidoIdNum}`);
+        this.$emit('open-order', pedidoIdNum);
+        
+        console.log('[CRÍTICO] Evento open-order emitido com sucesso');
+              
+        // Não fechamos mais o modal para que ele possa ser reaberto quando o pedido for fechado
+        // console.log('[CRÍTICO] Fechando modal de logs depois de emitir o evento');
+        // this.onClose();
+        
+        return true;
+      } catch (error) {
+        console.error('[CRÍTICO] Erro ao buscar detalhes do pedido:', error);
+        
+        let mensagemErro = 'Não foi possível carregar os detalhes do pedido.';
+        
+        if (error.response) {
+          // O servidor respondeu com um código de erro
+          console.error(`Erro de resposta: ${error.response.status}`, error.response.data);
+          if (error.response.status === 403) {
+            mensagemErro += ' Você não tem permissão para ver este pedido.';
+          } else if (error.response.status === 404) {
+            mensagemErro += ' Pedido não encontrado.';
+          } else if (error.response.status >= 500) {
+            mensagemErro += ' Erro no servidor. Tente novamente mais tarde.';
+          }
+        } else if (error.request) {
+          // A requisição foi feita mas não houve resposta (problema de rede)
+          console.error('Erro de rede - sem resposta do servidor:', error.request);
+          mensagemErro += ' Verifique sua conexão com a internet.';
+        } else {
+          // Erro de configuração da requisição ou outro tipo de erro
+          console.error('Outro tipo de erro:', error.message);
+        }
+        
+        this.toast.error(mensagemErro, {
+          timeout: 5000,
+          closeButton: false
+        });
+        
+        return false;
+      }
+    },
+    copyLogToClipboard(log) {
+      try {
+        // Criar texto formatado para copiar
+        const formattedLog = `
+          Tipo: ${this.formatLogType(log.tipo)}
+          Data: ${this.formatDateTime(log.data)}
+          Descrição: ${log.descricao}
+          Usuário: ${log.usuario_nome || 'Sistema'}
+          ${log.pedido_id ? `Pedido: #${log.pedido_id}` : ''}
+          ID: ${log.id}
+        `.trim();
+        
+        // Método alternativo para copiar para o clipboard, compatível com mais navegadores
+        const textArea = document.createElement('textarea');
+        textArea.value = formattedLog;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        const successful = document.execCommand('copy');
+        
+        if (successful) {
+          this.toast.success('Log copiado para a área de transferência');
+        } else {
+          // Tentar método moderno se o antigo falhar
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(formattedLog)
+              .then(() => {
+                this.toast.success('Log copiado para a área de transferência');
+              })
+              .catch(err => {
+                throw err;
+              });
+          } else {
+            this.toast.error('Seu navegador não suporta copiar para área de transferência');
+          }
+        }
+        
+        document.body.removeChild(textArea);
+      } catch (error) {
+        console.error('Erro ao copiar log:', error);
+        this.toast.error('Não foi possível copiar o log');
+      }
+    },
+    getFilterPeriodLabel() {
+      switch (this.filters.period) {
+        case 'hoje':
+          return 'Hoje';
+        case '7dias':
+          return 'Últimos 7 dias';
+        case '30dias':
+          return 'Últimos 30 dias';
+        case 'personalizado':
+          return `${this.filters.startDate} a ${this.filters.endDate}`;
+        default:
+          return 'Personalizado';
+      }
+    },
+    viewLogDetails(log) {
+      this.selectedLog = log;
+      this.isLogDetailOpen = true;
+    },
+    closeLogDetail() {
+      this.isLogDetailOpen = false;
+    },
+    showOrderInfoFromDetail(pedidoId) {
+      console.log(`[CRÍTICO] showOrderInfoFromDetail chamado com pedidoId: ${pedidoId}`);
+      
+      // Verificar se pedidoId é válido
+      if (!pedidoId) {
+        console.error('[CRÍTICO] ID do pedido inválido passado para showOrderInfoFromDetail');
+        this.toast.error('ID do pedido inválido');
+        return;
+      }
+      
+      // Fechar o modal de detalhes do log
+      this.closeLogDetail();
+      
+      // Garantir que pedidoId seja numérico
+      const pedidoIdNum = typeof pedidoId === 'string' ? parseInt(pedidoId, 10) : pedidoId;
+      
+      // Emitir evento para buscar o pedido no modal principal
+      console.log(`[CRÍTICO] Emitindo evento open-order com pedidoId: ${pedidoIdNum}`);
+      this.$emit('open-order', pedidoIdNum);
+      
+      // Não fechamos mais o modal para que ele possa ser reaberto quando o pedido for fechado
+      // console.log('[CRÍTICO] Fechando modal de logs após emitir o evento');
+      // this.onClose();
     }
   }
 };
@@ -487,89 +774,115 @@ export default {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100vw;
-  height: 100vh;
+  right: 0;
+  bottom: 0;
   background-color: rgba(0, 0, 0, 0.85);
-  z-index: 1000;
   display: flex;
   justify-content: center;
   align-items: center;
-  overflow: auto;
-  padding: 20px;
+  z-index: 1100;
+  overflow-y: auto;
+  padding: 15px;
   box-sizing: border-box;
 }
 
 .log-viewer-modal {
+  background-color: #1f1f1f;
+  border-radius: 10px;
   width: 90%;
   max-width: 1200px;
   max-height: 90vh;
-  background-color: #1f1f1f;
-  border-radius: 10px;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+  overflow-y: auto;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  animation: modalFadeIn 0.3s ease;
+  position: relative;
+  color: #f5f5f5;
+  scrollbar-width: thin;
+  scrollbar-color: #ff6f61 #333;
+}
+
+.log-viewer-modal::-webkit-scrollbar {
+  width: 8px;
+}
+
+.log-viewer-modal::-webkit-scrollbar-track {
+  background: #333;
+  border-radius: 10px;
+}
+
+.log-viewer-modal::-webkit-scrollbar-thumb {
+  background-color: #ff6f61;
+  border-radius: 10px;
 }
 
 .modal-header {
-  background-color: #ff6f61;
-  color: white;
-  padding: 15px 20px;
+  padding: 20px;
+  border-bottom: 1px solid #333;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  background-color: #1f1f1f;
+  z-index: 10;
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
 }
 
-.modal-header h2 {
+.modal-title {
+  font-size: 24px;
   margin: 0;
-  font-size: 1.5rem;
+  color: #f5f5f5;
   display: flex;
   align-items: center;
 }
 
-.modal-header h2 i {
-  margin-right: 10px;
+.modal-title i {
+  margin-right: 15px;
+  color: #ff6f61;
 }
 
 .filters-container {
   display: flex;
   flex-wrap: wrap;
   gap: 15px;
-  margin: 15px 0 0;
-  width: 100%;
+  margin-top: 15px;
+  padding: 10px;
+  background-color: #252525;
+  border-radius: 4px;
+  border: 1px solid #333;
 }
 
 .filter-item {
   display: flex;
   align-items: center;
-  margin-right: 15px;
 }
 
 .filter-item label {
   margin-right: 8px;
-  font-weight: 500;
   display: flex;
   align-items: center;
+  color: #f5f5f5;
 }
 
 .filter-item label i {
   margin-right: 5px;
+  color: #ff6f61;
 }
 
 .filter-item select,
 .filter-item input {
   padding: 8px 12px;
-  border-radius: 4px;
   border: 1px solid #444;
+  border-radius: 4px;
   background-color: #333;
-  color: white;
-  font-size: 0.9rem;
+  color: #f5f5f5;
+  font-size: 14px;
 }
 
 .date-range-container {
   display: flex;
+  align-items: center;
   gap: 10px;
 }
 
@@ -583,6 +896,26 @@ export default {
   white-space: nowrap;
 }
 
+.apply-date-btn {
+  padding: 8px 12px;
+  background-color: #ff6f61;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: background-color 0.3s;
+}
+
+.apply-date-btn i {
+  margin-right: 5px;
+}
+
+.apply-date-btn:hover {
+  background-color: #e74c3c;
+}
+
 .search-filter {
   position: relative;
   flex-grow: 1;
@@ -591,6 +924,10 @@ export default {
 .search-input {
   width: 100%;
   padding: 8px 12px 8px 35px;
+  border: 1px solid #444;
+  border-radius: 4px;
+  background-color: #333;
+  color: #f5f5f5;
 }
 
 .search-icon {
@@ -598,14 +935,14 @@ export default {
   left: 10px;
   top: 50%;
   transform: translateY(-50%);
-  color: #aaa;
+  color: #999;
 }
 
 .logs-container {
-  flex: 1;
+  flex-grow: 1;
   overflow-y: auto;
   padding: 20px;
-  background-color: #272727;
+  background-color: #252525;
 }
 
 .loading-container {
@@ -618,15 +955,15 @@ export default {
 .no-logs-message {
   display: flex;
   flex-direction: column;
-  align-items: center;
   justify-content: center;
+  align-items: center;
   height: 200px;
-  color: #aaa;
-  text-align: center;
+  color: #999;
+  font-size: 1.2rem;
 }
 
 .no-logs-message i {
-  font-size: 48px;
+  font-size: 3rem;
   margin-bottom: 15px;
   color: #ff6f61;
 }
@@ -638,11 +975,12 @@ export default {
 }
 
 .log-item {
-  background-color: #333;
-  border-radius: 8px;
-  overflow: hidden;
-  transition: all 0.2s ease;
+  background-color: #2a2a2a;
+  border-radius: 6px;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  border-left: 5px solid #444;
+  transition: transform 0.2s;
 }
 
 .log-item:hover {
@@ -651,118 +989,174 @@ export default {
 }
 
 .log-header {
-  padding: 12px 15px;
   display: flex;
   align-items: center;
-  background-color: #3a3a3a;
+  padding: 12px 15px;
+  background-color: #333;
   border-bottom: 1px solid #444;
 }
 
 .log-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background-color: #555;
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-color: #444;
   margin-right: 12px;
 }
 
 .log-icon i {
-  font-size: 18px;
-  color: white;
+  font-size: 20px;
+  color: #f5f5f5;
 }
 
-.log-type {
-  font-weight: 600;
-  text-transform: uppercase;
+.log-type-tag {
+  padding: 5px 10px;
+  background-color: #444;
+  border-radius: 12px;
   font-size: 0.8rem;
-  padding: 4px 8px;
-  border-radius: 4px;
-  background-color: #555;
+  font-weight: bold;
   margin-right: auto;
+  color: #f5f5f5;
 }
 
 .log-date {
-  font-size: 0.8rem;
-  color: #bbb;
-}
-
-.log-content {
-  padding: 15px;
-  color: #eee;
-}
-
-.log-description {
-  margin: 0 0 15px;
-  line-height: 1.5;
-}
-
-.log-details {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 15px;
   font-size: 0.85rem;
-  color: #bbb;
+  color: #999;
 }
 
-.log-user,
-.log-order-id {
-  display: flex;
-  align-items: center;
-}
-
-.log-user i,
-.log-order-id i {
+.date-icon {
   font-size: 16px;
   margin-right: 5px;
 }
 
-/* Classes de tipo de log */
-.log-type-login .log-icon {
-  background-color: #4caf50;
-}
-.log-type-criacao .log-icon {
-  background-color: #2196f3;
-}
-.log-type-edicao .log-icon {
-  background-color: #ff9800;
-}
-.log-type-conclusao .log-icon {
-  background-color: #9c27b0;
-}
-.log-type-orcamento .log-icon {
-  background-color: #00bcd4;
-}
-.log-type-erro .log-icon {
-  background-color: #f44336;
-}
-.log-type-seguranca .log-icon {
-  background-color: #795548;
+.log-content {
+  padding: 15px;
 }
 
-.log-type-login .log-type {
-  background-color: #4caf50;
+.log-description {
+  margin: 0 0 15px 0;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: #f5f5f5;
 }
-.log-type-criacao .log-type {
-  background-color: #2196f3;
+
+.log-details {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+  flex-wrap: wrap;
+  gap: 10px;
 }
-.log-type-edicao .log-type {
-  background-color: #ff9800;
+
+.log-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
-.log-type-conclusao .log-type {
-  background-color: #9c27b0;
+
+.log-tag {
+  display: flex;
+  align-items: center;
+  padding: 4px 8px;
+  background-color: #333;
+  border-radius: 4px;
+  font-size: 0.85rem;
 }
-.log-type-orcamento .log-type {
-  background-color: #00bcd4;
+
+.log-tag i {
+  font-size: 16px;
+  margin-right: 5px;
 }
-.log-type-erro .log-type {
-  background-color: #f44336;
+
+.log-tag-user {
+  background-color: rgba(3, 169, 244, 0.2);
+  color: #03a9f4;
 }
-.log-type-seguranca .log-type {
-  background-color: #795548;
+
+.log-tag-order {
+  background-color: rgba(76, 175, 80, 0.2);
+  color: #4caf50;
+  cursor: pointer;
+}
+
+.log-tag-order:hover {
+  background-color: rgba(76, 175, 80, 0.3);
+}
+
+.log-tag-time {
+  background-color: rgba(255, 152, 0, 0.2);
+  color: #ff9800;
+}
+
+.log-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.action-button {
+  display: flex;
+  align-items: center;
+  padding: 6px 10px;
+  background-color: #333;
+  border: 1px solid #444;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  color: #f5f5f5;
+}
+
+.action-button i {
+  font-size: 16px;
+  margin-right: 5px;
+  color: #ff6f61;
+}
+
+.action-button:hover {
+  background-color: #444;
+}
+
+/* Estilos específicos para tipos de log */
+.log-type-login {
+  border-left-color: #3498db;
+}
+
+.log-type-criacao {
+  border-left-color: #2ecc71;
+}
+
+.log-type-edicao {
+  border-left-color: #f39c12;
+}
+
+.log-type-conclusao {
+  border-left-color: #27ae60;
+}
+
+.log-type-orcamento {
+  border-left-color: #9b59b6;
+}
+
+.log-type-erro {
+  border-left-color: #e74c3c;
+}
+
+.log-type-seguranca {
+  border-left-color: #8e44ad;
+}
+
+.log-type-registro {
+  border-left-color: #16a085;
+}
+
+.log-type-cancelamento {
+  border-left-color: #c0392b;
 }
 
 .pagination {
@@ -770,152 +1164,235 @@ export default {
   justify-content: center;
   align-items: center;
   padding: 15px;
-  background-color: #1f1f1f;
-  border-top: 1px solid #444;
+  background-color: #252525;
+  border-top: 1px solid #333;
 }
 
 .pagination-button {
-  background-color: #333;
+  display: flex;
+  align-items: center;
+  padding: 8px 15px;
+  background-color: #ff6f61;
   color: white;
   border: none;
   border-radius: 4px;
-  padding: 8px 15px;
-  font-size: 0.9rem;
   cursor: pointer;
-  display: flex;
-  align-items: center;
+  font-size: 0.9rem;
   transition: background-color 0.2s;
 }
 
 .pagination-button:hover:not(:disabled) {
-  background-color: #444;
+  background-color: #e74c3c;
 }
 
 .pagination-button:disabled {
-  opacity: 0.5;
+  background-color: #444;
   cursor: not-allowed;
 }
 
 .pagination-button i {
-  font-size: 20px;
+  font-size: 18px;
 }
 
 .page-info {
-  margin: 0 20px;
-  color: #ddd;
+  margin: 0 15px;
+  font-size: 0.9rem;
+  color: #999;
 }
 
 .modal-actions {
   display: flex;
   justify-content: flex-end;
-  padding: 15px 20px;
+  gap: 10px;
+  padding: 15px;
   background-color: #1f1f1f;
-  border-top: 1px solid #444;
+  border-top: 1px solid #333;
 }
 
-.modal-actions button {
-  margin-left: 10px;
-  padding: 10px 20px;
-  border: none;
-  border-radius: 4px;
-  font-weight: 600;
-  cursor: pointer;
+.refresh-button,
+.export-button,
+.close-button {
   display: flex;
   align-items: center;
+  padding: 8px 15px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
   transition: background-color 0.2s;
 }
 
-.modal-actions button i {
-  margin-right: 8px;
-}
-
 .refresh-button {
-  background-color: #555;
-  color: white;
-}
-
-.refresh-button:hover {
-  background-color: #666;
-}
-
-.export-button {
-  background-color: #4caf50;
-  color: white;
-}
-
-.export-button:hover {
-  background-color: #3d8b40;
-}
-
-.close-button {
   background-color: #ff6f61;
   color: white;
 }
 
-.close-button:hover {
-  background-color: #e5635a;
+.refresh-button:hover {
+  background-color: #e74c3c;
 }
 
-@keyframes modalFadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.export-button {
+  background-color: #2ecc71;
+  color: white;
+}
+
+.export-button:hover {
+  background-color: #27ae60;
+}
+
+.close-button {
+  background-color: #333;
+  color: white;
+}
+
+.close-button:hover {
+  background-color: #444;
+}
+
+.modal-actions button i {
+  margin-right: 5px;
+}
+
+/* Dashboard de estatísticas */
+.stats-dashboard {
+  padding: 15px;
+  background-color: #252525;
+  border-bottom: 1px solid #333;
+}
+
+.stats-title {
+  display: flex;
+  align-items: center;
+  font-size: 1.1rem;
+  font-weight: bold;
+  margin-bottom: 10px;
+  color: #f5f5f5;
+}
+
+.stats-title i {
+  margin-right: 8px;
+  color: #ff6f61;
+}
+
+.stats-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+}
+
+.stats-card {
+  background-color: #2a2a2a;
+  border-radius: 6px;
+  padding: 15px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  border: 1px solid #333;
+}
+
+.stats-card-title {
+  font-size: 0.9rem;
+  color: #999;
+  margin-bottom: 10px;
+}
+
+.stats-card-value {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #f5f5f5;
+}
+
+.stats-card-content {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.log-type-chip {
+  display: flex;
+  align-items: center;
+  padding: 4px 8px;
+  background-color: #333;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  color: #f5f5f5;
+}
+
+.log-type-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 5px;
+}
+
+.indicator-login {
+  background-color: #3498db;
+}
+
+.indicator-criacao {
+  background-color: #2ecc71;
+}
+
+.indicator-edicao {
+  background-color: #f39c12;
+}
+
+.indicator-conclusao {
+  background-color: #27ae60;
+}
+
+.indicator-orcamento {
+  background-color: #9b59b6;
+}
+
+.indicator-erro {
+  background-color: #e74c3c;
+}
+
+.indicator-seguranca {
+  background-color: #8e44ad;
+}
+
+.indicator-registro {
+  background-color: #16a085;
+}
+
+.indicator-cancelamento {
+  background-color: #c0392b;
+}
+
+.indicator-desconhecido {
+  background-color: #bdc3c7;
 }
 
 /* Responsividade */
 @media (max-width: 768px) {
-  .modal-header {
-    flex-direction: column;
-    align-items: flex-start;
+  .log-viewer-modal {
+    width: 95%;
+    height: 95vh;
   }
   
   .filters-container {
     flex-direction: column;
-    width: 100%;
-  }
-  
-  .filter-item {
-    width: 100%;
-    margin-right: 0;
-    margin-bottom: 10px;
+    align-items: stretch;
   }
   
   .date-range-container {
     flex-direction: column;
-    gap: 5px;
+    align-items: stretch;
   }
   
-  .modal-actions {
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-  
-  .modal-actions button {
-    margin: 5px;
-  }
-  
-  .log-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  
-  .log-icon {
-    margin-bottom: 10px;
-  }
-  
-  .log-type {
-    margin-bottom: 10px;
+  .stats-cards {
+    grid-template-columns: 1fr;
   }
   
   .log-details {
     flex-direction: column;
     align-items: flex-start;
-    gap: 5px;
+  }
+  
+  .log-actions {
+    margin-top: 10px;
+    width: 100%;
+    justify-content: flex-end;
   }
 }
-</style> 
+</style>

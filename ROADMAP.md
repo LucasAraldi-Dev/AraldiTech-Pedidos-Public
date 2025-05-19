@@ -23,9 +23,8 @@ Este roadmap detalha o plano de desenvolvimento do AraldiTech - Pedidos, sistema
   - [ ] Resolver problemas de responsividade em telas específicas
   - [ ] Estabilizar a geração de relatórios
 - [ ] **Melhorias de UX:**
-  - [ ] Animações mais suaves nas transições de tela
   - [ ] Feedback visual aprimorado para ações do usuário
-  - [ ] Tooltips informativos em campos complexos
+  - [X] Tooltips informativos em campos complexos
 - [ ] **Refatoração Técnica:**
   - [ ] Otimizar queries de banco de dados
   - [ ] Reduzir tempo de carregamento das páginas principais
@@ -37,7 +36,7 @@ Este roadmap detalha o plano de desenvolvimento do AraldiTech - Pedidos, sistema
   - [ ] Melhorar encriptação de dados sensíveis
 - [ ] **Auditoria:**
   - [ ] Expandir sistema de logs para registrar mais detalhes de operações
-  - [ ] Implementar visualização de logs para administradores
+  - [X] Implementar visualização de logs para administradores
   - [ ] Rastreamento de atividades suspeitas
 
 ### Versão 0.8.7 - Otimização de Performance
@@ -92,7 +91,6 @@ Este roadmap detalha o plano de desenvolvimento do AraldiTech - Pedidos, sistema
 - [ ] **Automação:**
   - [ ] Regras de negócio configuráveis para automação de tarefas
   - [ ] Alertas proativos para pedidos atrasados
-  - [ ] Distribuição automática de pedidos por carga de trabalho
 
 ### Versão 0.9.3 - Análise Avançada e Business Intelligence
 - [ ] **BI Dashboard:**
@@ -109,10 +107,6 @@ Este roadmap detalha o plano de desenvolvimento do AraldiTech - Pedidos, sistema
   - [ ] Aprimorar experiência em dispositivos móveis
   - [ ] Implementar funcionalidades offline com PWA
   - [ ] Melhorar performance em conexões lentas
-- [ ] **Acessibilidade:**
-  - [ ] Conformidade com WCAG 2.1 nível AA
-  - [ ] Suporte a leitores de tela
-  - [ ] Modos de alto contraste e fontes ajustáveis
 
 ### Versão 0.9.5 - Integração e Ecossistema
 - [ ] **API Pública:**
@@ -121,7 +115,6 @@ Este roadmap detalha o plano de desenvolvimento do AraldiTech - Pedidos, sistema
   - [ ] Controle granular de permissões para APIs
 - [ ] **Integrações:**
   - [ ] Conectar com sistemas de ERP comuns
-  - [ ] Integração com plataformas de e-mail marketing
   - [ ] Webhooks para eventos importantes do sistema
 
 ### Versão 0.9.6 - Experiência Personalizada
@@ -168,14 +161,9 @@ Este roadmap detalha o plano de desenvolvimento do AraldiTech - Pedidos, sistema
   - [ ] Review final de segurança e performance
   - [ ] Remoção de código legado e funcionalidades experimentais
   - [ ] Polimento final da interface
-- [ ] **Marketing e Distribuição:**
-  - [ ] Página de produto completa
-  - [ ] Material promocional e demonstrações
-  - [ ] Programa de feedback de usuários
 - [ ] **Suporte Contínuo:**
   - [ ] Plano de atualizações pós-lançamento
   - [ ] Roadmap para versão 1.1+
-  - [ ] Comunidade de usuários e fórum
 
 ## Recursos Futuros (Pós-versão 1.0)
 - Aplicativo móvel nativo

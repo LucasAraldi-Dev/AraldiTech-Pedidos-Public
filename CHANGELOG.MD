@@ -1,7 +1,7 @@
 # Changelog
 Todas as alterações notáveis deste projeto serão documentadas neste arquivo.
 
-## [0.8.5] - 2025-05-20
+## [0.8.5] - 2025-05-18
 ### Adicionado
 - **Segurança Aprimorada**: Implementação de proteção CSRF em todos os endpoints, com validação avançada de dados e proteção contra XSS e injeção SQL.
 - **Sistema de Cache**: Mecanismo de cache para requisições frequentes, reduzindo o tempo de resposta e a carga no servidor.
@@ -18,6 +18,7 @@ Todas as alterações notáveis deste projeto serão documentadas neste arquivo.
 - **Segurança de Dados**: Validação rigorosa de entradas do usuário para prevenir ataques comuns.
 - **Organização do Código**: Refatoração para melhor modularidade e padrões de desenvolvimento.
 - **Consistência Visual**: Padronização dos componentes visuais em toda a aplicação.
+- **Visualização de Logs**: Melhor categorização dos logs e organização para futuras auditorias.
 
 ### Corrigido
 - **Inconsistências nos Formulários**: Uniformização da validação e mensagens de erro entre todos os formulários.
@@ -25,6 +26,10 @@ Todas as alterações notáveis deste projeto serão documentadas neste arquivo.
 - **Tratamento de Datas**: Formato consistente de datas entre formulários e relatórios.
 - **Concorrência de Requisições**: Melhor gerenciamento de múltiplas requisições simultâneas.
 - **Comportamento em Rede Instável**: Recuperação mais robusta de falhas temporárias de conexão.
+- **Conclusão dos Pedidos**: Correção relacionada ao formato da data e permissões de acesso a botão de concluir.
+
+### Removido
+- **Tutorial Interativo**: O sistema de tutorial passo a passo para novos usuários foi removido. As informações de uso agora estão disponíveis na documentação.
 
 ## [0.8.4] - 2025-05-15
 ### Adicionado

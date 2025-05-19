@@ -51,6 +51,10 @@ A versão atual do projeto é **0.8.5**.
 - **Tratamento de Erros**: Sistema robusto para lidar com falhas inesperadas.
 - **Manipulação de Datas**: Formato consistente em todo o sistema.
 
+#### Removido
+- **Tutorial Interativo**: O tutorial passo a passo para novos usuários foi removido e suas informações transferidas para a documentação.
+- **Verificações de Primeiro Acesso**: Simplificação da experiência de usuário com remoção de estados de controle de primeiro login.
+
 ## Funcionalidades
 - **Autenticação JWT**: Somente usuários autenticados têm permissão para criar, listar e editar pedidos.
 - **Hierarquia de Usuários**:

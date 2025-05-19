@@ -154,7 +154,7 @@ export default {
   bottom: 0;
   left: 0;
   width: 100%;
-  z-index: 100;
+  z-index: var(--z-index-footer);
 }
 
 .container {
@@ -162,21 +162,21 @@ export default {
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
-  max-width: 1200px;
+  max-width: 75rem; /* Convertido de 1200px para rem */
   margin: 0 auto;
-  padding: 15px 20px;
+  padding: var(--spacing-sm) var(--spacing-md);
 }
 
 .app-footer p {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   color: #aaa;
 }
 
 .footer-links {
   list-style: none;
   display: flex;
-  gap: 20px;
+  gap: var(--spacing-md);
   margin: 0;
   padding: 0;
 }
@@ -184,7 +184,7 @@ export default {
 .footer-links li a {
   color: #ccc;
   text-decoration: none;
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   transition: color 0.3s ease;
 }
 
@@ -203,24 +203,24 @@ export default {
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
-  padding: 20px;
+  z-index: var(--z-index-modal);
+  padding: var(--spacing-md);
 }
 
 .policy-modal-content {
   background: linear-gradient(145deg, #3b3b3b, #2c2c2c);
-  border-radius: 12px;
-  max-width: 800px;
+  border-radius: var(--border-radius-lg);
+  max-width: 50rem; /* Convertido de 800px para rem */
   width: 100%;
   max-height: 90vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0.625rem 1.875rem rgba(0, 0, 0, 0.5);
   animation: modalFadeIn 0.3s ease;
 }
 
 .policy-modal-header {
-  padding: 20px;
+  padding: var(--spacing-md);
   border-bottom: 1px solid #444;
   display: flex;
   justify-content: space-between;
@@ -229,7 +229,7 @@ export default {
 
 .policy-modal-header h2 {
   margin: 0;
-  font-size: 24px;
+  font-size: var(--font-size-xl);
   color: #fff;
 }
 
@@ -237,7 +237,7 @@ export default {
   background: none;
   border: none;
   color: #ccc;
-  font-size: 28px;
+  font-size: var(--font-size-xxl);
   cursor: pointer;
   transition: color 0.3s ease;
 }
@@ -247,14 +247,14 @@ export default {
 }
 
 .policy-modal-body {
-  padding: 20px;
+  padding: var(--spacing-md);
   overflow-y: auto;
   flex: 1;
 }
 
 .policy-modal-body h3 {
-  font-size: 18px;
-  margin: 20px 0 10px;
+  font-size: var(--font-size-lg);
+  margin: var(--spacing-md) 0 var(--spacing-xs);
   color: #eee;
 }
 
@@ -263,49 +263,49 @@ export default {
 }
 
 .policy-modal-body p {
-  font-size: 15px;
+  font-size: var(--font-size-md);
   line-height: 1.6;
   color: #ccc;
-  margin-bottom: 16px;
+  margin-bottom: var(--spacing-md);
 }
 
 .policy-modal-body ul {
-  padding-left: 20px;
-  margin-bottom: 16px;
+  padding-left: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
 }
 
 .policy-modal-body li {
-  margin-bottom: 8px;
+  margin-bottom: var(--spacing-xs);
   color: #ccc;
 }
 
 .policy-modal-footer {
-  padding: 15px 20px;
+  padding: var(--spacing-sm) var(--spacing-md);
   border-top: 1px solid #444;
   display: flex;
   justify-content: flex-end;
 }
 
 .btn-accept {
-  padding: 10px 20px;
+  padding: var(--spacing-xs) var(--spacing-md);
   background: linear-gradient(145deg, #3b3b3b, #2c2c2c);
   color: #fff;
   border: none;
-  border-radius: 6px;
-  font-size: 15px;
+  border-radius: var(--border-radius-md);
+  font-size: var(--font-size-md);
   cursor: pointer;
   transition: all 0.3s ease;
 }
 
 .btn-accept:hover {
   background: linear-gradient(145deg, #444, #333);
-  transform: translateY(-2px);
+  transform: translateY(-0.125rem); /* Convertido de -2px para rem */
 }
 
 @keyframes modalFadeIn {
   from {
     opacity: 0;
-    transform: translateY(-20px);
+    transform: translateY(-1.25rem); /* Convertido de -20px para rem */
   }
   to {
     opacity: 1;
@@ -316,15 +316,15 @@ export default {
 /* Responsividade */
 @media (max-width: 1024px) {
   .container {
-    padding: 12px 20px;
+    padding: 0.75rem var(--spacing-md);
   }
 }
 
 @media (max-width: 768px) {
   .container {
     flex-direction: column;
-    gap: 10px;
-    padding: 10px 15px;
+    gap: var(--spacing-xs);
+    padding: var(--spacing-xs) var(--spacing-sm);
   }
   
   .policy-modal-content {
@@ -332,57 +332,57 @@ export default {
   }
   
   .policy-modal-header h2 {
-    font-size: 20px;
+    font-size: var(--font-size-lg);
   }
   
   .policy-modal-body h3 {
-    font-size: 16px;
+    font-size: var(--font-size-md);
   }
   
   .policy-modal-body p, 
   .policy-modal-body li {
-    font-size: 14px;
+    font-size: var(--font-size-sm);
   }
 }
 
 @media (max-width: 480px) {
   .container {
-    padding: 8px 10px;
+    padding: 0.5rem var(--spacing-xs);
   }
   
   .app-footer p, 
   .footer-links li a {
-    font-size: 12px;
+    font-size: var(--font-size-xs);
   }
   
   .footer-links {
-    gap: 15px;
+    gap: 0.9375rem; /* Convertido de 15px para rem */
   }
   
   .policy-modal-header {
-    padding: 15px;
+    padding: var(--spacing-sm);
   }
   
   .policy-modal-body {
-    padding: 15px;
+    padding: var(--spacing-sm);
   }
   
   .policy-modal-header h2 {
-    font-size: 18px;
+    font-size: var(--font-size-md);
   }
   
   .policy-modal-body h3 {
-    font-size: 15px;
+    font-size: var(--font-size-sm);
   }
   
   .policy-modal-body p, 
   .policy-modal-body li {
-    font-size: 13px;
+    font-size: var(--font-size-xs);
   }
   
   .btn-accept {
-    padding: 8px 16px;
-    font-size: 14px;
+    padding: 0.5rem 1rem;
+    font-size: var(--font-size-sm);
   }
 }
 </style>

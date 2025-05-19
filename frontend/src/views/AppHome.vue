@@ -50,11 +50,11 @@ export default {
 <style scoped>
 /* Componentes específicos desta página */
 .logo-container {
-  margin-bottom: 20px;
+  margin-bottom: var(--spacing-md);
 }
 
 .logo {
-  max-width: 180px;
+  max-width: 11.25rem; /* Convertido de 180px para rem */
   height: auto;
 }
 
@@ -64,23 +64,23 @@ export default {
   justify-content: center;
   align-items: center;
   text-align: center;
-  padding: 40px 20px;
+  padding: var(--spacing-xl) var(--spacing-md);
 }
 
 /* Os estilos de h1 e p estão definidos globalmente, apenas sobrescrevendo o específico */
 h1 {
-  font-size: 42px;
+  font-size: var(--font-size-4xl); /* Equivalente a 42px */
 }
 
 p {
-  font-size: 18px;
-  max-width: 600px;
+  font-size: var(--font-size-lg);
+  max-width: 37.5rem; /* Convertido de 600px para rem */
 }
 
 .action-buttons {
   display: flex;
-  gap: 20px;
-  margin-bottom: 50px;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-xxl);
 }
 
 /* Botões já estão no estilo global, removidos daqui */
@@ -89,41 +89,41 @@ p {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 25px;
+  gap: 1.5625rem; /* Convertido de 25px para rem */
   width: 100%;
-  max-width: 1000px;
+  max-width: 62.5rem; /* Convertido de 1000px para rem */
 }
 
 .feature-card {
   background: linear-gradient(145deg, #3b3b3b, #2c2c2c);
-  padding: 30px 20px;
-  border-radius: 12px;
-  box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.3);
+  padding: var(--spacing-xl) var(--spacing-md);
+  border-radius: var(--border-radius-lg);
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.3);
   flex: 1;
-  min-width: 250px;
-  max-width: 300px;
+  min-width: 15.625rem; /* Convertido de 250px para rem */
+  max-width: 18.75rem; /* Convertido de 300px para rem */
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
 .feature-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0px 12px 20px rgba(0, 0, 0, 0.4);
+  transform: translateY(-0.3125rem); /* Convertido de -5px para rem */
+  box-shadow: 0 0.75rem 1.25rem rgba(0, 0, 0, 0.4);
 }
 
 .feature-icon {
-  font-size: 38px;
-  margin-bottom: 16px;
+  font-size: 2.375rem; /* Convertido de 38px para rem */
+  margin-bottom: var(--spacing-md);
   color: #fff;
 }
 
 .feature-card h3 {
-  font-size: 22px;
-  margin-bottom: 12px;
+  font-size: var(--font-size-xl);
+  margin-bottom: var(--spacing-sm);
   color: #fff;
 }
 
 .feature-card p {
-  font-size: 15px;
+  font-size: var(--font-size-md);
   color: #aaa;
   margin-bottom: 0;
 }
@@ -131,32 +131,32 @@ p {
 /* Responsividade */
 @media (max-width: 1024px) {
   h1 {
-    font-size: 38px;
+    font-size: var(--font-size-3xl);
   }
   
   .features {
-    gap: 20px;
+    gap: var(--spacing-md);
   }
   
   .feature-card {
-    min-width: 220px;
+    min-width: 13.75rem; /* Convertido de 220px para rem */
   }
 }
 
 @media (max-width: 768px) {
   h1 {
-    font-size: 36px;
+    font-size: var(--font-size-xxl);
   }
   
   p {
-    font-size: 16px;
+    font-size: var(--font-size-md);
   }
   
   .action-buttons {
     flex-direction: column;
-    gap: 15px;
+    gap: var(--spacing-sm);
     width: 100%;
-    max-width: 300px;
+    max-width: 18.75rem; /* Convertido de 300px para rem */
   }
   
   .btn-primary, .btn-secondary {
@@ -176,27 +176,27 @@ p {
 
 @media (max-width: 480px) {
   h1 {
-    font-size: 28px;
+    font-size: var(--font-size-xl);
   }
   
   p {
-    font-size: 15px;
+    font-size: var(--font-size-sm);
   }
   
   .feature-card {
-    padding: 20px 15px;
+    padding: var(--spacing-md) var(--spacing-sm);
   }
   
   .feature-icon {
-    font-size: 32px;
+    font-size: 2rem; /* Convertido de 32px para rem */
   }
   
   .feature-card h3 {
-    font-size: 18px;
+    font-size: var(--font-size-lg);
   }
   
   .feature-card p {
-    font-size: 14px;
+    font-size: var(--font-size-sm);
   }
 }
 </style>

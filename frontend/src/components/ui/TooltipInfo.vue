@@ -150,72 +150,78 @@ export default {
       let top = 0;
       let left = 0;
       
+      // Espaçamento entre o tooltip e o trigger (em pixels)
+      const spacing = 0.625; // 10px em rem
+      
+      // Margem de segurança da borda da tela (em pixels)
+      const safetyMargin = 1.25; // 20px em rem
+      
       // Calculate best position based on available space
       // First, try the requested position
       this.adjustedPosition = this.position;
       
       // Calculate positions based on preferred direction
       if (this.position === 'right') {
-        left = triggerRect.right + 10;
+        left = triggerRect.right + spacing * 16; // Convertendo rem para px aproximado
         top = triggerRect.top + (triggerRect.height / 2) - (tooltipRect.height / 2);
         
         // Check if tooltip would go off-screen to the right
-        if (left + tooltipRect.width > viewportWidth - 20) {
+        if (left + tooltipRect.width > viewportWidth - safetyMargin * 16) {
           // Try left position instead
           this.adjustedPosition = 'left';
-          left = triggerRect.left - tooltipRect.width - 10;
+          left = triggerRect.left - tooltipRect.width - spacing * 16;
         }
       } else if (this.position === 'left') {
-        left = triggerRect.left - tooltipRect.width - 10;
+        left = triggerRect.left - tooltipRect.width - spacing * 16;
         top = triggerRect.top + (triggerRect.height / 2) - (tooltipRect.height / 2);
         
         // Check if tooltip would go off-screen to the left
-        if (left < 20) {
+        if (left < safetyMargin * 16) {
           // Try right position instead
           this.adjustedPosition = 'right';
-          left = triggerRect.right + 10;
+          left = triggerRect.right + spacing * 16;
           
           // If still off-screen, try bottom
-          if (left + tooltipRect.width > viewportWidth - 20) {
+          if (left + tooltipRect.width > viewportWidth - safetyMargin * 16) {
             this.adjustedPosition = 'bottom';
             left = triggerRect.left + (triggerRect.width / 2) - (tooltipRect.width / 2);
-            top = triggerRect.bottom + 10;
+            top = triggerRect.bottom + spacing * 16;
           }
         }
       } else if (this.position === 'top') {
         left = triggerRect.left + (triggerRect.width / 2) - (tooltipRect.width / 2);
-        top = triggerRect.top - tooltipRect.height - 10;
+        top = triggerRect.top - tooltipRect.height - spacing * 16;
         
         // Check if tooltip would go off-screen to the top
-        if (top < 20) {
+        if (top < safetyMargin * 16) {
           // Try bottom position instead
           this.adjustedPosition = 'bottom';
-          top = triggerRect.bottom + 10;
+          top = triggerRect.bottom + spacing * 16;
         }
       } else if (this.position === 'bottom') {
         left = triggerRect.left + (triggerRect.width / 2) - (tooltipRect.width / 2);
-        top = triggerRect.bottom + 10;
+        top = triggerRect.bottom + spacing * 16;
         
         // Check if tooltip would go off-screen to the bottom
-        if (top + tooltipRect.height > viewportHeight - 20) {
+        if (top + tooltipRect.height > viewportHeight - safetyMargin * 16) {
           // Try top position instead
           this.adjustedPosition = 'top';
-          top = triggerRect.top - tooltipRect.height - 10;
+          top = triggerRect.top - tooltipRect.height - spacing * 16;
         }
       }
       
       // Horizontal boundary adjustments
-      if (left < 20) {
-        left = 20;
-      } else if (left + tooltipRect.width > viewportWidth - 20) {
-        left = viewportWidth - tooltipRect.width - 20;
+      if (left < safetyMargin * 16) {
+        left = safetyMargin * 16;
+      } else if (left + tooltipRect.width > viewportWidth - safetyMargin * 16) {
+        left = viewportWidth - tooltipRect.width - safetyMargin * 16;
       }
       
       // Vertical boundary adjustments
-      if (top < 20) {
-        top = 20;
-      } else if (top + tooltipRect.height > viewportHeight - 20) {
-        top = viewportHeight - tooltipRect.height - 20;
+      if (top < safetyMargin * 16) {
+        top = safetyMargin * 16;
+      } else if (top + tooltipRect.height > viewportHeight - safetyMargin * 16) {
+        top = viewportHeight - tooltipRect.height - safetyMargin * 16;
       }
       
       // Update position
@@ -241,7 +247,7 @@ export default {
 
 .info-icon {
   color: #66ccff;
-  font-size: 18px;
+  font-size: var(--font-size-md);
   opacity: 0.8;
   transition: opacity 0.2s;
 }
@@ -255,10 +261,10 @@ export default {
   position: fixed;
   background-color: #2c2c2c;
   color: #f5f5f5;
-  border-radius: 6px;
-  padding: 12px;
-  z-index: 1000;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  border-radius: var(--border-radius-md);
+  padding: var(--spacing-sm);
+  z-index: var(--z-index-modal);
+  box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.5);
   border: 1px solid #444;
   width: 100%;
   pointer-events: auto;
@@ -269,9 +275,9 @@ export default {
   content: '';
   position: absolute;
   top: 50%;
-  left: -10px;
+  left: -0.625rem;
   transform: translateY(-50%);
-  border-width: 10px 10px 10px 0;
+  border-width: 0.625rem 0.625rem 0.625rem 0;
   border-style: solid;
   border-color: transparent #2c2c2c transparent transparent;
 }
@@ -280,9 +286,9 @@ export default {
   content: '';
   position: absolute;
   top: 50%;
-  right: -10px;
+  right: -0.625rem;
   transform: translateY(-50%);
-  border-width: 10px 0 10px 10px;
+  border-width: 0.625rem 0 0.625rem 0.625rem;
   border-style: solid;
   border-color: transparent transparent transparent #2c2c2c;
 }
@@ -290,10 +296,10 @@ export default {
 .tooltip-top::before {
   content: '';
   position: absolute;
-  bottom: -10px;
+  bottom: -0.625rem;
   left: 50%;
   transform: translateX(-50%);
-  border-width: 10px 10px 0;
+  border-width: 0.625rem 0.625rem 0;
   border-style: solid;
   border-color: #2c2c2c transparent transparent;
 }
@@ -301,10 +307,10 @@ export default {
 .tooltip-bottom::before {
   content: '';
   position: absolute;
-  top: -10px;
+  top: -0.625rem;
   left: 50%;
   transform: translateX(-50%);
-  border-width: 0 10px 10px;
+  border-width: 0 0.625rem 0.625rem;
   border-style: solid;
   border-color: transparent transparent #2c2c2c;
 }
@@ -314,8 +320,8 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
-  padding-bottom: 8px;
+  margin-bottom: var(--spacing-xs);
+  padding-bottom: var(--spacing-xs);
   border-bottom: 1px solid #444;
 }
 
@@ -332,7 +338,7 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 4px;
+  padding: 0.25rem;
   border-radius: 50%;
 }
 
@@ -342,7 +348,7 @@ export default {
 }
 
 .tooltip-body {
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   line-height: 1.4;
 }
 

@@ -1,5 +1,8 @@
 <template>
   <div class="app-container">
+    <!-- Fundo com logo -->
+    <div class="background-logo"></div>
+    
     <!-- Botão para abrir o menu no mobile -->
     <button class="open-menu-btn" @click="toggleMenu" v-if="isMobile">
       Menu
@@ -92,7 +95,7 @@
       <button class="menu-btn logout-btn" @click="logout">Sair</button>
     </div>
 
-    <div class="main-content" :class="{'has-content': isCreateOrderSectionOpen || isConsultOrdersSectionOpen || isPrintModalOpen || isEditOrderOpen || isUserManagementOpen || isFinancialReportOpen || isDashboardOpen}">
+    <div class="main-content" :class="{'has-content': isCreateOrderSectionOpen || isConsultOrdersSectionOpen || isEditOrderOpen || isUserManagementOpen || isFinancialReportOpen || isDashboardOpen}">
       <!-- O Dashboard foi movido para um componente modal separado e foi removido daqui -->
     </div>
 
@@ -126,15 +129,6 @@
       @update-order="handleEditOrder"
     />
 
-    <!-- Modal de Impressão de Pedido -->
-    <ModalImprimirPedido
-      v-if="isPrintModalOpen"
-      :isOpen="isPrintModalOpen"
-      :pedido="pedidoCriado"
-      @close="closePrintModal"
-      @new-order="openNewOrderFromPrintModal"
-    />
-
     <!-- Modal de Gerenciamento de Usuários -->
     <ModalGerenciarUsuarios
       v-if="isUserManagementOpen"
@@ -155,13 +149,7 @@
       v-if="isDashboardOpen"
       :isOpen="isDashboardOpen"
       @close="closeDashboard"
-    />
-
-    <!-- Modal de Tutorial -->
-    <TutorialModal
-      v-if="isTutorialOpen"
-      :isOpen="isTutorialOpen"
-      @close="closeTutorial"
+      @open-order="handlePrintModal"
     />
 
     <!-- Modal de Visualização de Logs -->
@@ -169,7 +157,19 @@
       v-if="isLogViewerOpen"
       :isOpen="isLogViewerOpen"
       @close="closeLogViewer"
+      @open-order="handlePrintModal"
     />
+    
+    <!-- Modal de Impressão de Pedido - deve ter a maior prioridade de renderização -->
+    <div class="high-priority-modal-container" v-if="isPrintModalOpen && pedidoCriado">
+      <ModalImprimirPedido
+        :isOpen="isPrintModalOpen"
+        :pedido="pedidoCriado"
+        :origin="previousOpenModal ? 'consultation' : 'creation'"
+        @close="closePrintModal"
+        @new-order="handleNewOrderFromPrintModal"
+      />
+    </div>
   </div>
 </template>
 
@@ -182,7 +182,6 @@ import ModalGerenciarUsuarios from '@/components/ModalGerenciarUsuarios.vue';
 import ModalRelatorioFinanceiro from '@/components/ModalRelatorioFinanceiro.vue';
 import ModalDashboard from '@/components/ModalDashboard.vue';
 import ModalLogViewer from '@/components/ModalLogViewer.vue';
-import TutorialModal from '@/components/TutorialModal.vue';
 import html2canvas from "html2canvas";
 // Importação modificada para evitar o erro de 'module is not defined'
 import * as axiosModule from "axios";
@@ -203,7 +202,6 @@ export default {
     ModalRelatorioFinanceiro,
     ModalDashboard,
     ModalLogViewer,
-    TutorialModal,
   },
   data() {
     return {
@@ -215,7 +213,6 @@ export default {
       isFinancialReportOpen: false,
       isUserManagementOpen: false,
       isMenuOpen: false,
-      isTutorialOpen: false,
       isMobile: false,
       pedidoCriado: null,
       selectedOrder: null,
@@ -225,7 +222,11 @@ export default {
       // Verificar permissões de usuário
       isAdmin: false,
       isGestor: false,
-      isLogViewerOpen: false
+      isLogViewerOpen: false,
+      // Adicionar variável para debug
+      debugInterval: null,
+      // Adicionar variável para rastrear modal aberto anteriormente
+      previousOpenModal: null
     };
   },
   created() {
@@ -240,7 +241,6 @@ export default {
     console.log("Token presente:", token ? "Sim" : "Não");
     console.log("Usuário presente:", user ? "Sim" : "Não");
     console.log("Tipo de usuário:", user?.tipo_usuario);
-    console.log("Primeiro login:", user?.primeiro_login ? "Sim" : "Não");
     
     if (!token || !user) {
       console.warn("Usuário não autenticado, redirecionando para login");
@@ -248,20 +248,6 @@ export default {
     } else {
       this.isAdmin = user.tipo_usuario === "admin";
       this.isGestor = user.tipo_usuario === "gestor" || user.tipo_usuario === "admin";
-      
-      // Verificar se é o primeiro login do usuário
-      const urlSearchParams = new URLSearchParams(window.location.search);
-      const isFirstLogin = urlSearchParams.get('firstLogin') === 'true';
-      
-      console.log("Parâmetro firstLogin:", isFirstLogin ? "Sim" : "Não");
-      console.log("Tipo de usuário:", user.tipo_usuario);
-      
-      // Verificar se o tutorial deve ser exibido
-      if ((isFirstLogin || user.primeiro_login) && user.tipo_usuario === 'comum') {
-        console.log("Abrindo tutorial para novo usuário...");
-        // Se for o primeiro login de um usuário comum, mostrar o tutorial
-        this.openTutorial();
-      }
     }
   },
   unmounted() {
@@ -309,14 +295,151 @@ export default {
       this.isEditOrderOpen = false;
     },
     handlePrintModal(pedido) {
-      this.pedidoCriado = pedido;
-      this.isPrintModalOpen = true;
+      console.log('[CRÍTICO] handlePrintModal chamado com pedido:', pedido);
+      
+      try {
+        // Limpar qualquer intervalo de debug anterior
+        if (this.debugInterval) {
+          clearInterval(this.debugInterval);
+          this.debugInterval = null;
+        }
+        
+        // Se recebermos apenas o ID do pedido em vez do objeto completo
+        if (typeof pedido === 'number' || (typeof pedido === 'string' && !isNaN(parseInt(pedido, 10)))) {
+          const pedidoId = typeof pedido === 'number' ? pedido : parseInt(pedido, 10);
+          console.log(`[CRÍTICO] Recebido apenas o ID do pedido (${pedidoId}). Buscando detalhes completos...`);
+          
+          // Buscar os detalhes do pedido a partir do ID
+          this.fetchPedidoById(pedidoId);
+          return;
+        }
+        
+        // Verificar se o pedido tem as propriedades esperadas
+        if (!pedido || !pedido.id) {
+          console.error('[CRÍTICO] Pedido inválido recebido em handlePrintModal:', pedido);
+          alert('Pedido inválido ou sem ID.');
+          return;
+        }
+        
+        console.log('[CRÍTICO] Pedido válido encontrado, ID:', pedido.id);
+        
+        // Salvar qual modal está aberto antes de abrir o modal de impressão
+        this.savePreviousOpenModal();
+        
+        // Não fechamos mais os modais, para que o modal anterior possa ser reaberto
+        // Apenas removemos o código que fecha todos os modais
+        
+        // Garantir que todos os campos necessários existam
+        this.pedidoCriado = {
+          ...pedido,
+          // Definir valores padrão para campos que podem estar ausentes
+          descricao: pedido.descricao || '',
+          quantidade: pedido.quantidade || 0,
+          urgencia: pedido.urgencia || 'Normal',
+          categoria: pedido.categoria || 'Geral',
+          deliveryDate: pedido.deliveryDate || new Date().toISOString().split('T')[0],
+          observacao: pedido.observacao || '',
+          sender: pedido.sender || (localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')).name : '')
+        };
+        
+        console.log('[CRÍTICO] Abrindo modal de impressão com pedido:', pedido.id);
+        
+        // Diretamente definir como aberto, sem usar nextTick
+        this.isPrintModalOpen = true;
+        
+        // Forçar renderização direta
+        this.$forceUpdate();
+        
+        // Para debug
+        setTimeout(() => {
+          const modalElement = document.querySelector('.print-modal');
+          console.log('[CRÍTICO] Modal visível?', !!modalElement);
+          
+          if (!modalElement) {
+            console.log('[CRÍTICO] Modal não encontrado! Tentando novamente...');
+            this.isPrintModalOpen = false;
+            this.$forceUpdate();
+            
+            setTimeout(() => {
+              this.isPrintModalOpen = true;
+              this.$forceUpdate();
+              
+              // Verificar novamente
+              setTimeout(() => {
+                const modalElementRetry = document.querySelector('.print-modal');
+                console.log('[CRÍTICO] Modal visível após retry?', !!modalElementRetry);
+              }, 100);
+            }, 100);
+          }
+        }, 100);
+      } catch (err) {
+        console.error('[CRÍTICO] Erro ao abrir modal de impressão:', err);
+        alert(`Erro ao abrir modal: ${err.message}`);
+      }
+    },
+    
+    // Método auxiliar para fechar todos os modais
+    closeAllModals() {
+      this.isCreateOrderSectionOpen = false;
+      this.isConsultOrdersSectionOpen = false;
+      this.isEditOrderOpen = false;
+      this.isFinancialReportOpen = false;
+      this.isDashboardOpen = false;
+      this.isUserManagementOpen = false;
+      this.isLogViewerOpen = false;
+      this.isMenuOpen = false;
+      this.isPrintModalOpen = false; // Fechar este também para garantir uma nova montagem
     },
     closePrintModal() {
+      console.log('[CRÍTICO] Fechando modal de impressão');
       this.isPrintModalOpen = false;
+      
+      // Limpar qualquer intervalo de debug
+      if (this.debugInterval) {
+        clearInterval(this.debugInterval);
+        this.debugInterval = null;
+      }
+      
+      // Reabrir o modal anterior se houver algum
+      if (this.previousOpenModal) {
+        console.log(`[CRÍTICO] Reabrindo modal anterior: ${this.previousOpenModal}`);
+        
+        // Usar setTimeout para garantir que o modal de impressão seja fechado primeiro
+        setTimeout(() => {
+          switch (this.previousOpenModal) {
+            case 'consulta':
+              this.isConsultOrdersSectionOpen = true;
+              break;
+            case 'dashboard':
+              this.isDashboardOpen = true;
+              break;
+            case 'logViewer':
+              this.isLogViewerOpen = true;
+              break;
+            case 'createOrder':
+              this.isCreateOrderSectionOpen = true;
+              break;
+            case 'editOrder':
+              this.isEditOrderOpen = true;
+              break;
+            case 'financialReport':
+              this.isFinancialReportOpen = true;
+              break;
+            case 'userManagement':
+              this.isUserManagementOpen = true;
+              break;
+          }
+        }, 100);
+      }
     },
-    openNewOrderFromPrintModal() {
+    handleNewOrderFromPrintModal() {
+      // Fechar o modal de impressão
       this.isPrintModalOpen = false;
+      
+      // Limpar qualquer modal anterior salvo pois estamos indo para outra tela
+      this.previousOpenModal = null;
+      
+      // Abrir a tela de criação de novo pedido
       this.isCreateOrderSectionOpen = true;
     },
     logout() {
@@ -352,11 +475,17 @@ export default {
       }
     },
     handleCreateOrder(pedidoCriado) {
+      // Salvar qual modal está aberto antes de abrir o modal de impressão
+      this.savePreviousOpenModal();
+      
       this.pedidoCriado = pedidoCriado;
       this.isPrintModalOpen = true;
       this.isCreateOrderSectionOpen = false;
     },
     async handleCreateOrderWithImage(pedidoCriado) {
+      // Salvar qual modal está aberto antes de abrir o modal de impressão
+      this.savePreviousOpenModal();
+      
       // Guardar o pedido temporariamente
       this.pedidoCriado = pedidoCriado;
       
@@ -405,8 +534,12 @@ export default {
         } catch (error) {
           console.error("Erro ao gerar imagem automática:", error);
         } finally {
-          // Fechar o modal de impressão após gerar a imagem
-          this.isPrintModalOpen = false;
+          // Não fechar o modal de impressão automaticamente
+          // O usuário deve fechá-lo manualmente para voltar ao modal anterior
+          // this.isPrintModalOpen = false;
+          
+          // Mostrar mensagem para o usuário
+          alert("Imagem do pedido gerada com sucesso!");
         }
       }, 500); // Dar um tempo para o DOM ser renderizado completamente
     },
@@ -435,52 +568,9 @@ export default {
       this.isFinancialReportOpen = false;
     },
     openHelp() {
-      // Se for um usuário comum, abrir o tutorial
-      const user = JSON.parse(localStorage.getItem("user"));
-      if (user && user.tipo_usuario === 'comum') {
-        this.openTutorial();
-      } else {
-        // Para outros tipos de usuário, redirecionar para a página de ajuda
-        this.$router.push({ name: "Ajuda" });
-      }
+      // Redirecionar para a página de ajuda
+      this.$router.push({ name: "Ajuda" });
       this.isMenuOpen = false;
-    },
-    openTutorial() {
-      this.isTutorialOpen = true;
-      this.isMenuOpen = false;
-    },
-    async closeTutorial() {
-      this.isTutorialOpen = false;
-      
-      try {
-        // Atualizar o campo primeiro_login no backend
-        const token = localStorage.getItem("access_token");
-        if (token) {
-          const response = await axios.put(
-            `${process.env.VUE_APP_API_URL}/usuarios/primeiro-login`,
-            {},
-            {
-              headers: { Authorization: `Bearer ${token}` }
-            }
-          );
-          
-          console.log("Primeiro login atualizado no backend:", response.data);
-          
-          // Atualizar também no localStorage
-          const user = JSON.parse(localStorage.getItem("user"));
-          if (user) {
-            user.primeiro_login = false;
-            localStorage.setItem("user", JSON.stringify(user));
-          }
-        }
-      } catch (error) {
-        console.error("Erro ao atualizar status de primeiro login:", error);
-      }
-      
-      // Limpar parâmetros da URL para não reabrir o tutorial em atualizações de página
-      const currentUrl = window.location.href;
-      const urlWithoutParams = currentUrl.split('?')[0];
-      window.history.replaceState({}, document.title, urlWithoutParams);
     },
     openLogViewer() {
       this.isLogViewerOpen = true;
@@ -488,650 +578,379 @@ export default {
     closeLogViewer() {
       this.isLogViewerOpen = false;
     },
+    // Novo método para buscar um pedido pelo ID
+    async fetchPedidoById(pedidoId) {
+      console.log(`Buscando detalhes completos do pedido #${pedidoId}...`);
+      
+      // Limpar qualquer intervalo de debug anterior
+      if (this.debugInterval) {
+        clearInterval(this.debugInterval);
+        this.debugInterval = null;
+      }
+      
+      try {
+        const token = localStorage.getItem("access_token");
+        if (!token) {
+          console.error("Token de autenticação não encontrado");
+          alert("Sessão expirada. Faça login novamente.");
+          return;
+        }
+        
+        // Buscar todos os pedidos para encontrar este específico
+        const response = await axios.get(`${process.env.VUE_APP_API_URL}/pedidos`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (response && response.data && Array.isArray(response.data)) {
+          console.log(`Resposta recebida com ${response.data.length} pedidos, procurando ID #${pedidoId}`);
+          
+          // Encontrar o pedido pelo ID
+          const pedido = response.data.find(p => p.id == pedidoId);
+          
+          if (pedido) {
+            console.log(`Pedido #${pedidoId} encontrado:`, pedido);
+            
+            // Salvar qual modal está aberto antes de abrir o modal de impressão
+            this.savePreviousOpenModal();
+            
+            // Garantir que todos os campos necessários existam
+            this.pedidoCriado = {
+              ...pedido,
+              // Garantir que todos os campos necessários existam
+              descricao: pedido.descricao || '',
+              quantidade: pedido.quantidade || 0,
+              urgencia: pedido.urgencia || 'Normal',
+              categoria: pedido.categoria || 'Geral',
+              deliveryDate: pedido.deliveryDate || new Date().toISOString().split('T')[0],
+              observacao: pedido.observacao || '',
+              sender: pedido.sender || localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')).name : ''
+            };
+            
+            // Abrir o modal
+            this.$nextTick(() => {
+              this.isPrintModalOpen = true;
+              console.log(`Modal de impressão aberto para o pedido #${pedidoId}`);
+            });
+            
+            return true;
+          } else {
+            console.error(`Pedido #${pedidoId} não encontrado na lista`);
+            // Notificar o usuário
+            alert(`Pedido #${pedidoId} não encontrado. Verifique se o pedido existe.`);
+            return false;
+          }
+        } else {
+          console.error("Formato de resposta inválido:", response);
+          alert("Formato de resposta inválido ao buscar pedidos.");
+          return false;
+        }
+      } catch (error) {
+        console.error("Erro ao buscar pedido:", error);
+        alert("Não foi possível carregar os detalhes do pedido. Tente novamente mais tarde.");
+        return false;
+      }
+    },
+    savePreviousOpenModal() {
+      // Armazenar qual modal estava aberto anteriormente
+      if (this.isConsultOrdersSectionOpen) {
+        this.previousOpenModal = 'consulta';
+      } else if (this.isDashboardOpen) {
+        this.previousOpenModal = 'dashboard';
+      } else if (this.isLogViewerOpen) {
+        this.previousOpenModal = 'logViewer';
+      } else if (this.isCreateOrderSectionOpen) {
+        this.previousOpenModal = 'createOrder';
+      } else if (this.isEditOrderOpen) {
+        this.previousOpenModal = 'editOrder';
+      } else if (this.isFinancialReportOpen) {
+        this.previousOpenModal = 'financialReport';
+      } else if (this.isUserManagementOpen) {
+        this.previousOpenModal = 'userManagement';
+      } else {
+        this.previousOpenModal = null;
+      }
+      console.log(`[CRÍTICO] Modal anterior salvo: ${this.previousOpenModal}`);
+    },
   },
 };
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
-
 .app-container {
+  position: relative;
+  min-height: 100vh;
   display: flex;
-  font-family: 'Roboto', sans-serif;
-  color: #f5f5f5;
-  background-color: #1a1a1a;
-  height: 100vh;
+  background-color: #2c2c2c;
 }
 
-.sidebar {
-  width: 250px;
-  background-color: #2e2e2e;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding-top: 20px;
-  box-shadow: 2px 0 15px rgba(0, 0, 0, 0.5);
+/* Background com a logo */
+.background-logo {
   position: fixed;
   top: 0;
   left: 0;
-  height: 100%;
+  width: 100vw;
+  height: 100vh;
+  background-image: url('@/assets/logo.png');
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-size: 40%; /* Ajuste o tamanho conforme necessário */
+  opacity: 0.1; /* Transparência da logo */
   z-index: 1;
+  pointer-events: none; /* Permite clicar através da imagem */
 }
 
-.menu-btn {
-  background-color: #424242;
-  color: #f5f5f5;
-  font-weight: bold;
-  font-size: 1rem;
-  width: 80%;
-  margin: 10px 0;
-  padding: 12px 0;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.logout-btn {
-  background-color: #ff5252;
-}
-
-.logout-btn:hover {
-  background-color: #ff3333;
-}
-
-.admin-btn {
-  background-color: #724e91;
-}
-
-.admin-btn:hover {
-  background-color: #8a5aa9;
-}
-
-.gestor-btn {
-  background-color: #5bc0de;
-  border-color: #5bc0de;
-}
-
-.gestor-btn:hover {
-  background-color: #666666;
-}
-
-.finance-btn {
-  background-color: #555555; /* Cinza neutro para Relatório Financeiro */
-}
-
-.finance-btn:hover {
-  background-color: #666666;
-}
-
-.main-content {
-  min-height: 100vh;
-  width: calc(100vw - 250px); 
-  margin-left: 250px;
-  padding: 40px;
-  background-color: #1f1f1f;
+/* Sidebar */
+.sidebar {
+  width: 16rem; /* Convertido de fixo para rem */
+  height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  background-color: #262626;
+  padding: var(--spacing-lg) 0;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  box-shadow: inset 0px 0px 10px rgba(0, 0, 0, 0.3);
-  position: relative;
+  gap: var(--spacing-sm);
   overflow-y: auto;
+  z-index: var(--z-index-sidebar, 100);
+  box-shadow: 0.25rem 0 1.25rem rgba(0, 0, 0, 0.2);
 }
 
-/* Background com logo apenas quando não há conteúdo ativo */
-.main-content:not(.has-content) {
-  background-image: url('../components/favicon_logo_branco.png');
-  background-size: 70%; 
-  background-position: center;
-  background-repeat: no-repeat;
-  opacity: 0.3;
+/* Conteúdo principal */
+.main-content {
+  flex: 1;
+  margin-left: 16rem; /* Alinhado com a largura da sidebar */
+  width: calc(100% - 16rem); /* Largura - sidebar */
+  min-height: 100vh;
+  padding: var(--spacing-lg);
+  background-color: transparent; /* Alterado de #2c2c2c para transparente para mostrar o background */
+  overflow-y: auto;
+  transition: all 0.3s ease;
+  position: relative;
+  z-index: 2; /* Colocado acima do background-logo */
 }
 
 .main-content.has-content {
-  opacity: 1;
-  background-image: none;
+  padding: 0;
 }
 
-.open-menu-btn {
-  position: fixed;
-  top: 20px;
-  left: 20px;
-  background-color: #424242;
-  color: #f5f5f5;
-  padding: 10px 20px;
-  border-radius: 5px;
-  font-size: 1rem;
-  z-index: 1000;
+/* Botões do menu */
+.menu-btn {
+  display: block;
+  width: 90%;
+  margin: 0 auto var(--spacing-sm);
+  padding: 0.875rem 1.25rem; /* Convertido de 14px 20px para rem */
+  text-align: center;
+  background: linear-gradient(145deg, #3b3b3b, #2c2c2c);
+  color: white;
+  border: none;
+  border-radius: var(--border-radius-md);
   cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 500;
+  font-size: var(--font-size-md);
+  box-shadow: 0 0.25rem 0.625rem rgba(0, 0, 0, 0.3);
 }
 
+.menu-btn:hover {
+  transform: translateY(-0.1875rem); /* Convertido de -3px para rem */
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.4);
+  background: linear-gradient(145deg, #444, #333);
+}
+
+.menu-btn:active {
+  transform: translateY(-0.0625rem); /* Convertido de -1px para rem */
+}
+
+/* Botão para administrador */
+.admin-btn {
+  background: linear-gradient(145deg, #b73c3c, #9a3232);
+  color: white;
+}
+
+.admin-btn:hover {
+  background: linear-gradient(145deg, #c54040, #aa3636);
+}
+
+.gestor-btn {
+  background: linear-gradient(145deg, #3c7bb7, #32689a);
+  color: white;
+}
+
+.gestor-btn:hover {
+  background: linear-gradient(145deg, #4086c5, #3673aa);
+}
+
+.finance-btn {
+  background: linear-gradient(145deg, #5c3cb7, #4d329a);
+  color: white;
+}
+
+.finance-btn:hover {
+  background: linear-gradient(145deg, #6a44d0, #573aaa);
+}
+
+.logout-btn {
+  margin-top: auto;
+  background-color: #444;
+  border: 0.0625rem solid #555; /* Convertido de 1px para rem */
+}
+
+.logout-btn:hover {
+  background-color: #555;
+}
+
+/* Botão do menu mobile */
+.open-menu-btn {
+  display: none;
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 90;
+  background-color: #333;
+  color: white;
+  border: none;
+  border-radius: var(--border-radius-md);
+  padding: 0.625rem 1.25rem; /* Convertido de 10px 20px para rem */
+  cursor: pointer;
+  box-shadow: 0 0.25rem 0.625rem rgba(0, 0, 0, 0.3);
+}
+
+/* Menu de tela cheia no mobile */
 .fullscreen-menu {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
-  height: 100%;
-  background-color: #1a1a1a;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.95);
+  z-index: 1000;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  z-index: 2000;
-  padding: 20px;
+  padding: var(--spacing-lg);
+  overflow-y: auto;
+}
+
+.fullscreen-menu .menu-btn {
+  margin-bottom: var(--spacing-md);
+  width: 80%;
+  max-width: 25rem;
 }
 
 .close-menu-btn {
-  margin-top: 20px;
-  background-color: #424242;
-  color: #f5f5f5;
-  font-weight: bold;
-  width: 80%;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
+  background-color: transparent;
+  border: 0.0625rem solid #555; /* Convertido de 1px para rem */
+  margin-top: var(--spacing-lg);
 }
 
-/* Dashboard Styles */
-.dashboard-grid {
-  width: 100%;
-  display: grid;
-  grid-gap: 20px;
-  padding: 20px 0;
-}
-
-.dashboard-title {
-  grid-column: 1 / -1;
-  text-align: center;
-  font-size: 28px;
-  margin-bottom: 20px;
-  color: #f5f5f5;
-}
-
-.dashboard-row {
-  display: grid;
-  grid-gap: 20px;
-  width: 100%;
-}
-
-.kpi-row {
-  grid-template-columns: repeat(3, 1fr);
-}
-
-.chart-row {
-  grid-template-columns: repeat(3, 1fr);
-  min-height: 300px;
-}
-
-.split-row {
-  grid-template-columns: 1fr 1fr;
-}
-
-.kpi-card {
-  background-color: #333;
-  border-radius: 10px;
-  padding: 20px;
-  text-align: center;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  transition: transform 0.3s, box-shadow 0.3s;
-}
-
-.kpi-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
-}
-
-.kpi-card h3 {
-  font-size: 16px;
-  margin-bottom: 15px;
-  color: #aaa;
-}
-
-.kpi-value {
-  font-size: 32px;
-  font-weight: bold;
-  color: #fff;
-}
-
-.chart-wrapper {
-  background-color: #333;
-  border-radius: 10px;
-  padding: 20px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  display: flex;
-  flex-direction: column;
-  height: 300px;
-}
-
-.chart-wrapper h3 {
-  margin-bottom: 10px;
-  text-align: center;
-  font-size: 16px;
-  color: #aaa;
-}
-
-.activities-section, .reports-section {
-  background-color: #333;
-  border-radius: 10px;
-  padding: 20px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  min-height: 400px;
-  max-height: 500px;
-  display: flex;
-  flex-direction: column;
-}
-
-.activities-section h2, .reports-section h2 {
-  margin-bottom: 15px;
-  font-size: 20px;
-  color: #f5f5f5;
-  border-bottom: 1px solid #444;
-  padding-bottom: 10px;
-}
-
-.activity-feed {
-  flex: 1;
-  overflow-y: auto;
-  padding-right: 10px;
-}
-
-.activity-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.activity-item {
-  background-color: #444;
-  border-radius: 8px;
-  padding: 15px;
-  display: flex;
-  gap: 15px;
-  transition: background-color 0.3s;
-}
-
-.activity-item:hover {
-  background-color: #555;
-}
-
-.activity-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  color: white;
-  flex-shrink: 0;
-}
-
-.activity-icon-create {
-  background-color: #4CAF50;
-}
-
-.activity-icon-edit {
-  background-color: #2196F3;
-}
-
-.activity-icon-complete {
-  background-color: #9C27B0;
-}
-
-.activity-icon-cancel {
-  background-color: #FF5722;
-}
-
-.activity-icon-login {
-  background-color: #607D8B;
-}
-
-.activity-icon-default {
-  background-color: #9E9E9E;
-}
-
-.activity-content {
-  flex: 1;
-}
-
-.activity-header {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 5px;
-}
-
-.activity-user {
-  font-weight: bold;
-  color: #e0e0e0;
-}
-
-.activity-date {
-  color: #aaa;
-  font-size: 0.85em;
-}
-
-.activity-description {
-  margin-bottom: 5px;
-  color: #ccc;
-}
-
-.activity-details a {
-  color: #8ab4f8;
-  cursor: pointer;
-  text-decoration: underline;
-}
-
-.view-order-btn {
-  display: inline-block;
-  background-color: #4a6da7;
-  color: white !important;
-  padding: 5px 10px;
-  border-radius: 4px;
-  text-decoration: none !important;
-  font-size: 0.85em;
-  margin-top: 5px;
-  transition: background-color 0.3s, transform 0.2s;
-}
-
-.view-order-btn:hover {
-  background-color: #5e82bc;
-  transform: translateY(-2px);
-}
-
-.report-options {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 15px;
-  margin-bottom: 20px;
-}
-
-.form-group {
-  margin-bottom: 15px;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 5px;
-  color: #aaa;
-}
-
-.form-group select, .form-group input {
-  width: 100%;
-  padding: 8px;
-  background-color: #444;
-  border: 1px solid #555;
-  border-radius: 4px;
-  color: #f5f5f5;
-}
-
-.date-range {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-
-.btn-generate {
-  width: 100%;
-  padding: 12px;
-  background-color: #2ecc71;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  font-weight: bold;
-  cursor: pointer;
-  transition: background-color 0.3s;
-}
-
-.btn-generate:hover {
-  background-color: #27ae60;
-}
-
-.loading {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100px;
-  color: #aaa;
-}
-
-.empty-feed {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100px;
-  color: #aaa;
-  font-style: italic;
-}
-
-.financial-summary-section {
-  background-color: #2c3e50;
-  border-radius: 10px;
-  padding: 20px;
-  margin-top: 20px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-}
-
-.financial-kpis {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
-  margin-bottom: 20px;
-}
-
-.financial-kpi {
-  background-color: #34495e;
-  border-radius: 8px;
-  padding: 15px;
-  text-align: center;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-.financial-kpi h3 {
-  margin: 0 0 10px 0;
-  font-size: 16px;
-  color: #ccc;
-}
-
-.financial-kpi .kpi-value {
-  font-size: 24px;
-  font-weight: bold;
-}
-
-.positive-balance .kpi-value {
-  color: #2ecc71;
-}
-
-.negative-balance .kpi-value {
-  color: #e74c3c;
-}
-
-.financial-chart-wrapper {
-  background-color: #34495e;
-  border-radius: 8px;
-  padding: 15px;
-  height: 300px;
-  margin-top: 20px;
-}
-
-.financial-chart-wrapper h3 {
-  margin: 0 0 15px 0;
-  font-size: 18px;
-  text-align: center;
-  color: #f5f5f5;
-}
-
-.activity-icon-finance {
-  background-color: #9b59b6;
-}
-
-.help-btn {
-  background-color: #5cb85c;
-  border-color: #5cb85c;
-}
-
-.help-btn:hover {
-  background-color: #4cae4c;
-  border-color: #4cae4c;
-}
-
-.log-btn {
-  background-color: #345995;
-}
-
-.log-btn:hover {
-  background-color: #4270b3;
-}
-
+/* Responsividade */
 @media (max-width: 768px) {
   .sidebar {
     display: none;
   }
+  
   .main-content {
-    width: 100vw;
+    width: 100%;
     margin-left: 0;
-    padding: 20px;
+    padding: var(--spacing-md);
   }
   
-  .kpi-row, .chart-row, .split-row {
-    grid-template-columns: 1fr;
-  }
-  
-  .dashboard-title {
-    font-size: 22px;
-  }
-  .financial-kpis {
-    grid-template-columns: 1fr;
+  .open-menu-btn {
+    display: block;
   }
 }
 
 /* Otimizações para tablets e telas 1024x768 */
 @media (min-width: 769px) and (max-width: 1024px) {
   .sidebar {
-    width: 200px;
+    width: 12.5rem; /* Convertido de 200px para rem */
   }
   
   .main-content {
-    width: calc(100vw - 200px);
-    margin-left: 200px;
-    padding: 25px;
-  }
-  
-  .kpi-row {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .kpi-card:last-child {
-    grid-column: span 2;
-  }
-  
-  .chart-row {
-    grid-template-columns: 1fr;
-  }
-  
-  .financial-kpis {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  
-  .financial-kpi:last-child {
-    grid-column: span 2;
+    width: calc(100% - 12.5rem);
+    margin-left: 12.5rem;
+    padding: var(--spacing-lg);
   }
   
   .menu-btn {
-    font-size: 14px;
-    padding: 10px 15px;
+    font-size: 0.875rem; /* Convertido de 14px para rem */
+    padding: 0.625rem 0.9375rem; /* Convertido de 10px 15px para rem */
   }
 }
 
 /* Otimizações para telas entre 1025px e 1200px */
 @media (min-width: 1025px) and (max-width: 1200px) {
-  .chart-row {
-    grid-template-columns: 1fr 1fr;
-  }
-  
-  .chart-wrapper:last-child {
-    grid-column: span 2;
-  }
-  
   .main-content {
-    padding: 30px;
+    padding: var(--spacing-lg);
   }
 }
 
 /* Otimizações para telas Full HD (1920x1080) */
 @media (min-width: 1367px) and (max-width: 1920px) {
   .main-content {
-    padding: 40px 60px;
+    padding: 2.5rem 3.75rem; /* Convertido de 40px 60px para rem */
   }
   
   .sidebar {
-    width: 270px;
+    width: 16.875rem; /* Convertido de 270px para rem */
   }
   
   .main-content {
-    width: calc(100vw - 270px);
-    margin-left: 270px;
+    width: calc(100% - 16.875rem);
+    margin-left: 16.875rem;
   }
   
   .menu-btn {
-    padding: 15px 25px;
-    font-size: 18px;
-  }
-  
-  .dashboard-title {
-    font-size: 32px;
-  }
-  
-  .kpi-card {
-    padding: 25px;
-  }
-  
-  .kpi-card h3 {
-    font-size: 18px;
-  }
-  
-  .kpi-value {
-    font-size: 38px;
+    padding: 0.9375rem 1.5625rem; /* Convertido de 15px 25px para rem */
+    font-size: 1.125rem; /* Convertido de 18px para rem */
   }
 }
 
 /* Otimizações para telas maiores que Full HD */
 @media (min-width: 1921px) {
   .sidebar {
-    width: 300px;
+    width: 18.75rem; /* Convertido de 300px para rem */
   }
   
   .main-content {
-    width: calc(100vw - 300px);
-    margin-left: 300px;
-    padding: 50px 80px;
+    width: calc(100% - 18.75rem);
+    margin-left: 18.75rem;
+    padding: 3.125rem 5rem; /* Convertido de 50px 80px para rem */
   }
   
   .menu-btn {
-    padding: 18px 30px;
-    font-size: 20px;
-    margin-bottom: 15px;
+    padding: 1.125rem 1.875rem; /* Convertido de 18px 30px para rem */
+    font-size: 1.25rem; /* Convertido de 20px para rem */
+    margin-bottom: 0.9375rem; /* Convertido de 15px para rem */
   }
-  
-  .dashboard-title {
-    font-size: 36px;
-  }
-  
-  .kpi-row, .chart-row {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 30px;
-  }
-  
-  .kpi-card {
-    padding: 30px;
-  }
-  
-  .kpi-card h3 {
-    font-size: 20px;
-    margin-bottom: 20px;
-  }
-  
-  .kpi-value {
-    font-size: 42px;
-  }
+}
+
+/* Estilos para seções específicas */
+.order-section {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0;
+  background-color: transparent;
+}
+
+/* Container de alta prioridade para modais */
+.high-priority-modal-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 99999;
+}
+
+.high-priority-modal-container > * {
+  pointer-events: auto;
 }
 </style>

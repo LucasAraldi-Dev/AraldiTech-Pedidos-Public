@@ -189,14 +189,6 @@
           </div>
         </div>
         
-        <!-- Modal para detalhes do pedido -->
-        <ModalDetalhePedido
-          v-if="showOrderDetails"
-          :isOpen="showOrderDetails"
-          :pedido="selectedOrder"
-          @close="closeOrderDetails"
-        />
-        
         <!-- Modal para detalhes financeiros -->
         <ModalFinanceiro
           v-if="showFinancialDetails"
@@ -216,7 +208,6 @@ import { Chart, registerables } from 'chart.js';
 import authService from '@/api/authService';
 import axiosService from '@/api/axiosService';
 import { cachedRequest } from '@/utils/cacheService';
-import ModalDetalhePedido from '@/components/ModalDetalhePedido.vue';
 import ModalFinanceiro from '@/components/ModalFinanceiro.vue';
 import LoadingIndicator from '@/components/ui/LoadingIndicator.vue';
 import { useToast } from 'vue-toastification';
@@ -227,11 +218,10 @@ Chart.register(...registerables);
 export default {
   name: 'ModalDashboard',
   components: {
-    ModalDetalhePedido,
     ModalFinanceiro,
     LoadingIndicator
   },
-  emits: ['close'],
+  emits: ['close', 'open-order'],
   props: {
     isOpen: {
       type: Boolean,
@@ -276,8 +266,6 @@ export default {
         dataFinal: this.formatDateForInput(new Date()),
         formato: 'pdf'
       },
-      showOrderDetails: false,
-      selectedOrder: null,
       showFinancialDetails: false
     };
   },
@@ -709,35 +697,29 @@ export default {
     },
     
     openOrderDetails(pedidoId) {
-      // Buscar o pedido pelo ID
-      const pedido = this.pedidos.find(p => p.id == pedidoId); // usando == para comparação mais flexível
-      if (pedido) {
-        this.selectedOrder = pedido;
-        this.showOrderDetails = true;
-      } else {
-        // Se não encontrar localmente, tentar buscar da API
-        this.fetchOrderById(pedidoId);
-      }
+      console.log(`ModalDashboard: Emitindo evento open-order com pedidoId: ${pedidoId}`);
+      
+      // Não fechamos mais o modal para que ele possa ser reaberto quando o pedido for fechado
+      // this.$emit('close');
+      
+      // Emitir evento para abrir o modal de impressão do pedido
+      this.$emit('open-order', pedidoId);
     },
     
     async fetchOrderById(pedidoId) {
       try {
+        // Método mantido para compatibilidade, mas não utilizado diretamente
         const response = await axios.get(`${process.env.VUE_APP_API_URL}/pedidos/${pedidoId}`, {
           headers: authService.getAuthHeaders()
         });
         if (response.data) {
-          this.selectedOrder = response.data;
-          this.showOrderDetails = true;
+          // Emitir evento para abrir o modal de impressão do pedido
+          this.$emit('open-order', pedidoId);
         }
       } catch (error) {
         console.error(`Erro ao buscar detalhes do pedido #${pedidoId}:`, error);
         alert('Não foi possível carregar os detalhes do pedido.');
       }
-    },
-    
-    closeOrderDetails() {
-      this.showOrderDetails = false;
-      this.selectedOrder = null;
     },
     
     getActivityIcon(tipo) {

@@ -112,15 +112,6 @@
             </select>
           </div>
 
-          <div class="form-group">
-            <label for="editPassword">Nova Senha (deixe em branco para manter a atual)</label>
-            <input 
-              id="editPassword" 
-              type="password" 
-              v-model="editingUser.newPassword" 
-            />
-          </div>
-
           <div class="button-group">
             <button type="submit" class="save-btn">Salvar Alterações</button>
             <button type="button" @click="closeEditModal" class="cancel-btn">Cancelar</button>
@@ -323,14 +314,14 @@ export default {
         
         const userData = { ...this.editingUser };
         
-        if (!userData.newPassword) {
-          delete userData.newPassword;
-        } else {
-          userData.senha = userData.newPassword;
-          delete userData.newPassword;
-        }
+        // Remover qualquer campo de senha para evitar conflitos
+        delete userData.newPassword;
+        delete userData.senha;
         
         const changes = this.getChanges(this.originalUserData, userData);
+        
+        // Verificar se houve alteração no tipo de usuário
+        const tipoUsuarioAlterado = this.originalUserData.tipo_usuario !== userData.tipo_usuario;
         
         if (Object.keys(changes).length > 0) {
           const currentUser = authService.getUser();
@@ -342,7 +333,7 @@ export default {
         }
         
         const token = authService.getToken();
-        await axios.put(
+        const response = await axios.put(
           `${process.env.VUE_APP_API_URL}/usuarios/${userData._id}`,
           userData,
           {
@@ -350,19 +341,52 @@ export default {
           }
         );
         
+        // Verificar informações de resposta da API
+        const info = response.data?.info || {};
+        const tipoUsuarioAlteradoConfirmado = info.tipo_usuario_alterado || tipoUsuarioAlterado;
+        
         this.toast.success('Usuário atualizado com sucesso!');
+        
+        // Obter o usuário atual da sessão para saber se estamos alterando nosso próprio usuário
+        const currentUser = authService.getUser();
+        const alterandoProprioUsuario = currentUser && currentUser.nome === userData.nome;
+        
+        // Mostrar mensagens específicas baseadas nas alterações
+        if (tipoUsuarioAlteradoConfirmado) {
+          // Apenas tipo de usuário alterado
+          if (alterandoProprioUsuario) {
+            this.toast.warning('Suas permissões foram alteradas. Você precisará fazer login novamente.', {
+              timeout: 8000
+            });
+          } else {
+            this.toast.info(`O tipo de usuário de ${userData.nome} foi alterado para ${this.getUserTypeLabel(userData.tipo_usuario)}.`);
+          }
+        }
+        
+        // Se estamos alterando nosso próprio usuário e houver alterações que exigem novo login
+        if (alterandoProprioUsuario && tipoUsuarioAlteradoConfirmado) {
+          // Dar tempo para o usuário ler a mensagem antes de fazer logout
+          setTimeout(() => {
+            authService.logout();
+            this.$router.push('/login');
+          }, 5000);
+        }
+        
         this.closeEditModal();
         this.fetchUsers();
       } catch (error) {
         console.error('Erro ao atualizar usuário:', error);
-        this.toast.error('Erro ao atualizar usuário');
+        this.toast.error('Erro ao atualizar usuário: ' + (error.response?.data?.detail || error.message));
       }
     },
     getChanges(original, updated) {
       const changes = {};
       
+      // Campos a serem ignorados
+      const ignoredFields = ['_id', 'log', 'senha', 'newPassword', 'sessao_expirada'];
+      
       for (const key in updated) {
-        if (['_id', 'log', 'senha', 'newPassword'].includes(key)) continue;
+        if (ignoredFields.includes(key)) continue;
         
         if (original[key] !== updated[key]) {
           changes[key] = {
@@ -370,13 +394,6 @@ export default {
             to: updated[key]
           };
         }
-      }
-      
-      if (updated.senha) {
-        changes.senha = {
-          from: '[protegido]',
-          to: '[nova senha protegida]'
-        };
       }
       
       return changes;

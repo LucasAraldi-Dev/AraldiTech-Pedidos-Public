@@ -102,9 +102,9 @@ import RegisterModal from "../components/RegisterModal.vue";
 import { useToast } from "vue-toastification";
 import { ref, onMounted } from "vue";
 import { validateText } from "../utils/validationService";
-import { initCsrfProtection, checkPasswordStrength } from "../utils/securityService";
+import { initCsrfProtection, checkPasswordStrength, ensureCsrfToken } from "../utils/securityService";
 import LoadingIndicator from "../components/ui/LoadingIndicator.vue";
-import axiosService from '../api/axiosService';
+import authService from '../api/authService';
 
 export default {
   name: "AppLogin",
@@ -221,42 +221,33 @@ export default {
         currentStep.value = 2;
         statusMessage.value = "Autenticando...";
         
+        // Garantir que temos um token CSRF válido antes do login
+        await ensureCsrfToken();
+        
         // Aguarda 1.5 segundos antes de fazer a requisição real (apenas para efeito de UI)
         await new Promise(resolve => setTimeout(resolve, 1500));
         
-        const response = await axiosService.post(
-          '/token',
-          {
-            username: username.value,
-            senha: password.value,
-          }
-        );
-
-        console.log("Resposta completa do login:", response.data);
+        // Usar o authService para fazer login com segurança
+        const result = await authService.login(username.value, password.value);
         
-        const { access_token, token_type, nome, tipo_usuario, primeiro_login } = response.data;
-        console.log("Tipo de usuário recebido:", tipo_usuario);
-        console.log("Primeiro login:", primeiro_login);
+        if (!result.success) {
+          throw new Error(result.error || "Falha na autenticação");
+        }
         
-        // Armazenar informações de autenticação
-        localStorage.setItem("access_token", access_token);
-        localStorage.setItem("token_type", token_type);
-        localStorage.setItem("tipo_usuario", tipo_usuario || "comum");
+        // Obter dados do usuário logado
+        const userData = authService.getUser();
+        console.log("Usuário autenticado:", userData);
         
-        // Armazenando o modelo completo do usuário
-        const userModel = {
-          nome: nome,
-          tipo_usuario: tipo_usuario || "comum",
-          username: username.value,
-          primeiro_login: primeiro_login
-        };
+        // Para compatibilidade com código existente
+        const nome = userData.nome;
+        const tipo_usuario = userData.tipo_usuario;
+        const primeiro_login = userData.primeiro_login;
         
-        console.log("Modelo de usuário a ser salvo:", userModel);
-        localStorage.setItem("user", JSON.stringify(userModel));
-        console.log("LocalStorage após salvar:", localStorage.getItem("user"));
-
         // Verificar se é a primeira vez que o usuário faz login
-        const shouldShowTutorial = userModel.tipo_usuario === 'comum' && primeiro_login;
+        const shouldShowTutorial = userData.tipo_usuario === 'comum' && primeiro_login;
+
+        // Registrar dados do usuário no log (para uso das variáveis)
+        console.log(`Usuário: ${nome}, Tipo: ${tipo_usuario}`);
 
         // Mostrar tela de sucesso
         isLoggingIn.value = false;
@@ -433,20 +424,20 @@ export default {
 }
 
 .login {
-  padding: 40px;
+  padding: var(--spacing-xl);
   background: linear-gradient(145deg, #3b3b3b, #2c2c2c);
   color: white;
-  border-radius: 12px;
+  border-radius: var(--border-radius-lg);
   width: 90%;
-  max-width: 550px;
+  max-width: 34.375rem; /* Convertido de 550px para rem */
   box-shadow: 0px 10px 20px rgba(0, 0, 0, 0.4);
   position: relative;
   overflow: hidden;
 }
 
 h1 {
-  margin-bottom: 20px;
-  font-size: 24px;
+  margin-bottom: var(--spacing-md);
+  font-size: var(--font-size-xl);
   font-weight: 600;
   text-align: center;
 }
@@ -458,43 +449,43 @@ form {
 
 .input-box {
   position: relative;
-  margin-bottom: 20px;
+  margin-bottom: var(--spacing-md);
   width: 100%;
 }
 
 .input-box input {
   width: 100%;
-  padding: 14px 20px;
-  padding-left: 45px;
+  padding: 0.875rem 1.25rem;
+  padding-left: 2.8125rem; /* Convertido de 45px para rem */
   border: 1px solid #555;
-  border-radius: 8px;
+  border-radius: var(--border-radius-md);
   background: #444;
   color: white;
   outline: none;
-  font-size: 16px;
+  font-size: var(--font-size-md);
   transition: all 0.3s ease;
 }
 
 .input-box input:focus {
   border-color: #66ccff;
-  box-shadow: 0 0 8px rgba(102, 204, 255, 0.3);
+  box-shadow: 0 0 0.5rem rgba(102, 204, 255, 0.3);
 }
 
 .input-box input:not(:placeholder-shown) + label,
 .input-box input:focus + label {
-  top: -10px;
-  left: 45px;
-  font-size: 12px;
+  top: -0.625rem; /* Convertido de -10px para rem */
+  left: 2.8125rem; /* Convertido de 45px para rem */
+  font-size: 0.75rem; /* Convertido de 12px para rem */
   background-color: #444;
-  padding: 0 5px;
+  padding: 0 0.3125rem; /* Convertido de 5px para rem */
   color: #66ccff;
 }
 
 .input-box label {
   position: absolute;
-  top: 16px;
-  left: 45px;
-  font-size: 16px;
+  top: 1rem; /* Convertido de 16px para rem */
+  left: 2.8125rem; /* Convertido de 45px para rem */
+  font-size: var(--font-size-md);
   color: #bbb;
   pointer-events: none;
   transition: all 0.3s ease;
@@ -502,9 +493,9 @@ form {
 
 .input-icon {
   position: absolute;
-  top: 14px;
-  left: 15px;
-  font-size: 18px;
+  top: 0.875rem; /* Convertido de 14px para rem */
+  left: 0.9375rem; /* Convertido de 15px para rem */
+  font-size: 1.125rem; /* Convertido de 18px para rem */
   color: #bbb;
   pointer-events: none;
 }
@@ -512,8 +503,8 @@ form {
 .input-icon i::before {
   content: '';
   display: inline-block;
-  width: 18px;
-  height: 18px;
+  width: 1.125rem; /* Convertido de 18px para rem */
+  height: 1.125rem; /* Convertido de 18px para rem */
   background-size: contain;
   background-repeat: no-repeat;
 }
@@ -531,15 +522,15 @@ form {
 }
 
 button {
-  padding: 14px 20px;
-  font-size: 16px;
+  padding: 0.875rem 1.25rem; /* Convertido de 14px 20px para rem */
+  font-size: var(--font-size-md);
   background-color: #555;
   color: white;
   border: 2px solid #555;
-  border-radius: 8px;
+  border-radius: var(--border-radius-md);
   cursor: pointer;
   width: 100%;
-  margin-top: 10px;
+  margin-top: 0.625rem; /* Convertido de 10px para rem */
   transition: all 0.3s ease;
   font-weight: 500;
   letter-spacing: 0.5px;
@@ -574,7 +565,7 @@ button:disabled {
 }
 
 p {
-  padding-top: 35px;
+  padding-top: 2.1875rem; /* Convertido de 35px para rem */
 }
 
 /* Estilos para o processo de login */
@@ -582,18 +573,18 @@ p {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 20px 0;
+  padding: var(--spacing-md) 0;
 }
 
 .progress-steps {
   width: 100%;
-  margin-bottom: 30px;
+  margin-bottom: 1.875rem; /* Convertido de 30px para rem */
 }
 
 .progress-step {
   display: flex;
   align-items: center;
-  margin-bottom: 15px;
+  margin-bottom: 0.9375rem; /* Convertido de 15px para rem */
   opacity: 0.6;
   transition: opacity 0.3s ease;
 }
@@ -603,20 +594,20 @@ p {
 }
 
 .step-indicator {
-  width: 28px;
-  height: 28px;
+  width: 1.75rem; /* Convertido de 28px para rem */
+  height: 1.75rem; /* Convertido de 28px para rem */
   border-radius: 50%;
   background: #666;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: bold;
-  margin-right: 10px;
+  margin-right: 0.625rem; /* Convertido de 10px para rem */
 }
 
 .progress-step.active .step-indicator {
   background: #66ccff;
-  box-shadow: 0 0 10px rgba(102, 204, 255, 0.5);
+  box-shadow: 0 0 0.625rem rgba(102, 204, 255, 0.5); /* Convertido de 10px para rem */
 }
 
 .progress-step.completed .step-indicator {
@@ -624,17 +615,17 @@ p {
 }
 
 .step-label {
-  font-size: 15px;
+  font-size: 0.9375rem; /* Convertido de 15px para rem */
 }
 
 .spinner {
-  width: 50px;
-  height: 50px;
+  width: 3.125rem; /* Convertido de 50px para rem */
+  height: 3.125rem; /* Convertido de 50px para rem */
   border: 4px solid rgba(255, 255, 255, 0.1);
   border-top: 4px solid #66ccff;
   border-radius: 50%;
   animation: spin 1s linear infinite;
-  margin: 20px 0;
+  margin: 1.25rem 0; /* Convertido de 20px para rem */
 }
 
 @keyframes spin {
@@ -643,10 +634,10 @@ p {
 }
 
 .status-message {
-  font-size: 16px;
+  font-size: var(--font-size-md);
   text-align: center;
   color: #ddd;
-  margin-top: 10px;
+  margin-top: 0.625rem; /* Convertido de 10px para rem */
 }
 
 /* Estilos para o estado de sucesso */
@@ -658,15 +649,15 @@ p {
 }
 
 .success-icon {
-  width: 70px;
-  height: 70px;
+  width: 4.375rem; /* Convertido de 70px para rem */
+  height: 4.375rem; /* Convertido de 70px para rem */
   background: #00cc66;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 40px;
-  margin-bottom: 20px;
+  font-size: 2.5rem; /* Convertido de 40px para rem */
+  margin-bottom: 1.25rem; /* Convertido de 20px para rem */
   box-shadow: 0 5px 15px rgba(0, 204, 102, 0.4);
   animation: scaleIn 0.5s ease forwards;
   transform: scale(0);
@@ -677,24 +668,24 @@ p {
 }
 
 .success-message {
-  font-size: 22px;
+  font-size: 1.375rem; /* Convertido de 22px para rem */
   font-weight: 600;
-  margin-bottom: 15px;
+  margin-bottom: 0.9375rem; /* Convertido de 15px para rem */
   color: #00cc66;
 }
 
 .redirect-message {
   color: #bbb;
-  margin-bottom: 20px;
-  font-size: 15px;
+  margin-bottom: 1.25rem; /* Convertido de 20px para rem */
+  font-size: 0.9375rem; /* Convertido de 15px para rem */
   padding-top: 0;
 }
 
 .progress-bar {
   width: 100%;
-  height: 4px;
+  height: 0.25rem; /* Convertido de 4px para rem */
   background: #444;
-  border-radius: 2px;
+  border-radius: 0.125rem; /* Convertido de 2px para rem */
   overflow: hidden;
 }
 
@@ -727,16 +718,16 @@ p {
 }
 
 .error-icon {
-  width: 70px;
-  height: 70px;
+  width: 4.375rem; /* Convertido de 70px para rem */
+  height: 4.375rem; /* Convertido de 70px para rem */
   background: #ff3d71;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 40px;
+  font-size: 2.5rem; /* Convertido de 40px para rem */
   font-weight: bold;
-  margin-bottom: 20px;
+  margin-bottom: 1.25rem; /* Convertido de 20px para rem */
   box-shadow: 0 5px 15px rgba(255, 61, 113, 0.4);
   animation: pulseError 2s infinite;
 }
@@ -748,28 +739,28 @@ p {
 }
 
 .error-title {
-  font-size: 22px;
+  font-size: 1.375rem; /* Convertido de 22px para rem */
   font-weight: 600;
-  margin-bottom: 10px;
+  margin-bottom: 0.625rem; /* Convertido de 10px para rem */
   color: #ff3d71;
 }
 
 .error-message {
   color: #ddd;
-  font-size: 16px;
-  margin-bottom: 10px;
+  font-size: var(--font-size-md);
+  margin-bottom: 0.625rem; /* Convertido de 10px para rem */
 }
 
 .error-help {
   color: #bbb;
-  font-size: 14px;
-  margin-bottom: 25px;
-  padding: 0 10px;
+  font-size: 0.875rem; /* Convertido de 14px para rem */
+  margin-bottom: 1.5625rem; /* Convertido de 25px para rem */
+  padding: 0 0.625rem; /* Convertido de 10px para rem */
 }
 
 .error-actions {
   display: flex;
-  gap: 10px;
+  gap: 0.625rem; /* Convertido de 10px para rem */
   width: 100%;
 }
 
@@ -801,134 +792,134 @@ p {
 /* Media queries para responsividade */
 @media (min-width: 1200px) {
   .login {
-    max-width: 600px;
-    padding: 50px;
+    max-width: 37.5rem; /* Convertido de 600px para rem */
+    padding: 3.125rem; /* Convertido de 50px para rem */
   }
   
   h1 {
-    font-size: 28px;
-    margin-bottom: 30px;
+    font-size: 1.75rem; /* Convertido de 28px para rem */
+    margin-bottom: 1.875rem; /* Convertido de 30px para rem */
   }
   
   .input-box input {
-    padding: 16px 22px;
-    padding-left: 50px;
-    font-size: 17px;
+    padding: 1rem 1.375rem; /* Convertido de 16px 22px para rem */
+    padding-left: 3.125rem; /* Convertido de 50px para rem */
+    font-size: 1.0625rem; /* Convertido de 17px para rem */
   }
   
   .input-icon {
-    top: 16px;
-    left: 18px;
+    top: 1rem; /* Convertido de 16px para rem */
+    left: 1.125rem; /* Convertido de 18px para rem */
   }
   
   .input-box label {
-    top: 18px;
-    left: 50px;
-    font-size: 17px;
+    top: 1.125rem; /* Convertido de 18px para rem */
+    left: 3.125rem; /* Convertido de 50px para rem */
+    font-size: 1.0625rem; /* Convertido de 17px para rem */
   }
   
   .input-box input:not(:placeholder-shown) + label,
   .input-box input:focus + label {
-    top: -12px;
-    left: 50px;
-    font-size: 13px;
+    top: -0.75rem; /* Convertido de -12px para rem */
+    left: 3.125rem; /* Convertido de 50px para rem */
+    font-size: 0.8125rem; /* Convertido de 13px para rem */
   }
   
   button {
-    padding: 16px 22px;
-    font-size: 17px;
-    margin-top: 15px;
+    padding: 1rem 1.375rem; /* Convertido de 16px 22px para rem */
+    font-size: 1.0625rem; /* Convertido de 17px para rem */
+    margin-top: 0.9375rem; /* Convertido de 15px para rem */
   }
 }
 
 @media (max-width: 768px) {
   .login {
-    padding: 30px;
+    padding: 1.875rem; /* Convertido de 30px para rem */
     width: 95%;
-    max-width: 450px;
+    max-width: 28.125rem; /* Convertido de 450px para rem */
   }
   
   .input-box input {
-    padding: 12px 15px;
-    padding-left: 40px;
+    padding: 0.75rem 0.9375rem; /* Convertido de 12px 15px para rem */
+    padding-left: 2.5rem; /* Convertido de 40px para rem */
   }
   
   .input-icon {
-    top: 12px;
-    left: 12px;
+    top: 0.75rem; /* Convertido de 12px para rem */
+    left: 0.75rem; /* Convertido de 12px para rem */
   }
   
   .input-box label {
-    top: 14px;
-    left: 40px;
+    top: 0.875rem; /* Convertido de 14px para rem */
+    left: 2.5rem; /* Convertido de 40px para rem */
   }
   
   .input-box input:not(:placeholder-shown) + label,
   .input-box input:focus + label {
-    top: -10px;
-    left: 40px;
+    top: -0.625rem; /* Convertido de -10px para rem */
+    left: 2.5rem; /* Convertido de 40px para rem */
   }
 }
 
 @media (max-width: 480px) {
   .login {
-    padding: 25px;
-    border-radius: 10px;
+    padding: 1.5625rem; /* Convertido de 25px para rem */
+    border-radius: 0.625rem; /* Convertido de 10px para rem */
     box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.3);
   }
   
   h1 {
-    font-size: 22px;
-    margin-bottom: 15px;
+    font-size: 1.375rem; /* Convertido de 22px para rem */
+    margin-bottom: 0.9375rem; /* Convertido de 15px para rem */
   }
   
   .input-box input {
-    padding: 10px 8px;
-    padding-left: 36px;
-    font-size: 15px;
+    padding: 0.625rem 0.5rem; /* Convertido de 10px 8px para rem */
+    padding-left: 2.25rem; /* Convertido de 36px para rem */
+    font-size: 0.9375rem; /* Convertido de 15px para rem */
   }
   
   .input-box label {
-    font-size: 15px;
-    top: 12px;
-    left: 36px;
+    font-size: 0.9375rem; /* Convertido de 15px para rem */
+    top: 0.75rem; /* Convertido de 12px para rem */
+    left: 2.25rem; /* Convertido de 36px para rem */
   }
   
   .input-icon {
-    top: 10px;
-    left: 10px;
-    font-size: 16px;
+    top: 0.625rem; /* Convertido de 10px para rem */
+    left: 0.625rem; /* Convertido de 10px para rem */
+    font-size: 1rem; /* Convertido de 16px para rem */
   }
   
   .input-box input:not(:placeholder-shown) + label,
   .input-box input:focus + label {
-    top: -10px;
-    left: 36px;
-    font-size: 12px;
+    top: -0.625rem; /* Convertido de -10px para rem */
+    left: 2.25rem; /* Convertido de 36px para rem */
+    font-size: 0.75rem; /* Convertido de 12px para rem */
   }
   
   button {
-    padding: 10px 15px;
-    font-size: 15px;
+    padding: 0.625rem 0.9375rem; /* Convertido de 10px 15px para rem */
+    font-size: 0.9375rem; /* Convertido de 15px para rem */
   }
   
   p {
-    padding-top: 25px;
-    font-size: 14px;
+    padding-top: 1.5625rem; /* Convertido de 25px para rem */
+    font-size: 0.875rem; /* Convertido de 14px para rem */
   }
 
   .progress-step {
-    margin-bottom: 10px;
+    margin-bottom: 0.625rem; /* Convertido de 10px para rem */
   }
 
   .step-indicator {
-    width: 24px;
-    height: 24px;
-    font-size: 12px;
+    width: 1.5rem; /* Convertido de 24px para rem */
+    height: 1.5rem; /* Convertido de 24px para rem */
+    font-size: 0.75rem; /* Convertido de 12px para rem */
   }
 
   .step-label {
-    font-size: 14px;
+    font-size: 0.875rem; /* Convertido de 14px para rem */
   }
   
   .error-actions {
@@ -936,38 +927,38 @@ p {
   }
   
   .error-title {
-    font-size: 20px;
+    font-size: 1.25rem; /* Convertido de 20px para rem */
   }
   
   .error-message {
-    font-size: 15px;
+    font-size: 0.9375rem; /* Convertido de 15px para rem */
   }
 }
 
 @media (max-width: 320px) {
   .login {
-    padding: 20px;
+    padding: 1.25rem; /* Convertido de 20px para rem */
   }
   
   h1 {
-    font-size: 20px;
+    font-size: 1.25rem; /* Convertido de 20px para rem */
   }
   
   .input-box {
-    margin-bottom: 15px;
+    margin-bottom: 0.9375rem; /* Convertido de 15px para rem */
   }
   
   .input-box input {
-    padding-left: 32px;
+    padding-left: 2rem; /* Convertido de 32px para rem */
   }
   
   .input-box label {
-    left: 32px;
+    left: 2rem; /* Convertido de 32px para rem */
   }
   
   .input-box input:not(:placeholder-shown) + label,
   .input-box input:focus + label {
-    left: 32px;
+    left: 2rem; /* Convertido de 32px para rem */
   }
 }
 </style>

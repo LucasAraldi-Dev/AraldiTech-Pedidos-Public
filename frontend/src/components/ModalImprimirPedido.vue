@@ -1,125 +1,276 @@
 <template>
-  <div v-if="isOpen" class="modal-overlay" @click="closeModal">
+  <div v-if="isOpen && pedido" class="modal-overlay" @click="closeModal">
+    <!-- Banner de depuração removido conforme solicitado -->
+    
     <div class="print-modal" @click.stop ref="orderContent">
       <!-- Header com o logo -->
       <div class="modal-header">
         <img src="@/assets/logo.png" alt="LOGO" class="logo" />
         <h2>DETALHES DO PEDIDO</h2>
-      </div>
 
-      <!-- ID do Pedido destacado -->
-      <div class="order-id">
-        <p><strong>PEDIDO Nº :    </strong> {{pedido.id }}</p>
-      </div>
-
-      <!-- Detalhes do Pedido -->
-      <div class="order-details">
-        <p><strong>DESCRIÇÃO:</strong> {{ (pedido.descricao || 'Não informado').toUpperCase() }}</p>
-        <p><strong>QUANTIDADE:</strong> {{ pedido.quantidade || 0 }}</p>
-        <p><strong>URGÊNCIA:</strong> {{ (pedido.urgencia || 'Normal').toUpperCase() }}</p>
-        <p><strong>CATEGORIA:</strong> {{ (pedido.categoria || 'Não categorizado').toUpperCase() }}</p>
-        <p><strong>DATA DO PEDIDO:</strong> {{ formatDate(pedido.deliveryDate || new Date()).toUpperCase() }}</p>
-        <p v-if="pedido.status === 'Concluído'"><strong>DATA DE CONCLUSÃO:</strong> {{ formatDate(pedido.conclusao_data || new Date()).toUpperCase() }}</p>
-        <p><strong>OBSERVAÇÃO:</strong> {{ pedido.observacao ? pedido.observacao.toUpperCase() : "NENHUMA" }}</p>
-        <p><strong>RESPONSÁVEL:</strong> {{ (pedido.sender || 'Não informado').toUpperCase() }}</p>
-        <p v-if="pedido.status"><strong>STATUS:</strong> {{ pedido.status.toUpperCase() }}</p>
-        <div v-if="pedido.anexo">
-          <p><strong>ANEXO:</strong></p>
-          <img :src="'data:image/png;base64,' + pedido.anexo" alt="ANEXO" class="order-attachment" />
+        <!-- ID do Pedido -->
+        <div class="order-id">
+          <p><strong>PEDIDO Nº:</strong> {{pedido.id }}</p>
         </div>
       </div>
       
-      <!-- Histórico de Alterações Expansível -->
-      <div class="order-history">
-        <div class="history-header" @click="toggleHistory">
-          <strong>HISTÓRICO DE ALTERAÇÕES</strong>
-          <span class="toggle-icon">{{ isHistoryExpanded ? '▼' : '►' }}</span>
+      <!-- Grid para Detalhes do Pedido -->
+      <div class="order-details-grid">
+        <div class="detail-item">
+          <strong>DESCRIÇÃO:</strong>
+          <span>{{ (pedido.descricao || 'Não informado').toUpperCase() }}</span>
         </div>
-        <div v-if="isHistoryExpanded" class="history-content">
-          <div v-if="isLoadingHistory" class="loading-history">
-            Carregando histórico...
+        
+        <div class="detail-item">
+          <strong>QUANTIDADE:</strong>
+          <span>{{ pedido.quantidade || 0 }}</span>
+        </div>
+        
+        <div class="detail-item">
+          <strong>URGÊNCIA:</strong> 
+          <div class="badge-container">
+            <span class="urgency-badge" :class="urgencyClass">
+              {{ (pedido.urgencia || 'Normal').toUpperCase() }}
+            </span>
           </div>
-          <div v-else-if="historico.length === 0" class="empty-history">
-            Nenhuma alteração registrada.
+        </div>
+        
+        <div class="detail-item">
+          <strong>CATEGORIA:</strong>
+          <span>{{ (pedido.categoria || 'Não categorizado').toUpperCase() }}</span>
+        </div>
+        
+        <div class="detail-item">
+          <strong>DATA DO PEDIDO:</strong>
+          <span>{{ formatDate(pedido.deliveryDate || new Date()).toUpperCase() }}</span>
+        </div>
+        
+        <div v-if="pedido.status === 'Concluído'" class="detail-item">
+          <strong>DATA DE CONCLUSÃO:</strong>
+          <span>{{ formatDate(pedido.conclusao_data || new Date()).toUpperCase() }}</span>
+        </div>
+        
+        <div class="detail-item full-width">
+          <strong>OBSERVAÇÃO:</strong>
+          <span>{{ pedido.observacao ? pedido.observacao.toUpperCase() : "NENHUMA" }}</span>
+        </div>
+        
+        <div class="detail-item">
+          <strong>RESPONS. PELA COMPRA:</strong>
+          <span>{{ (pedido.sender || 'Não informado').toUpperCase() }}</span>
+        </div>
+        
+        <div v-if="pedido.status" class="detail-item">
+          <strong>STATUS:</strong>
+          <span class="status-badge" :class="statusClass">
+            {{ pedido.status.toUpperCase() }}
+          </span>
+        </div>
+        
+        <div class="detail-item">
+          <strong>CRIADO POR:</strong>
+          <span>{{ (pedido.usuario_nome || getCurrentUser() || 'Não informado').toUpperCase() }}</span>
+        </div>
+
+        <!-- Setor -->
+        <div class="detail-item" v-if="pedido.setor">
+          <strong>SETOR:</strong>
+          <span>{{ pedido.setor.toUpperCase() }}</span>
+        </div>
+
+        <!-- Tempo de Processamento (se estiver concluído) -->
+        <div class="detail-item" v-if="pedido.status === 'Concluído' && pedido.conclusao_data && pedido.deliveryDate">
+          <strong>TEMPO DE PROCESSAMENTO:</strong>
+          <span>{{ calculateProcessingTime() }}</span>
+        </div>
+      </div>
+        
+      <!-- Anexo (se houver) -->
+      <div v-if="pedido.anexo" class="attachment-section">
+        <strong>ANEXO:</strong>
+        <img :src="'data:image/png;base64,' + pedido.anexo" alt="ANEXO" class="order-attachment" />
+      </div>
+
+      <!-- Informações de Auditoria -->
+      <div v-if="showAuditInfo && pedido.audit_info" class="audit-section">
+        <div class="audit-header" @click="toggleAuditInfo">
+          <strong>INFORMAÇÕES DE AUDITORIA</strong>
+          <i class="fas" :class="auditInfoExpanded ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+        </div>
+        <div v-if="auditInfoExpanded" class="audit-details">
+          <div class="audit-item" v-if="pedido.audit_info.created_at_exact">
+            <strong>Data e Hora Exata:</strong>
+            <span>{{ formatExactDateTime(pedido.audit_info.created_at_exact) }}</span>
           </div>
-          <div v-else class="history-list">
-            <div v-for="(item, index) in historico" :key="index" class="history-item">
-              <div class="history-header">
-                <span class="history-user">{{ item.usuario_nome }}</span>
-                <span class="history-date">{{ formatDateTime(item.data_edicao) }}</span>
-              </div>
-              <div class="history-details">
-                <span class="field">{{ item.campo_alterado }}</span>:
-                <span class="old-value">{{ item.valor_anterior }}</span> →
-                <span class="new-value">{{ item.valor_novo }}</span>
-              </div>
-            </div>
+          <div class="audit-item" v-if="pedido.audit_info.browser_info">
+            <strong>Dispositivo:</strong>
+            <span>{{ getBrowserInfo() }}</span>
+          </div>
+          <div class="audit-item" v-if="pedido.audit_info.user_email">
+            <strong>Email do Usuário:</strong>
+            <span>{{ pedido.audit_info.user_email }}</span>
+          </div>
+          <div class="audit-item" v-if="pedido.audit_info.user_type">
+            <strong>Tipo de Usuário:</strong>
+            <span>{{ getUserType(pedido.audit_info.user_type) }}</span>
           </div>
         </div>
       </div>
 
       <!-- Botões -->
-      <button @click="generateImage">GERAR IMAGEM</button>
-      <button class="primary-btn" @click="createNewOrder">NOVO PEDIDO</button>
-      <button class="close-btn" @click="closeModal">FECHAR</button>
+      <div class="action-buttons">
+        <button @click="generateImage" class="print-btn" :disabled="isGeneratingImage">
+          <i class="fas fa-image"></i> GERAR IMAGEM
+        </button>
+        <!-- Mostrar o botão de novo pedido apenas se for do contexto de criação -->
+        <button v-if="origin === 'creation'" class="primary-btn" @click="createNewOrder">
+          <i class="fas fa-plus"></i> NOVO PEDIDO
+        </button>
+        <button class="close-btn" @click="closeModal">
+          <i class="fas fa-times"></i> FECHAR
+        </button>
+      </div>
     </div>
+    
+    <!-- Indicador de loading durante a geração da imagem -->
+    <loading-indicator 
+      v-if="isGeneratingImage" 
+      overlay 
+      size="large" 
+      message="Gerando imagem do pedido..." 
+    />
   </div>
 </template>
 
 <script>
 import html2canvas from "html2canvas";
-// Importação modificada para evitar o erro de 'module is not defined'
-import * as axiosModule from "axios";
-const axios = axiosModule.default || axiosModule;
+import { useToast } from 'vue-toastification';
+import LoadingIndicator from '@/components/ui/LoadingIndicator.vue';
 
 export default {
   name: 'ModalImprimirPedido',
+  components: {
+    LoadingIndicator
+  },
   props: {
-    isOpen: Boolean,
-    pedido: Object,
+    isOpen: {
+      type: Boolean,
+      default: false
+    },
+    pedido: {
+      type: Object,
+      default: () => ({})
+    },
+    origin: {
+      type: String,
+      default: 'creation' // 'creation' ou 'consultation'
+    }
   },
   data() {
     return {
-      isHistoryExpanded: false,
-      historico: [],
-      isLoadingHistory: false,
-      ultimaAtualizacao: null
+      modalId: `print-modal-${Date.now()}`, // ID único para o modal
+      isGeneratingImage: false,
+      showAuditInfo: true, // Controla se as informações de auditoria devem ser exibidas
+      auditInfoExpanded: false, // Controla se as informações de auditoria estão expandidas
+      currentUser: null // Armazenará os dados do usuário atual
     };
   },
-  mounted() {
-    // Quando o componente for montado, já carregamos os dados do histórico
-    // mas mantemos ele recolhido por padrão
-    if (this.isOpen && this.pedido && this.pedido.id) {
-      console.log("Modal montado, pré-carregando histórico");
-      // Pré-carregar o histórico mantendo-o recolhido
-      this.carregarHistorico();
+  computed: {
+    // Determinar a classe da badge com base na urgência
+    urgencyClass() {
+      const urgency = (this.pedido.urgencia || '').toLowerCase();
+      if (urgency === 'urgente') return 'urgent';
+      if (urgency === 'crítico' || urgency === 'critico') return 'critical';
+      return 'normal';
+    },
+    // Determinar a classe do status
+    statusClass() {
+      const status = (this.pedido.status || '').toLowerCase();
+      if (status === 'concluído' || status === 'concluido') return 'status-completed';
+      if (status === 'em andamento') return 'status-progress';
+      if (status === 'cancelado') return 'status-canceled';
+      return 'status-pending';
     }
+  },
+  created() {
+    console.log('[INFO] ModalImprimirPedido criado', {
+      isOpen: this.isOpen,
+      pedidoId: this.pedido?.id,
+      modalId: this.modalId,
+      origin: this.origin
+    });
+    
+    // Carregar dados do usuário atual do localStorage
+    this.loadCurrentUser();
+  },
+  mounted() {
+    if (this.isOpen) {
+      // Impedir rolagem quando o modal está aberto
+      document.body.style.overflow = 'hidden';
+      
+      // Verificar se o botão de novo pedido deve ser exibido
+      console.log('[INFO] Modal aberto com origin:', this.origin);
+    }
+  },
+  beforeUnmount() {
+    // Restaurar a rolagem quando o componente for desmontado
+    document.body.style.overflow = '';
   },
   watch: {
     isOpen(newVal) {
-      if (newVal && this.pedido) {
-        // Resetar o estado do histórico
-        this.isHistoryExpanded = false;
-        // Pré-carregar o histórico em segundo plano
-        this.carregarHistorico();
-      }
-    },
-    pedido(newVal) {
-      if (newVal && this.isOpen) {
-        // Caso o pedido mude enquanto o modal estiver aberto
-        console.log("Pedido mudou, recarregando histórico");
-        this.isHistoryExpanded = false;
-        this.historico = [];
-        // Carregar o histórico do novo pedido
-        this.carregarHistorico();
+      if (newVal) {
+        // Impedir rolagem quando o modal está aberto
+        document.body.style.overflow = 'hidden';
+      } else {
+        // Restaurar rolagem quando o modal é fechado
+        document.body.style.overflow = '';
       }
     }
   },
   methods: {
+    loadCurrentUser() {
+      try {
+        const userStr = localStorage.getItem("user");
+        if (userStr) {
+          this.currentUser = JSON.parse(userStr);
+          console.log('[INFO] Usuário atual carregado:', this.currentUser.nome);
+        } else {
+          this.currentUser = {
+            nome: localStorage.getItem("user_name") || "Usuário do Sistema"
+          };
+        }
+      } catch (e) {
+        console.error("Erro ao carregar dados do usuário:", e);
+        this.currentUser = { nome: "Usuário do Sistema" };
+      }
+    },
+    getCurrentUser() {
+      if (this.currentUser && this.currentUser.nome) {
+        return this.currentUser.nome;
+      }
+      
+      // Tentar obter o nome do usuário do localStorage se não estiver carregado
+      const userStr = localStorage.getItem("user");
+      if (userStr) {
+        try {
+          const user = JSON.parse(userStr);
+          return user.nome;
+        } catch (e) {
+          console.error("Erro ao parsear dados do usuário:", e);
+        }
+      }
+      
+      // Fallback para outros campos caso precise
+      return localStorage.getItem("user_name") || "Usuário do Sistema";
+    },
     closeModal() {
+      // Restaurar a rolagem
+      document.body.style.overflow = '';
+      // Emitir evento de fechamento
       this.$emit("close");
     },
     createNewOrder() {
+      this.closeModal();
       this.$emit("new-order");
     },
     formatDate(date) {
@@ -144,148 +295,315 @@ export default {
         return 'Erro de formato';
       }
     },
-    formatDateTime(dateTime) {
-      if (!dateTime) return 'Data não informada';
+    formatExactDateTime(dateTimeStr) {
+      if (!dateTimeStr) return 'Não disponível';
       
       try {
-        const d = new Date(dateTime);
+        const d = new Date(dateTimeStr);
         
         // Verificar se a data é válida
         if (isNaN(d.getTime())) {
-          console.warn(`Data inválida: ${dateTime}`);
-          return 'Data inválida';
+          return 'Data/hora inválida';
         }
         
-        return new Intl.DateTimeFormat('pt-BR', {
-          day: '2-digit',
-          month: '2-digit',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: false  // Garantir formato 24h
-        }).format(d);
+        return d.toLocaleDateString("pt-BR", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit"
+        });
       } catch (error) {
-        console.error(`Erro ao formatar data: ${dateTime}`, error);
         return 'Erro de formato';
       }
     },
-    async generateImage() {
-      const orderElement = this.$refs.orderContent;
-      const buttons = this.$el.querySelectorAll('button'); 
-
-      if (orderElement) {
-        // Ocultar os botões antes de gerar a imagem
-        buttons.forEach(btn => btn.classList.add('hidden'));
-
-        // Escalar o conteúdo para caber em uma única página
-        const originalScale = orderElement.style.transform;
-        const originalWidth = orderElement.style.width;
-
-        // Garantir que a largura da área de impressão seja fixa
-        orderElement.style.width = '800px'; 
-        orderElement.style.transform = 'scale(1)'; 
-
-        // Captura o canvas após o ajuste
-        const canvas = await html2canvas(orderElement, {
-          useCORS: true,
-          scrollX: 0,
-          scrollY: -window.scrollY,
-        });
-
-        // Reverter os estilos ao estado original
-        orderElement.style.transform = originalScale || '';
-        orderElement.style.width = originalWidth || '';
-
-        // Gerar imagem PNG
-        const imgData = canvas.toDataURL('image/png');
-
-        // Criar um link para baixar a imagem
-        const link = document.createElement('a');
-        link.href = imgData;
-        link.download = `pedido_${this.pedido.id}.png`; 
-        link.click();
-
-        // Restaurar a visibilidade dos botões
-        buttons.forEach(btn => btn.classList.remove('hidden'));
-      }
-    },
-    toggleHistory() {
-      this.isHistoryExpanded = !this.isHistoryExpanded;
-      
-      // Se estamos expandindo e não temos dados ou eles estão desatualizados
-      if (this.isHistoryExpanded) {
-        console.log("Expandindo seção de histórico");
-        
-        // Se não temos histórico ou já se passaram mais de 5 segundos desde a última carga
-        const forcarRecarga = this.historico.length === 0 || 
-                              (this.ultimaAtualizacao && 
-                               (Date.now() - this.ultimaAtualizacao > 5000));
-        
-        if (forcarRecarga) {
-          console.log("Recarregando histórico ao expandir");
-          this.carregarHistorico();
-        }
-      }
-    },
-    async carregarHistorico() {
-      if (!this.pedido || !this.pedido.id) {
-        console.log("Não é possível carregar histórico: pedido inválido ou sem ID");
-        this.isLoadingHistory = false;
-        return;
-      }
-      
-      this.isLoadingHistory = true;
-      console.log("Carregando histórico para o pedido ID:", this.pedido.id);
+    calculateProcessingTime() {
+      if (!this.pedido.conclusao_data || !this.pedido.deliveryDate) return 'N/A';
       
       try {
-        const token = localStorage.getItem("access_token");
-        if (!token) {
-          console.warn("Token de autenticação não encontrado");
-          this.isLoadingHistory = false;
+        const startDate = new Date(this.pedido.deliveryDate);
+        const endDate = new Date(this.pedido.conclusao_data);
+        
+        if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+          return 'N/A';
+        }
+        
+        const diffTime = Math.abs(endDate - startDate);
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        
+        if (diffDays === 0) {
+          return 'Mesmo dia';
+        } else if (diffDays === 1) {
+          return '1 dia';
+        } else {
+          return `${diffDays} dias`;
+        }
+      } catch (error) {
+        return 'N/A';
+      }
+    },
+    getBrowserInfo() {
+      if (!this.pedido.audit_info || !this.pedido.audit_info.browser_info) return 'Não disponível';
+      
+      const info = this.pedido.audit_info.browser_info;
+      // Criar uma string simplificada com as informações mais relevantes
+      return `${info.platform} - ${window.innerWidth}x${window.innerHeight}`;
+    },
+    getUserType(type) {
+      const types = {
+        'admin': 'Administrador',
+        'gestor': 'Gestor',
+        'usuario': 'Usuário Padrão'
+      };
+      
+      return types[type] || type;
+    },
+    toggleAuditInfo() {
+      this.auditInfoExpanded = !this.auditInfoExpanded;
+    },
+    async generateImage() {
+      if (this.isGeneratingImage) return;
+      this.isGeneratingImage = true;
+        
+      // Inicializar o toast
+      const toast = useToast();
+      toast.info("Preparando para gerar a imagem do pedido...");
+
+      try {
+        // Obter o elemento que contém o conteúdo do pedido
+        const orderElement = this.$refs.orderContent;
+        
+        if (!orderElement) {
+          toast.error("Erro: Elemento do pedido não encontrado.");
+          this.isGeneratingImage = false;
           return;
         }
+
+        // Criando um clone do elemento para ser usado na captura
+        // Isso evita modificar o elemento original e possíveis efeitos colaterais
+        const cloneDiv = orderElement.cloneNode(true);
+        document.body.appendChild(cloneDiv);
         
-        const url = `${process.env.VUE_APP_API_URL}/pedidos/${this.pedido.id}/historico`;
-        console.log("URL da requisição:", url);
+        // Configurando o clone para captura
+        cloneDiv.style.position = 'absolute';
+        cloneDiv.style.top = '-9999px';
+        cloneDiv.style.left = '-9999px';
+        cloneDiv.style.width = `${orderElement.offsetWidth}px`;
+        cloneDiv.style.maxHeight = 'none';
+        cloneDiv.style.height = 'auto';
+        cloneDiv.style.overflowY = 'visible';
+        cloneDiv.style.background = '#1c1c1c';
+        cloneDiv.style.zIndex = '-1';
+        cloneDiv.style.transform = 'none';
+        cloneDiv.style.transition = 'none';
+        cloneDiv.style.padding = '30px';
+        cloneDiv.style.margin = '0';
+        cloneDiv.style.boxSizing = 'border-box';
+        cloneDiv.style.display = 'flex';
+        cloneDiv.style.flexDirection = 'column';
+        cloneDiv.style.gap = '24px';
         
-        const response = await axios.get(url, {
-          headers: { Authorization: `Bearer ${token}` }
+        // Adicionar uma classe especial para captura
+        cloneDiv.setAttribute('data-capture-clone', 'true');
+        
+        // Garantir que elementos fixos sejam renderizados corretamente
+        const fixElements = (container) => {
+          // Processar elementos diretamente
+          for (let i = 0; i < container.children.length; i++) {
+            const child = container.children[i];
+            // Remover efeitos de hover, transições e transformações
+            if (child.style) {
+              child.style.transition = 'none';
+              child.style.transform = 'none';
+              child.style.boxShadow = 'none';
+              
+              // Garantir que conteúdo seja visível
+              if (child.classList.contains('detail-item') || 
+                  child.classList.contains('order-details-grid') ||
+                  child.classList.contains('attachment-section')) {
+                child.style.opacity = '1';
+                child.style.visibility = 'visible';
+                child.style.overflow = 'visible';
+                child.style.display = child.classList.contains('order-details-grid') ? 'grid' : 'flex';
+              }
+            }
+            
+            // Processar filhos recursivamente
+            if (child.children && child.children.length > 0) {
+              fixElements(child);
+            }
+          }
+        };
+        
+        // Aplicar processamento recursivo
+        fixElements(cloneDiv);
+        
+        // Ocultar botões e seções desnecessárias no clone
+        const cloneButtons = cloneDiv.querySelectorAll('button');
+        cloneButtons.forEach(btn => {
+          btn.style.display = 'none';
         });
         
-        // Verificar se a resposta contém dados válidos
-        if (response.data && Array.isArray(response.data)) {
-          console.log("Histórico recebido:", response.data);
-          this.historico = response.data;
-          
-          // Filtrar quaisquer entradas inválidas
-          this.historico = this.historico.filter(item => 
-            item && 
-            item.campo_alterado && 
-            (item.valor_anterior !== undefined || item.valor_novo !== undefined)
-          );
-          
-          if (this.historico.length === 0) {
-            console.log("Nenhum histórico válido encontrado para este pedido");
-          } else {
-            console.log(`Encontrados ${this.historico.length} registros no histórico`);
-          }
-        } else {
-          console.warn("Resposta inválida ao carregar histórico:", response.data);
-          this.historico = [];
+        const cloneAuditSection = cloneDiv.querySelector('.audit-section');
+        if (cloneAuditSection) {
+          cloneAuditSection.style.display = 'none';
         }
         
-        this.ultimaAtualizacao = Date.now();
-      } catch (error) {
-        console.error("Erro ao carregar histórico do pedido:", error);
-        if (error.response) {
-          console.error("Detalhes do erro:", error.response.data);
-          console.error("Status do erro:", error.response.status);
+        // Garantir layout específico do grid
+        const cloneGrid = cloneDiv.querySelector('.order-details-grid');
+        if (cloneGrid) {
+          cloneGrid.style.display = 'grid';
+          cloneGrid.style.gridTemplateColumns = '1fr 1fr';
+          cloneGrid.style.gap = '16px';
         }
-        this.historico = [];
+        
+        // Dar tempo para o DOM renderizar o clone completamente
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        console.log('[DEBUG] Dimensões do clone para captura:', {
+          scrollHeight: cloneDiv.scrollHeight,
+          offsetHeight: cloneDiv.offsetHeight,
+          clientHeight: cloneDiv.clientHeight,
+          width: cloneDiv.offsetWidth
+        });
+        
+        try {
+          // Usar html2canvas com configurações otimizadas
+          const canvas = await html2canvas(cloneDiv, {
+            useCORS: true,
+            allowTaint: true,
+            backgroundColor: "#1c1c1c",
+            scale: 2, // Bom equilíbrio entre qualidade e tamanho
+            height: cloneDiv.scrollHeight,
+            width: cloneDiv.offsetWidth,
+            windowHeight: cloneDiv.scrollHeight,
+            windowWidth: cloneDiv.offsetWidth,
+            scrollY: 0,
+            scrollX: 0,
+            logging: false, 
+            removeContainer: false,
+            foreignObjectRendering: false // Desativar para evitar problemas em alguns navegadores
+          });
+
+          // Converter para PNG e baixar
+          const imgData = canvas.toDataURL('image/png');
+          const link = document.createElement('a');
+          link.href = imgData;
+          link.download = `pedido_${this.pedido.id || 'novo'}.png`; 
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+      
+          toast.success("Imagem gerada com sucesso!");
+        } catch (error) {
+          console.error("Primeiro método falhou, tentando método alternativo:", error);
+          // Tentativa com método de fallback
+          await this.generateImageFallback(orderElement);
+        } finally {
+          // Remover o clone do DOM quando terminar
+          if (cloneDiv && cloneDiv.parentNode) {
+            cloneDiv.parentNode.removeChild(cloneDiv);
+          }
+        }
+      } catch (error) {
+        console.error("Erro ao processar captura:", error);
+        toast.error("Erro ao processar captura: " + (error.message || "Erro desconhecido"));
       } finally {
-        this.isLoadingHistory = false;
+        this.isGeneratingImage = false;
       }
-    }
+    },
+    
+    // Método de fallback para captura de imagem
+    async generateImageFallback(orderElement) {
+      const toast = useToast();
+      
+      try {
+        console.log('[DEBUG] Utilizando método de fallback para captura');
+        
+        // 1. Salvar as configurações originais
+        const originalOverflow = document.body.style.overflow;
+        const originalOverflowY = orderElement.style.overflowY;
+        const originalHeight = orderElement.style.height;
+        const originalMaxHeight = orderElement.style.maxHeight;
+        
+        // 2. Armazenar estado da seção de auditoria
+        const auditInfoExpandedOriginal = this.auditInfoExpanded;
+        this.auditInfoExpanded = false;
+        
+        // 3. Ocultar botões
+        const actionButtons = orderElement.querySelector('.action-buttons');
+        const originalButtonsDisplay = actionButtons ? actionButtons.style.display : null;
+        if (actionButtons) {
+          actionButtons.style.display = 'none';
+        }
+        
+        // 4. Configurar elemento para captura
+        document.body.style.overflow = 'hidden';
+        orderElement.style.overflowY = 'visible';
+        orderElement.style.height = 'auto';
+        orderElement.style.maxHeight = 'none';
+        
+        try {
+          // 5. Aguardar rendering
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // 6. Capturar com configurações mais básicas
+          const canvas = await html2canvas(orderElement, {
+            useCORS: true,
+            allowTaint: true,
+            backgroundColor: "#1c1c1c",
+            scale: 2,
+            scrollY: 0,
+            scrollX: 0,
+            onclone: (document, clonedOrderElement) => {
+              // Garantir que elementos estejam visíveis no clone
+              const allDetailItems = clonedOrderElement.querySelectorAll('.detail-item');
+              allDetailItems.forEach(item => {
+                item.style.opacity = '1';
+                item.style.visibility = 'visible';
+                item.style.display = 'flex';
+              });
+              
+              // Ocultar botões e seção de auditoria
+              const buttons = clonedOrderElement.querySelectorAll('button');
+              buttons.forEach(btn => btn.style.display = 'none');
+              
+              const auditSection = clonedOrderElement.querySelector('.audit-section');
+              if (auditSection) auditSection.style.display = 'none';
+            }
+          });
+          
+          // 7. Baixar imagem
+          const imgData = canvas.toDataURL('image/png');
+          const link = document.createElement('a');
+          link.href = imgData;
+          link.download = `pedido_${this.pedido.id || 'novo'}_fallback.png`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          
+          toast.success("Imagem gerada com método alternativo!");
+        } catch (error) {
+          console.error("Erro no método de fallback:", error);
+          toast.error("Não foi possível gerar a imagem. Tente novamente mais tarde.");
+        } finally {
+          // 8. Restaurar configurações originais
+          document.body.style.overflow = originalOverflow;
+          orderElement.style.overflowY = originalOverflowY;
+          orderElement.style.height = originalHeight;
+          orderElement.style.maxHeight = originalMaxHeight;
+          this.auditInfoExpanded = auditInfoExpandedOriginal;
+          
+          if (actionButtons && originalButtonsDisplay !== null) {
+            actionButtons.style.display = originalButtonsDisplay;
+          }
+        }
+      } catch (error) {
+        console.error("Erro no método de fallback:", error);
+        toast.error("Não foi possível gerar a imagem. Tente novamente mais tarde.");
+      }
+    },
   },
 };
 </script>
@@ -295,271 +613,494 @@ export default {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
+  right: 0;
+  bottom: 0;
   background-color: rgba(0, 0, 0, 0.85);
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
+  z-index: 999999;
+  padding: 20px;
 }
 
 .print-modal {
-  background-color: #1f1f1f;
+  background-color: #1c1c1c;
   color: #f5f5f5;
-  padding: 25px;
-  border-radius: 0px;
   width: 100%;
-  max-width: 500px;
-  box-sizing: border-box;
-  text-align: left;
-  position: relative;
-  max-height: 90vh;
+  max-width: 550px;
+  border-radius: 16px;
+  padding: 30px;
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
   overflow-y: auto;
+  max-height: 85vh;
 }
 
-.print-modal h2 {
-  color: #ff6f61;
-  text-align: center;
-  font-size: 1.4rem;
-  margin-bottom: 20px;
+/* Aplicando estilos à versão clonada do modal para captura de imagem */
+[style*="position:absolute"][style*="top:-9999px"] {
+  /* Garantindo que o clone seja renderizado corretamente */
+  background-color: #1c1c1c !important;
+  padding: 30px !important;
+  width: 550px !important;
+  border-radius: 0 !important; /* Remover para evitar problemas de recorte */
+  box-shadow: none !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 24px !important;
+  overflow: visible !important;
+  height: auto !important;
+  max-height: none !important;
+}
+
+/* Estilos específicos para o elemento usado para captura */
+[data-capture-clone="true"] {
+  color: #f5f5f5 !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol" !important;
+  line-height: 1.5 !important;
+  letter-spacing: 0.5px !important;
+}
+
+[data-capture-clone="true"] .detail-item {
+  background-color: #333 !important;
+  padding: 15px !important;
+  border: 1px solid #424242 !important;
+  border-radius: 10px !important;
+  margin-bottom: 0 !important;
+}
+
+[data-capture-clone="true"] .order-details-grid {
+  background-color: #2a2a2a !important;
+  padding: 20px !important;
+  border-radius: 12px !important;
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 16px !important;
+}
+
+[data-capture-clone="true"] .detail-item strong {
+  color: #ff6f61 !important;
+  display: block !important;
+  margin-bottom: 8px !important;
+  font-weight: bold !important;
+}
+
+[data-capture-clone="true"] .detail-item span {
+  color: #f5f5f5 !important;
+  display: block !important;
+}
+
+[data-capture-clone="true"] .detail-item.full-width {
+  grid-column: 1 / -1 !important;
 }
 
 .modal-header {
   text-align: center;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
+  position: relative;
 }
 
 .logo {
-  width: 180px;
-  margin-bottom: 10px;
+  width: 160px;
+  margin-bottom: 15px;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+}
+
+.modal-header h2 {
+  color: #ff6f61;
+  font-size: 1.4rem;
+  margin: 0 0 15px 0;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 .order-id {
+  margin: 0 auto;
+  background-color: #2a2a2a;
+  border-radius: 12px;
+  padding: 12px 15px;
   text-align: center;
-  margin: 20px 0;
+  width: 100%;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15) inset;
+}
+
+.order-id p {
+  margin: 0;
   font-size: 1.2rem;
+  color: #ff6f61;
+  font-weight: 600;
+}
+
+/* Layout em grid para os detalhes */
+.order-details-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  background-color: #2a2a2a;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.95rem;
   background-color: #333;
-  color: #ff6f61;
-  padding: 10px;
-  border-radius: 8px;
+  border-radius: 10px;
+  padding: 15px;
+  border: 1px solid #424242;
+  transition: all 0.2s ease;
 }
 
-.order-details p {
-  margin-bottom: 15px;
+.detail-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  border-color: rgba(255, 111, 97, 0.4);
+}
+
+.detail-item.full-width {
+  grid-column: span 2;
+}
+
+.detail-item strong {
+  color: #ff6f61;
+  margin-bottom: 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.detail-item span {
+  line-height: 1.5;
   font-size: 1rem;
-  text-transform: uppercase;
 }
 
-.order-details strong {
+/* Badges de urgência */
+.badge-container {
+  display: flex;
+  align-items: center;
+}
+
+.urgency-badge {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 50px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: center;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.urgency-badge.normal {
+  background-color: #3498db;
+  color: white;
+}
+
+.urgency-badge.urgent {
+  background-color: #f39c12;
+  color: white;
+}
+
+.urgency-badge.critical {
+  background-color: #e74c3c;
+  color: white;
+}
+
+/* Status badges */
+.status-badge {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 50px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: center;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.status-badge.status-completed {
+  background-color: #2ecc71;
+  color: white;
+}
+
+.status-badge.status-progress {
+  background-color: #3498db;
+  color: white;
+}
+
+.status-badge.status-pending {
+  background-color: #f39c12;
+  color: white;
+}
+
+.status-badge.status-canceled {
+  background-color: #e74c3c;
+  color: white;
+}
+
+/* Seção de anexo */
+.attachment-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  background-color: #2a2a2a;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.attachment-section strong {
   color: #ff6f61;
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 5px;
 }
 
 .order-attachment {
-  margin-top: 15px;
-  max-width: 200px; 
-  max-height: 200px; 
-  width: auto; 
-  height: auto; 
-  border-radius: 5px;
-  object-fit: contain; 
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  margin-top: 5px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
 }
 
-/* Estilos para o histórico de alterações */
-.order-history {
-  margin-top: 20px;
-  border-top: 1px solid #444;
-  padding-top: 15px;
+/* Seção de auditoria */
+.audit-section {
+  background-color: #2a2a2a;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-top: 5px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  border: 1px solid #424242;
 }
 
-.history-header {
+.audit-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  cursor: pointer;
-  padding: 10px;
+  padding: 15px 20px;
   background-color: #333;
-  border-radius: 5px;
-  margin-bottom: 5px;
-  user-select: none;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
 }
 
-.history-header strong {
+.audit-header:hover {
+  background-color: #3a3a3a;
+}
+
+.audit-header strong {
   color: #ff6f61;
+  font-size: 0.9rem;
+  font-weight: 600;
 }
 
-.toggle-icon {
+.audit-header i {
   color: #ff6f61;
-  font-size: 14px;
+  font-size: 0.9rem;
 }
 
-.history-content {
-  padding: 10px;
-  background-color: #272727;
-  border-radius: 5px;
-  margin-top: 5px;
-  max-height: 200px;
-  overflow-y: auto;
-}
-
-.loading-history, .empty-history {
-  padding: 15px;
-  text-align: center;
-  color: #aaa;
-  font-style: italic;
-}
-
-.history-list {
+.audit-details {
+  padding: 15px 20px;
+  background-color: #2a2a2a;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
-.history-item {
-  background-color: #333;
-  border-radius: 5px;
-  padding: 10px;
+.audit-item {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.85rem;
 }
 
-.history-item .history-header {
-  background-color: transparent;
-  padding: 0;
-  margin-bottom: 5px;
+.audit-item strong {
+  color: #bbb;
+  margin-bottom: 4px;
+  font-weight: 600;
 }
 
-.history-user {
-  font-weight: bold;
-  color: #e0e0e0;
+.audit-item span {
+  color: #f5f5f5;
 }
 
-.history-date {
-  color: #aaa;
-  font-size: 0.85em;
-}
-
-.history-details {
-  font-size: 0.9em;
-  color: #ddd;
-}
-
-.field {
-  font-weight: bold;
-  color: #ff6f61;
-}
-
-.old-value {
-  color: #ff6f61;
-  text-decoration: line-through;
-  margin: 0 5px;
-}
-
-.new-value {
-  color: #2ecc71;
-  margin-left: 5px;
+/* Botões */
+.action-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  margin-top: 5px;
 }
 
 button {
-  background-color: #424242;
-  color: #f5f5f5;
-  padding: 12px 20px;
+  padding: 14px;
   border: none;
-  border-radius: 5px;
-  margin-top: 20px;
-  width: 100%;
-  font-weight: bold;
+  border-radius: 12px;
+  font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.3s ease;
+  transition: all 0.3s ease;
+  background-color: #424242;
+  color: white;
+  text-transform: uppercase;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  letter-spacing: 0.5px;
+}
+
+button:hover:not(:disabled) {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+}
+
+button:active:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 button.close-btn {
+  grid-column: span 2;
   background-color: #555;
+}
+
+button.close-btn:hover:not(:disabled) {
+  background-color: #ff6f61;
+}
+
+button.print-btn {
+  background-color: #ff6f61;
+  position: relative;
+  overflow: hidden;
+}
+
+button.print-btn::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(255, 255, 255, 0.1);
+  transform: translateX(-100%);
+  transition: transform 0.4s ease;
+}
+
+button.print-btn:hover::after {
+  transform: translateX(0);
+}
+
+button.print-btn:hover:not(:disabled) {
+  background-color: #e05648;
 }
 
 button.primary-btn {
   background-color: #2ecc71;
-  color: #1f1f1f;
-  margin-top: 10px;
+  position: relative;
+  overflow: hidden;
 }
 
-button.primary-btn:hover {
+button.primary-btn::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(255, 255, 255, 0.1);
+  transform: translateX(-100%);
+  transition: transform 0.4s ease;
+}
+
+button.primary-btn:hover::after {
+  transform: translateX(0);
+}
+
+button.primary-btn:hover:not(:disabled) {
   background-color: #27ae60;
 }
 
-button:hover {
-  background-color: #ff6f61;
-  color: #1f1f1f;
-}
+/* Responsividade */
+@media screen and (max-width: 600px) {
+  .order-details-grid {
+    grid-template-columns: 1fr;
+  }
 
-.order-attachment {
-  margin-top: 15px;
-  max-width: 100%;
-  border-radius: 5px;
-}
-
-.hidden {
-  display: none;
-}
-
-/* Responsividade para diferentes dispositivos */
-/* Tablets e telas menores (1024x768) */
-@media (max-width: 1024px) {
+  .detail-item.full-width {
+    grid-column: 1;
+  }
+  
   .print-modal {
-    max-width: 90%;
     padding: 20px;
+    border-radius: 12px;
   }
   
-  .logo {
-    width: 150px;
+  .action-buttons {
+    grid-template-columns: 1fr;
   }
   
-  .order-details p {
-    font-size: 0.95rem;
+  .close-btn {
+    grid-column: 1 !important;
   }
-}
 
-/* Tablets e dispositivos médios */
-@media (max-width: 768px) {
-  .print-modal {
-    width: 90%;
-    max-width: 400px;
-    padding: 15px;
+  .order-id p {
+    font-size: 1.1rem;
   }
-  
-  .logo {
-    width: 120px;
+
+  .modal-header h2 {
+    font-size: 1.2rem;
   }
-  
-  .order-details p {
-    font-size: 0.9rem;
-  }
-  
+
   button {
-    padding: 10px 15px;
-    font-size: 0.9rem;
+    padding: 12px;
+    font-size: 0.85rem;
   }
 }
 
-.activity-details a {
-  color: #8ab4f8;
-  cursor: pointer;
-  text-decoration: underline;
+/* Quando o modal estiver sendo impresso/capturado */
+@media print {
+  .modal-overlay {
+    background-color: transparent;
+    padding: 0;
+  }
+  
+  .print-modal {
+    box-shadow: none;
+  }
+  
+  .action-buttons {
+    display: none;
+  }
+
+  .audit-section {
+    display: none;
+  }
 }
 
-/* Estilo atualizado para o hiperlink de ver pedido */
-.activity-details a {
-  display: inline-block;
-  background-color: #4a6da7;
-  color: white;
-  padding: 5px 10px;
-  border-radius: 4px;
-  text-decoration: none;
-  font-size: 0.85em;
-  margin-top: 5px;
-  transition: background-color 0.3s, transform 0.2s;
+[data-capture-clone="true"] .action-buttons,
+[style*="position:absolute"][style*="top:-9999px"] .action-buttons {
+  display: none !important;
 }
 
-.activity-details a:hover {
-  background-color: #5e82bc;
-  transform: translateY(-2px);
+/* Versão otimizada para captura de imagem - mantida por compatibilidade */
+.print-modal.print-capture {
+  /* Removendo limitações de altura durante a captura */
+  max-height: none !important;
+  overflow: visible !important;
+  /* Garantindo que não haja sombras */
+  box-shadow: none !important;
+  /* Garantir que todos os elementos sejam visíveis */
+  transform: none !important;
+  transition: none !important;
+  /* Mostrar todos os detalhes */
+  display: flex !important;
+  flex-direction: column !important;
 }
 </style>
+

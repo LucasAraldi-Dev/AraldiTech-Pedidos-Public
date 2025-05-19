@@ -86,7 +86,11 @@
               <i class="material-icons">edit</i>
               EDITAR
             </button>
-            <button v-if="order.status.toUpperCase() === 'PENDENTE'" class="complete-button" @click="showConfirmModal(order)">
+            <button 
+              v-if="order.status.toUpperCase() === 'PENDENTE' && (isAdminOrGestor || canCompleteOrder(order))" 
+              class="complete-button" 
+              @click="showConfirmModal(order)"
+            >
               <i class="material-icons">check_circle</i>
               CONCLUIR
             </button>
@@ -119,38 +123,7 @@
   <div v-if="showConfirmation" class="confirm-modal-overlay" @click.self="cancelConfirmation">
     <div class="confirm-modal">
       <h3>Confirmar Conclusão do Pedido</h3>
-      <div class="confirm-order-details" v-if="selectedOrder">
-        <div class="confirm-order-header">
-          <span class="confirm-order-id">#{{ selectedOrder.id }}</span>
-        </div>
-        <h4 class="confirm-order-title">{{ selectedOrder.descricao }}</h4>
-        <div class="confirm-order-info">
-          <p>
-            <i class="material-icons">format_list_numbered</i>
-            <strong>Quantidade:</strong> {{ selectedOrder.quantidade }}
-          </p>
-          <p>
-            <i class="material-icons">category</i>
-            <strong>Categoria:</strong> {{ selectedOrder.categoria }}
-          </p>
-          <p>
-            <i class="material-icons">priority_high</i>
-            <strong>Urgência:</strong> {{ selectedOrder.urgencia }}
-          </p>
-          <p>
-            <i class="material-icons">event</i>
-            <strong>Data do Pedido:</strong> {{ formatDate(selectedOrder.deliveryDate) }}
-          </p>
-          <p>
-            <i class="material-icons">event_available</i>
-            <strong>Data de Conclusão:</strong> {{ formatDate(completionDate) }}
-          </p>
-          <p>
-            <i class="material-icons">person</i>
-            <strong>Usuário:</strong> {{ selectedOrder.usuario_nome }}
-          </p>
-        </div>
-      </div>
+              <div class="confirm-order-details" v-if="selectedOrder">          <div class="confirm-order-header">            <span class="confirm-order-id">#{{ selectedOrder.id }}</span>          </div>          <h4 class="confirm-order-title">{{ sanitizeHtml(selectedOrder.descricao) }}</h4>          <div class="confirm-order-info">            <p>              <i class="material-icons">format_list_numbered</i>              <strong>Quantidade:</strong> {{ selectedOrder.quantidade }}            </p>            <p>              <i class="material-icons">category</i>              <strong>Categoria:</strong> {{ sanitizeHtml(selectedOrder.categoria) }}            </p>            <p>              <i class="material-icons">priority_high</i>              <strong>Urgência:</strong> {{ sanitizeHtml(selectedOrder.urgencia) }}            </p>            <p>              <i class="material-icons">event</i>              <strong>Data do Pedido:</strong> {{ formatDate(selectedOrder.deliveryDate) }}            </p>            <p>              <i class="material-icons">person</i>              <strong>Usuário Solicitante:</strong> {{ sanitizeHtml(selectedOrder.usuario_nome) }}            </p>          </div>        </div>
       
       <!-- Campo de data de conclusão -->
       <div class="completion-date-container">
@@ -166,6 +139,10 @@
           required 
           class="date-picker"
         />
+        <p class="date-helper-text">
+          <i class="material-icons info-icon">info</i>
+          Selecione a data em que o pedido foi realmente concluído. Não é possível selecionar datas anteriores à data do pedido.
+        </p>
       </div>
       
       <p class="confirm-message">Tem certeza que deseja concluir este pedido?</p>
@@ -183,9 +160,7 @@
   </div>
 </template>
 
-<script>
-import axios from "axios";
-import { useToast } from "vue-toastification";
+<script>import axios from "axios";import { useToast } from "vue-toastification";
 
 export default {
   props: {
@@ -202,9 +177,10 @@ export default {
       showConfirmation: false,
       selectedOrder: null,
       completionDate: null,
-      minDate: new Date().toISOString().split('T')[0],
+      minDate: null,
       userType: null,
       userSector: null,
+      userName: null,
     };
   },
   computed: {
@@ -235,6 +211,15 @@ export default {
     },
   },
   methods: {
+    sanitizeHtml(text) {
+      if (!text) return '';
+      return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    },
     fetchOrders() {
       // Garantir que os dados do usuário foram carregados antes de buscar pedidos
       this.loadUserData();
@@ -308,7 +293,8 @@ export default {
       }
     },
     openOrder(order) {
-      this.$emit("open-order", order);
+      console.log(`ModalConsultaPedidos: Emitindo evento open-order com pedidoId: ${order.id}`);
+      this.$emit("open-order", order.id);
     },
     editOrder(order) {
       this.$emit("edit-order", order);
@@ -350,9 +336,36 @@ export default {
     // Exibe o modal de confirmação com os detalhes do pedido
     showConfirmModal(order) {
       this.selectedOrder = order;
+      
+      // Log para diagnóstico dos campos disponíveis no pedido
+      console.log("Dados do pedido selecionado:", {
+        id: order.id,
+        deliveryDate: order.deliveryDate,
+        todos_campos: Object.keys(order)
+      });
+      
+      // Usar a data do pedido como data mínima para conclusão
+      if (order.deliveryDate) {
+        const dataPedido = new Date(order.deliveryDate);
+        if (!isNaN(dataPedido.getTime())) {
+          this.minDate = dataPedido.toISOString().split('T')[0];
+          console.log(`Usando data do pedido como data mínima: ${this.minDate}`);
+        } else {
+          // Se a data do pedido for inválida, usa a data atual
+          console.warn(`Data do pedido inválida (${order.deliveryDate}), usando data atual`);
+          this.minDate = new Date().toISOString().split('T')[0];
+        }
+      } else {
+        // Se não houver data do pedido, usa a data atual
+        console.warn(`Pedido ${order.id} não tem data definida, usando data atual`);
+        this.minDate = new Date().toISOString().split('T')[0];
+      }
+      
       // Inicializar a data de conclusão com a data atual
       this.completionDate = new Date().toISOString().split('T')[0];
       this.showConfirmation = true;
+      
+      console.log(`Modal de conclusão aberto para o pedido #${order.id}. Data mínima: ${this.minDate}`);
     },
     
     // Cancela a confirmação e fecha o modal
@@ -366,11 +379,85 @@ export default {
     confirmComplete() {
       if (!this.selectedOrder) return;
       
+      // Obter dados do usuário atual
+      const userStr = localStorage.getItem("user");
+      let userId = null;
+      let userName = this.userName;
+      let userType = this.userType;
+      
+      if (userStr) {
+        try {
+          const userObj = JSON.parse(userStr);
+          userId = userObj.id;
+          userName = userObj.nome || userObj.username;
+          userType = userObj.tipo_usuario;
+          
+          console.log("Dados do usuário:", {
+            id: userId,
+            nome: userName,
+            tipo: userType
+          });
+        } catch (e) {
+          console.error("Erro ao obter dados do usuário para registro:", e);
+        }
+      }
+      
+      // Verificar se o usuário pode concluir o pedido
+      // Admin ou gestor podem concluir qualquer pedido
+      // Usuário comum só pode concluir seus próprios pedidos
+      const isAdminOrGestor = userType === "admin" || userType === "gestor";
+      const isCreator = this.selectedOrder.usuario_id === userId || 
+                        this.selectedOrder.usuario_nome === userName;
+      
+      console.log("Verificação de permissão:", {
+        isAdminOrGestor,
+        isCreator,
+        "pedido.usuario_id": this.selectedOrder.usuario_id,
+        "pedido.usuario_nome": this.selectedOrder.usuario_nome,
+        "usuario.id": userId,
+        "usuario.nome": userName
+      });
+      
+      if (!isAdminOrGestor && !isCreator) {
+        this.toast.error(
+          "Você não tem permissão para concluir este pedido. Apenas o criador do pedido, administradores ou gestores podem concluí-lo.", 
+          {
+            toastClassName: "custom-toast-error",
+            bodyClassName: "custom-toast-body",
+            closeButtonClassName: "custom-toast-close",
+            timeout: 5000 // Mensagem mais longa, mais tempo para ler
+          }
+        );
+        return;
+      }
+      
+      // Criar informações de histórico detalhadas
+      const historicoItem = {
+        campo_alterado: "status",
+        valor_anterior: this.selectedOrder.status || "Pendente",
+        valor_novo: "Concluído",
+        data_edicao: new Date().toISOString(),
+        usuario_nome: userName,
+        pedido_id: this.selectedOrder.id
+      };
+      
       // Preparar os dados para atualização
+      // Criamos uma cópia limpa dos dados do pedido para evitar problemas com campos extras
       const updateData = {
-        ...this.selectedOrder,
+        id: this.selectedOrder.id,
+        descricao: this.selectedOrder.descricao,
+        quantidade: this.selectedOrder.quantidade,
+        categoria: this.selectedOrder.categoria,
+        urgencia: this.selectedOrder.urgencia, 
+        deliveryDate: this.selectedOrder.deliveryDate,
+        setor: this.selectedOrder.setor,
         status: "Concluído",
-        completionDate: this.completionDate
+        sender: this.selectedOrder.sender || this.selectedOrder.usuario_nome,
+        observacao: this.selectedOrder.observacao || "",
+        completionDate: this.completionDate,
+        usuario_nome: userName,
+        usuario_id: userId,
+        historico: [historicoItem]
       };
       
       console.log("Dados enviados para atualização:", updateData);
@@ -397,15 +484,28 @@ export default {
         })
         .catch(error => {
           console.error("Erro ao concluir pedido:", error);
-          const errorMessage = error.response && error.response.data && error.response.data.detail
-            ? error.response.data.detail
-            : "Erro ao concluir pedido. Por favor, tente novamente.";
+          
+          // Determinar a mensagem de erro adequada
+          let errorMessage = "Erro ao concluir pedido. Por favor, tente novamente.";
+          
+          if (error.response) {
+            if (error.response.status === 422) {
+              errorMessage = "Não foi possível concluir este pedido. Verifique se você tem permissão para esta ação ou se o pedido já foi concluído por outro usuário.";
+            } else if (error.response.data && error.response.data.detail) {
+              errorMessage = error.response.data.detail;
+            } else if (error.response.status === 401) {
+              errorMessage = "Sua sessão expirou. Por favor, faça login novamente.";
+            } else if (error.response.status === 403) {
+              errorMessage = "Você não tem permissão para concluir este pedido.";
+            }
+          }
             
-          // Notificação de erro estilizada
+          // Notificação de erro estilizada com mensagem melhorada
           this.toast.error(errorMessage, {
             toastClassName: "custom-toast-error",
             bodyClassName: "custom-toast-body",
-            closeButtonClassName: "custom-toast-close"
+            closeButtonClassName: "custom-toast-close",
+            timeout: 5000 // Mais tempo para ler mensagens de erro detalhadas
           });
         });
     },
@@ -417,8 +517,9 @@ export default {
           const userObj = JSON.parse(userStr);
           this.userType = userObj.tipo_usuario;
           this.userSector = userObj.setor;
+          this.userName = userObj.nome || userObj.username;
           
-          console.log(`Dados do usuário carregados - Tipo: ${this.userType}, Setor: ${this.userSector}`);
+          console.log(`Dados do usuário carregados - Tipo: ${this.userType}, Setor: ${this.userSector}, Nome: ${this.userName}`);
           
           // Para usuário comum, o filtro de setor deve mostrar apenas o seu setor
           if (this.userType !== "admin" && this.userType !== "gestor") {
@@ -436,6 +537,35 @@ export default {
       } else {
         console.warn("Nenhum dado de usuário encontrado no localStorage");
       }
+    },
+    canCompleteOrder(order) {
+      // Verifica se o usuário atual é o criador do pedido
+      // Obtém dados do usuário atual
+      const userStr = localStorage.getItem("user");
+      if (!userStr) return false;
+      
+      try {
+        const userObj = JSON.parse(userStr);
+        const userId = userObj.id;
+        const userName = userObj.nome || userObj.username;
+        
+        // Caso o pedido não tenha ID de usuário, compare pelo nome
+        if (!order.usuario_id) {
+          console.log(`Pedido ${order.id} não tem ID de usuário, comparando pelo nome: ${userName} vs ${order.usuario_nome}`);
+          return order.usuario_nome === userName;
+        }
+        
+        console.log(`Verificando permissão - Usuário atual: ${userId}/${userName}, Criador do pedido: ${order.usuario_id}/${order.usuario_nome}`);
+        
+        // Compara o ID do usuário ou o nome do usuário com o do pedido
+        return (
+          order.usuario_id === userId || 
+          order.usuario_nome === userName
+        );
+      } catch (e) {
+        console.error("Erro ao verificar permissão para concluir pedido:", e);
+        return false;
+      }
     }
   },
   watch: {
@@ -445,6 +575,14 @@ export default {
         this.loadUserData();
         this.fetchOrders();
       }
+    },
+    // Resetar para a primeira página quando o filtro for alterado
+    statusFilter() {
+      this.currentPage = 1;
+    },
+    // Resetar para a primeira página quando o filtro de setor for alterado
+    sectorFilter() {
+      this.currentPage = 1;
     }
   },
   created() {
@@ -930,6 +1068,25 @@ export default {
   border-color: #ff6f61;
   outline: none;
   box-shadow: 0 0 0 2px rgba(255, 111, 97, 0.2);
+}
+
+.date-helper-text {
+  font-size: 0.85rem;
+  color: #aaa;
+  margin-top: 8px;
+  width: 100%;
+  padding: 5px 10px;
+  background-color: #2a2a2a;
+  border-radius: 5px;
+  display: flex;
+  align-items: flex-start;
+}
+
+.date-helper-text .info-icon {
+  color: #ff6f61;
+  font-size: 16px;
+  margin-right: 8px;
+  margin-top: 2px;
 }
 
 .confirm-message {

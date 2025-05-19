@@ -42,26 +42,26 @@ export default {
 <style scoped>
 header {
   background-color: #2c2c2c;
-  padding: 15px 0;
+  padding: var(--spacing-sm) 0;
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   border-bottom: 1px solid #444;
-  z-index: 100;
+  z-index: var(--z-index-header);
 }
 
 .container {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  max-width: 1200px;
+  max-width: 75rem; /* Convertido de 1200px para rem */
   margin: 0 auto;
-  padding: 0 20px;
+  padding: 0 var(--spacing-md);
 }
 
 .logo {
-  width: 140px;
+  width: 8.75rem; /* Convertido de 140px para rem */
   height: auto;
 }
 
@@ -73,8 +73,8 @@ header {
   display: none;
   flex-direction: column;
   justify-content: space-between;
-  width: 30px;
-  height: 21px;
+  width: 1.875rem; /* Convertido de 30px para rem */
+  height: 1.3125rem; /* Convertido de 21px para rem */
   cursor: pointer;
   z-index: 150;
 }
@@ -82,16 +82,16 @@ header {
 .menu-toggle span {
   display: block;
   width: 100%;
-  height: 3px;
+  height: 0.1875rem; /* Convertido de 3px para rem */
   background-color: #fff;
-  border-radius: 3px;
+  border-radius: 0.1875rem; /* Convertido de 3px para rem */
   transition: all 0.3s ease;
 }
 
 nav ul {
   list-style: none;
   display: flex;
-  gap: 20px;
+  gap: var(--spacing-md);
 }
 
 nav ul li {
@@ -102,9 +102,9 @@ nav ul li a {
   color: #ccc;
   text-decoration: none;
   font-weight: bold;
-  padding: 10px 15px;
+  padding: 0.625rem 0.9375rem; /* Convertido de 10px 15px para rem */
   transition: color 0.3s ease, background-color 0.3s ease;
-  border-radius: 6px;
+  border-radius: var(--border-radius-sm);
 }
 
 nav ul li a:hover {
@@ -119,16 +119,16 @@ nav ul li a.router-link-active {
 /* Responsividade */
 @media (max-width: 1024px) {
   .logo {
-    width: 130px;
+    width: 8.125rem; /* Convertido de 130px para rem */
   }
   
   nav ul {
-    gap: 15px;
+    gap: var(--spacing-sm);
   }
   
   nav ul li a {
-    padding: 8px 12px;
-    font-size: 15px;
+    padding: 0.5rem 0.75rem; /* Convertido de 8px 12px para rem */
+    font-size: var(--font-size-sm);
   }
 }
 
@@ -144,7 +144,7 @@ nav ul li a.router-link-active {
     width: 70%;
     height: 100vh;
     background-color: #2c2c2c;
-    padding-top: 80px;
+    padding-top: 5rem; /* Convertido de 80px para rem */
     transition: right 0.3s ease;
     z-index: 90;
     box-shadow: -5px 0 15px rgba(0, 0, 0, 0.3);
@@ -157,7 +157,7 @@ nav ul li a.router-link-active {
   nav ul {
     flex-direction: column;
     align-items: center;
-    gap: 10px;
+    gap: var(--spacing-xs);
   }
   
   nav ul li {
@@ -167,8 +167,8 @@ nav ul li a.router-link-active {
   
   nav ul li a {
     display: block;
-    padding: 12px;
-    font-size: 16px;
+    padding: 0.75rem; /* Convertido de 12px para rem */
+    font-size: var(--font-size-md);
     width: 90%;
     margin: 0 auto;
   }
@@ -176,11 +176,11 @@ nav ul li a.router-link-active {
 
 @media (max-width: 480px) {
   .logo {
-    width: 110px;
+    width: 6.875rem; /* Convertido de 110px para rem */
   }
   
   .container {
-    padding: 0 15px;
+    padding: 0 var(--spacing-sm);
   }
   
   nav {
@@ -188,32 +188,32 @@ nav ul li a.router-link-active {
   }
   
   header {
-    padding: 10px 0;
+    padding: 0.625rem 0; /* Convertido de 10px para rem */
   }
 
   .menu-toggle {
-    width: 26px;
-    height: 19px;
+    width: 1.625rem; /* Convertido de 26px para rem */
+    height: 1.1875rem; /* Convertido de 19px para rem */
   }
   
   nav ul li a {
-    font-size: 15px;
-    padding: 10px;
+    font-size: var(--font-size-sm);
+    padding: 0.625rem; /* Convertido de 10px para rem */
   }
 }
 
 @media (max-width: 390px) {
   .logo {
-    width: 100px;
+    width: 6.25rem; /* Convertido de 100px para rem */
   }
   
   .container {
-    padding: 0 10px;
+    padding: 0 var(--spacing-xs);
   }
   
   nav ul li a {
-    font-size: 14px;
-    padding: 8px;
+    font-size: 0.875rem; /* Convertido de 14px para rem */
+    padding: 0.5rem; /* Convertido de 8px para rem */
   }
 }
 </style>

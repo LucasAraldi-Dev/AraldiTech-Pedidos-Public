@@ -158,77 +158,82 @@
           </div>
           
           <!-- Novos campos para orçamento -->
-          <div class="separator full-width">
-            <h3 class="section-title">
+          <div class="separator full-width" v-if="isAdminOrGestor">
+            <h3 class="section-title budget-section-toggle" @click="toggleBudgetSection">
               <i class="material-icons">account_balance</i>
               Informações de Orçamento
+              <i class="material-icons toggle-icon" :class="{ 'rotate': showBudgetSection }">
+                expand_more
+              </i>
             </h3>
           </div>
 
-          <div class="form-group">
-            <label for="orderBudget">
-              <i class="material-icons">attach_money</i>
-              ORÇAMENTO PREVISTO (R$)
-            </label>
-            <input 
-              id="orderBudget" 
-              type="number" 
-              step="0.01" 
-              min="0"
-              v-model.number="orderBudget" 
-              placeholder="0.00"
-              @input="validateBudget"
-              :class="{ 'invalid': validationErrors.budget }"
-            />
-            <div class="input-note" v-if="validationErrors.budget">
-              {{ validationErrors.budget }}
+          <div v-if="isAdminOrGestor && showBudgetSection" class="budget-section">
+            <div class="form-group">
+              <label for="orderBudget">
+                <i class="material-icons">attach_money</i>
+                ORÇAMENTO PREVISTO (R$)
+              </label>
+              <input 
+                id="orderBudget" 
+                type="number" 
+                step="0.01" 
+                min="0"
+                v-model.number="orderBudget" 
+                placeholder="0.00"
+                @input="validateBudget"
+                :class="{ 'invalid': validationErrors.budget }"
+              />
+              <div class="input-note" v-if="validationErrors.budget">
+                {{ validationErrors.budget }}
+              </div>
             </div>
-          </div>
 
-          <div class="form-group">
-            <label for="orderRealCost">
-              <i class="material-icons">money</i>
-              CUSTO REAL (R$)
-            </label>
-            <input 
-              id="orderRealCost" 
-              type="number" 
-              step="0.01" 
-              min="0"
-              v-model.number="orderRealCost" 
-              placeholder="0.00"
-              @input="validateRealCost"
-              :class="{ 'invalid': validationErrors.realCost }"
-            />
-            <div class="input-note" v-if="validationErrors.realCost">
-              {{ validationErrors.realCost }}
+            <div class="form-group">
+              <label for="orderRealCost">
+                <i class="material-icons">money</i>
+                CUSTO REAL (R$)
+              </label>
+              <input 
+                id="orderRealCost" 
+                type="number" 
+                step="0.01" 
+                min="0"
+                v-model.number="orderRealCost" 
+                placeholder="0.00"
+                @input="validateRealCost"
+                :class="{ 'invalid': validationErrors.realCost }"
+              />
+              <div class="input-note" v-if="validationErrors.realCost">
+                {{ validationErrors.realCost }}
+              </div>
             </div>
-          </div>
 
-          <div class="form-group">
-            <label for="orderSupplier">
-              <i class="material-icons">storefront</i>
-              FORNECEDOR
-            </label>
-            <input 
-              id="orderSupplier"
-              type="text" 
-              v-model="orderSupplier" 
-              placeholder="Nome do fornecedor" 
-            />
-          </div>
+            <div class="form-group">
+              <label for="orderSupplier">
+                <i class="material-icons">storefront</i>
+                FORNECEDOR
+              </label>
+              <input 
+                id="orderSupplier"
+                type="text" 
+                v-model="orderSupplier" 
+                placeholder="Nome do fornecedor" 
+              />
+            </div>
 
-          <div class="form-group full-width">
-            <label for="orderBudgetNotes">
-              <i class="material-icons">description</i>
-              OBSERVAÇÕES DO ORÇAMENTO
-            </label>
-            <textarea 
-              id="orderBudgetNotes" 
-              v-model="orderBudgetNotes" 
-              placeholder="Informações adicionais sobre orçamento e custos" 
-              rows="3"
-            ></textarea>
+            <div class="form-group full-width">
+              <label for="orderBudgetNotes">
+                <i class="material-icons">description</i>
+                OBSERVAÇÕES DO ORÇAMENTO
+              </label>
+              <textarea 
+                id="orderBudgetNotes" 
+                v-model="orderBudgetNotes" 
+                placeholder="Informações adicionais sobre orçamento e custos" 
+                rows="3"
+              ></textarea>
+            </div>
           </div>
 
           <!-- Status financeiro -->
@@ -318,7 +323,8 @@ export default {
       },
       successMessage: false,
       historicoAlteracoes: [],
-      toast: useToast()
+      toast: useToast(),
+      showBudgetSection: false
     };
   },
   mounted() {
@@ -692,6 +698,9 @@ export default {
         console.error(`Erro ao formatar data: ${data}`, error);
         return 'Erro de formato';
       }
+    },
+    toggleBudgetSection() {
+      this.showBudgetSection = !this.showBudgetSection;
     }
   },
 };
@@ -1168,5 +1177,49 @@ button i {
   background-color: rgba(52, 152, 219, 0.2);
   border: 1px solid #3498db;
   color: #3498db;
+}
+
+.budget-section {
+  margin-top: 20px;
+  padding: 15px;
+  border-radius: 8px;
+  background-color: #2a2a2a;
+  animation: fadeIn 0.3s ease;
+  border: 1px solid #333;
+}
+
+.budget-section-toggle {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: all 0.3s ease;
+  padding: 10px 15px;
+  border-radius: 5px;
+  background-color: #2a2a2a;
+  margin: 0;
+}
+
+.budget-section-toggle:hover {
+  background-color: #333;
+}
+
+.budget-section-toggle .material-icons {
+  margin-right: 8px;
+  color: #ff6f61;
+}
+
+.budget-section-toggle .toggle-icon {
+  margin-left: auto;
+  font-size: 20px;
+  transition: transform 0.3s ease;
+}
+
+.toggle-icon.rotate {
+  transform: rotate(180deg);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 </style>
