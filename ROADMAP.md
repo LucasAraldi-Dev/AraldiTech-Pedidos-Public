@@ -30,11 +30,11 @@ Este roadmap detalha o plano de desenvolvimento do AraldiTech - Pedidos, sistema
 
 ### Versão 0.8.6 - Aprimoramento de Segurança
 - [ ] **Segurança Aprimorada:**
-  - [ ] Implementar proteção contra CSRF em todos os endpoints
-  - [ ] Adicionar validação avançada de dados em formulários
+  - [X] Implementar proteção contra CSRF em todos os endpoints
+  - [X] Adicionar validação avançada de dados em formulários
   - [ ] Melhorar encriptação de dados sensíveis
 - [ ] **Auditoria:**
-  - [ ] Expandir sistema de logs para registrar mais detalhes de operações
+  - [X] Expandir sistema de logs para registrar mais detalhes de operações
   - [X] Implementar visualização de logs para administradores
   - [ ] Rastreamento de atividades suspeitas
 

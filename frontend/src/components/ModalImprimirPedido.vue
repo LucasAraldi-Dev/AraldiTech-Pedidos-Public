@@ -208,6 +208,10 @@ export default {
       origin: this.origin
     });
     
+    // Adicionar log detalhado do pedido recebido
+    console.log('[DEBUG] Pedido completo recebido:', this.pedido);
+    console.log('[DEBUG] Campo sender do pedido:', this.pedido?.sender);
+    
     // Carregar dados do usuário atual do localStorage
     this.loadCurrentUser();
   },
@@ -421,6 +425,7 @@ export default {
         
         // Configurações específicas para dispositivos móveis
         if (isMobile) {
+          // Mantendo as configurações originais para Mobile
           cloneDiv.style.width = '540px'; // Largura fixa para evitar distorção
           cloneDiv.style.fontSize = '14px'; // Reduzir tamanho da fonte
           
@@ -468,14 +473,38 @@ export default {
           // Garantir que a imagem final tenha tamanho adequado para visualização no dispositivo
           cloneDiv.setAttribute('data-orientation', isPortrait ? 'portrait' : 'landscape');
         } else {
-          // Configurações específicas para desktop para evitar cortes
+          // Configurações específicas para desktop para evitar cortes e espaço excessivo
           cloneDiv.style.width = `${orderElement.offsetWidth}px`;
           
-          // Reorganizar completamente o grid para desktop na geração de imagem
-          this.reorganizeGridForImageCapture(cloneDiv);
+          // Aumentar o tamanho da logo no desktop
+          const logo = cloneDiv.querySelector('.logo');
+          if (logo) {
+            logo.style.width = '200px'; // Logo maior
+            logo.style.marginBottom = '12px';
+          }
           
-          // Adicionar padding extra na parte de baixo do clone
-          cloneDiv.style.paddingBottom = '60px';
+          // Reduzir espaçamentos no clone para versão desktop
+          cloneDiv.style.gap = '16px'; // Menor espaçamento entre seções
+          
+          // Reduzir o padding inferior
+          cloneDiv.style.paddingBottom = '30px'; // Reduzido de 60px para 30px
+          
+          // Reduzir espaçamento do grid
+          const grid = cloneDiv.querySelector('.order-details-grid');
+          if (grid) {
+            grid.style.gap = '12px'; // Reduzir espaço entre itens
+            grid.style.padding = '16px'; // Reduzir padding interno
+            grid.style.marginBottom = '10px'; // Reduzir margem inferior
+          }
+          
+          // Ajustar cabeçalho para ser mais compacto
+          const modalHeader = cloneDiv.querySelector('.modal-header');
+          if (modalHeader) {
+            modalHeader.style.marginBottom = '10px';
+          }
+          
+          // Reorganizar o grid para layout mais compacto
+          this.reorganizeGridForImageCapture(cloneDiv);
         }
         
         // Garantir que elementos fixos sejam renderizados corretamente
@@ -498,9 +527,9 @@ export default {
                 child.style.overflow = 'visible';
                 child.style.display = child.classList.contains('order-details-grid') ? 'grid' : 'flex';
                 
-                // Ajuste adicional para dispositivos móveis
-                if (isMobile && child.classList.contains('detail-item')) {
-                  child.style.minHeight = 'auto';
+                if (!isMobile && child.classList.contains('detail-item')) {
+                  child.style.padding = '12px'; // Reduzir padding dos itens no desktop
+                  child.style.marginBottom = '0';
                 }
               }
             }
@@ -567,9 +596,9 @@ export default {
             allowTaint: true,
             backgroundColor: "#1c1c1c",
             scale: isMobile ? 1.5 : 2, // Reduzir escala para dispositivos móveis
-            height: fullHeight + 100, // Aumentar margem extra para evitar cortes
+            height: isMobile ? (fullHeight + 100) : fullHeight, // Remover margem extra para desktop
             width: cloneDiv.offsetWidth,
-            windowHeight: fullHeight + 100, // Margem maior para desktop
+            windowHeight: isMobile ? (fullHeight + 100) : fullHeight, // Sem margem extra para desktop
             windowWidth: cloneDiv.offsetWidth,
             scrollY: 0,
             scrollX: 0,
@@ -665,11 +694,52 @@ export default {
           // Configurações específicas para desktop para evitar cortes
           orderElement.style.width = `${orderElement.offsetWidth}px`;
           
+          // Aumentar tamanho da logo
+          const logo = orderElement.querySelector('.logo');
+          if (logo) {
+            const originalLogoWidth = logo.style.width;
+            logo.style.width = '200px';
+            
+            // Restaurar depois
+            setTimeout(() => {
+              logo.style.width = originalLogoWidth;
+            }, 2000);
+          }
+          
+          // Ajustar espaçamentos para compactação no desktop
+          const grid = orderElement.querySelector('.order-details-grid');
+          if (grid) {
+            const originalGridGap = grid.style.gap;
+            const originalGridPadding = grid.style.padding;
+            
+            grid.style.gap = '12px';
+            grid.style.padding = '16px';
+            
+            // Reduzir espaço nos itens
+            const items = grid.querySelectorAll('.detail-item');
+            const originalItemPaddings = [];
+            
+            items.forEach((item, index) => {
+              originalItemPaddings[index] = item.style.padding;
+              item.style.padding = '12px';
+            });
+            
+            // Restaurar depois
+            setTimeout(() => {
+              grid.style.gap = originalGridGap;
+              grid.style.padding = originalGridPadding;
+              
+              items.forEach((item, index) => {
+                item.style.padding = originalItemPaddings[index];
+              });
+            }, 2000);
+          }
+          
           // Reorganizar completamente o grid para desktop na geração de imagem
           this.reorganizeGridForImageCapture(orderElement);
           
-          // Adicionar padding extra na parte de baixo 
-          orderElement.style.paddingBottom = '60px';
+          // Reduzir padding inferior (sem adicionar padding extra)
+          orderElement.style.paddingBottom = '20px';
         }
         
         try {
@@ -755,6 +825,42 @@ export default {
                 // Marcar o elemento com a orientação
                 clonedOrderElement.setAttribute('data-orientation', isPortrait ? 'portrait' : 'landscape');
               } else {
+                // Aumentar tamanho da logo no desktop
+                const logo = clonedOrderElement.querySelector('.logo');
+                if (logo) {
+                  logo.style.width = '200px';
+                  logo.style.marginBottom = '12px';
+                }
+                
+                // Reduzir espaçamentos no clone para desktop
+                clonedOrderElement.style.gap = '16px';
+                clonedOrderElement.style.paddingBottom = '20px';
+                
+                const grid = clonedOrderElement.querySelector('.order-details-grid');
+                if (grid) {
+                  grid.style.gap = '12px';
+                  grid.style.padding = '16px';
+                  grid.style.marginBottom = '10px';
+                  
+                  // Reduzir padding dos itens
+                  const items = grid.querySelectorAll('.detail-item');
+                  items.forEach(item => {
+                    item.style.padding = '12px';
+                    item.style.marginBottom = '0';
+                  });
+                  
+                  // Identificar o campo de observação para dar tratamento especial
+                  const obsItem = Array.from(grid.querySelectorAll('.detail-item')).find(item => {
+                    const label = item.querySelector('strong');
+                    return label && label.textContent.includes('OBSERVAÇÃO');
+                  });
+                  
+                  if (obsItem) {
+                    obsItem.style.gridColumn = '1 / -1';
+                    obsItem.style.padding = '12px';
+                  }
+                }
+                
                 // Aplicar o mesmo método de reorganização do grid no clone
                 this.reorganizeClonedGrid(clonedOrderElement);
               }
@@ -801,8 +907,8 @@ export default {
       // Configurar o grid para 2 colunas uniformes
       grid.style.display = 'grid';
       grid.style.gridTemplateColumns = '1fr 1fr';
-      grid.style.gap = '16px';
-      grid.style.marginBottom = '20px';
+      grid.style.gap = '12px'; // Reduzido de 16px para 12px
+      grid.style.marginBottom = '10px'; // Reduzido de 20px para 10px
       
       // Obter todos os itens do grid
       const items = grid.querySelectorAll('.detail-item');
@@ -810,6 +916,12 @@ export default {
       // Retirar todos os items do grid para reordená-los
       const itemsArray = Array.from(items);
       itemsArray.forEach(item => grid.removeChild(item));
+      
+      // Compactação: reduzir o padding dos itens de detalhe
+      itemsArray.forEach(item => {
+        item.style.padding = '12px'; // Reduzido de 15px
+        item.style.marginBottom = '0';
+      });
       
       // Identificar o campo de observação
       const observacaoItem = itemsArray.find(item => {
@@ -839,14 +951,16 @@ export default {
       if (observacaoItem) {
         observacaoItem.style.gridColumn = '1 / -1'; // Ocupar todas as colunas
         observacaoItem.classList.add('full-width');
+        // Compactar o campo de observação
+        observacaoItem.style.padding = '12px';
         grid.appendChild(observacaoItem);
       }
       
-      // Adicionar espaçamento para garantir que nada seja cortado
+      // Reduzir espaçamento para garantir maior compactação
       const lastItems = Array.from(grid.querySelectorAll('.detail-item')).slice(-3);
       lastItems.forEach(item => {
-        item.style.marginBottom = '10px';
-        item.style.paddingBottom = '15px';
+        item.style.marginBottom = '0'; // Reduzido de 10px para 0
+        item.style.paddingBottom = '12px'; // Reduzido de 15px para 12px
       });
     },
     // Método para reorganizar o grid do clone no método de fallback
@@ -1355,10 +1469,21 @@ button.primary-btn:hover:not(:disabled) {
     border-radius: var(--border-radius-lg);
     width: var(--modal-width-lg);
     max-width: var(--modal-max-width);
+    padding-bottom: 120px; /* Espaço adicional para os botões fixos */
   }
   
   .action-buttons {
     grid-template-columns: 1fr;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: #1f1f1f;
+    z-index: 10;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
+    padding: 10px;
+    margin: 0;
+    gap: 10px;
   }
   
   .close-btn {
@@ -1577,6 +1702,23 @@ button.primary-btn:hover:not(:disabled) {
     color: #ff6f61 !important;
     margin-bottom: 15px !important;
     font-size: 1rem !important;
+  }
+}
+
+/* Dispositivos móveis muito pequenos */
+@media screen and (max-width: 480px) {
+  .print-modal {
+    padding-bottom: 140px; /* Ainda mais espaço para os botões fixos */
+  }
+  
+  .action-buttons {
+    gap: 8px;
+    padding: 8px;
+  }
+  
+  button {
+    padding: 12px 8px;
+    font-size: 0.85rem;
   }
 }
 </style>

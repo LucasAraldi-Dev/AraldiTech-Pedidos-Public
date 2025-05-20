@@ -24,7 +24,13 @@
                   <div class="input-icon">
                     <i class="fa-user-tag"></i>
                   </div>
-                  <input id="username" type="text" v-model="username" required />
+                  <input 
+                    id="username" 
+                    type="text" 
+                    v-model="username" 
+                    @input="convertToLowercase"
+                    required 
+                  />
                 </div>
               </div>
 
@@ -469,6 +475,11 @@ export default {
       }
     });
     
+    // Função para transformar o username em minúsculo
+    const convertToLowercase = () => {
+      username.value = username.value.toLowerCase();
+    };
+    
     return {
       // Campos do formulário
       name,
@@ -511,7 +522,10 @@ export default {
       getUserInitials,
       
       // Utilitários
-      toast
+      toast,
+      
+      // Função para transformar o username em minúsculo
+      convertToLowercase
     };
   }
 };
@@ -531,6 +545,7 @@ export default {
   z-index: 1000;
   backdrop-filter: blur(8px);
   transition: backdrop-filter 0.3s ease;
+  overflow-y: auto;
 }
 
 .modal {
@@ -543,6 +558,7 @@ export default {
   box-shadow: 0px 10px 20px rgba(0, 0, 0, 0.4);
   position: relative;
   overflow: hidden;
+  margin: auto;
 }
 
 h2 {
@@ -1111,28 +1127,45 @@ h2 {
   }
 }
 
+/* Ajustes específicos para mobile - para evitar corte do modal */
 @media (max-width: 480px) {
+  .modal-overlay {
+    align-items: flex-start;
+    padding: 20px 0;
+    overflow-y: auto;
+    height: 100%;
+  }
+  
   .modal {
-    padding: 25px;
+    padding: 20px;
     width: 95%;
     border-radius: 10px;
+    margin: auto;
+    max-height: none;
   }
   
   h2 {
-    font-size: 22px;
+    font-size: 20px;
     margin-bottom: 15px;
+  }
+  
+  /* Transformar grid em coluna única */
+  .register-form .form-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
   }
   
   .input-container input, 
   .input-container select {
     padding: 10px 8px;
     padding-left: 36px;
-    font-size: 15px;
+    font-size: 14px;
   }
   
   .form-label {
     font-size: 14px;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
   }
   
   .input-icon {
@@ -1141,19 +1174,21 @@ h2 {
   }
   
   .form-group {
-    margin-bottom: 15px;
+    margin-bottom: 12px;
   }
   
   .action-buttons {
     flex-direction: column;
+    margin-top: 20px;
   }
   
   .submit-button, .cancel-button {
-    padding: 10px 15px;
+    padding: 12px 15px;
     font-size: 15px;
     margin-bottom: 10px;
   }
   
+  /* Ajustes para o card de usuário em telas pequenas */
   .user-card-header, .user-card-body, .user-card-footer {
     padding: 15px;
   }
@@ -1163,24 +1198,136 @@ h2 {
     height: 40px;
     font-size: 16px;
   }
+  
+  /* Ajustes para o progresso de registro */
+  .progress-steps {
+    margin-bottom: 20px;
+  }
+  
+  .progress-step {
+    margin-bottom: 10px;
+  }
+  
+  .step-indicator {
+    width: 24px;
+    height: 24px;
+    font-size: 12px;
+  }
+  
+  .step-label {
+    font-size: 13px;
+  }
+  
+  .spinner {
+    width: 40px;
+    height: 40px;
+    margin: 15px 0;
+  }
+  
+  /* Ajustes para a mensagem de sucesso */
+  .success-icon {
+    width: 60px;
+    height: 60px;
+    font-size: 30px;
+    margin-bottom: 15px;
+  }
+  
+  .success-message {
+    font-size: 18px;
+    margin-bottom: 15px;
+  }
+  
+  /* Ajustes para mensagem de erro */
+  .error-icon {
+    width: 60px;
+    height: 60px;
+    font-size: 30px;
+    margin-bottom: 15px;
+  }
+  
+  .error-title {
+    font-size: 18px;
+  }
+  
+  .error-message, .error-help {
+    font-size: 14px;
+  }
+  
+  /* Ajustes para termos */
+  .terms-info {
+    font-size: 12px;
+    margin: 10px 0;
+  }
 }
 
+/* Ajustes para dispositivos muito pequenos */
 @media (max-width: 320px) {
+  .modal-overlay {
+    padding: 10px 0;
+  }
+  
   .modal {
-    padding: 20px;
+    padding: 15px;
+    width: 98%;
   }
   
   h2 {
-    font-size: 20px;
+    font-size: 18px;
+    margin-bottom: 12px;
   }
   
   .input-container input, 
   .input-container select {
-    padding-left: 32px;
+    padding: 8px 6px;
+    padding-left: 30px;
+    font-size: 13px;
+  }
+  
+  .form-label {
+    font-size: 12px;
   }
   
   .input-icon {
-    left: 10px;
+    left: 8px;
+    font-size: 14px;
+  }
+  
+  .form-group {
+    margin-bottom: 10px;
+  }
+  
+  .password-strength, .password-error {
+    font-size: 11px;
+  }
+  
+  .submit-button, .cancel-button {
+    padding: 10px;
+    font-size: 14px;
+  }
+}
+
+/* Ajustes para telas altas com teclado virtual ativo */
+@media (max-height: 600px) and (max-width: 480px) {
+  .modal-overlay {
+    padding: 10px 0;
+    align-items: flex-start;
+  }
+  
+  .modal {
+    margin-top: 5px;
+    padding: 15px;
+  }
+  
+  .form-group {
+    margin-bottom: 8px;
+  }
+  
+  .terms-info {
+    margin: 8px 0;
+  }
+  
+  .action-buttons {
+    margin-top: 12px;
   }
 }
 
@@ -1271,6 +1418,103 @@ h2 {
   
   .form-label {
     font-size: 15px;
+  }
+}
+
+/* Ajustes específicos para orientação retrato em dispositivos móveis */
+@media (max-width: 480px) and (orientation: portrait) {
+  .modal-overlay {
+    align-items: flex-start;
+    justify-content: flex-start;
+    padding: 10px 0;
+    overflow-y: auto;
+  }
+  
+  .modal {
+    /* Ajuste para garantir que o modal não seja cortado em dispositivos móveis */
+    position: absolute;
+    top: 10px;
+    margin-bottom: 20px;
+    transform: none;
+    max-height: none;
+  }
+}
+
+/* Ajustes específicos para orientação paisagem em dispositivos móveis */
+@media (max-height: 450px) and (orientation: landscape) {
+  .modal-overlay {
+    align-items: flex-start;
+    padding: 5px 0;
+    overflow-y: auto;
+  }
+  
+  .modal {
+    padding: 15px;
+    margin: 5px auto;
+    max-height: none;
+  }
+  
+  h2 {
+    font-size: 18px;
+    margin-bottom: 10px;
+  }
+  
+  .register-form .form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  
+  .register-form .span-full {
+    grid-column: 1 / -1;
+  }
+  
+  .form-group {
+    margin-bottom: 8px;
+  }
+  
+  .form-label {
+    margin-bottom: 2px;
+    font-size: 12px;
+  }
+  
+  .input-container input, 
+  .input-container select {
+    padding: 8px 6px 8px 30px;
+    font-size: 13px;
+  }
+  
+  .input-icon {
+    left: 8px;
+    font-size: 14px;
+  }
+  
+  .action-buttons {
+    flex-direction: row;
+    margin-top: 10px;
+  }
+  
+  .submit-button, .cancel-button {
+    padding: 8px 12px;
+    font-size: 13px;
+    margin-bottom: 0;
+  }
+  
+  .terms-info {
+    font-size: 11px;
+    margin: 8px 0;
+  }
+  
+  /* Ajustes para o estado de progresso em paisagem */
+  .progress-steps {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 15px;
+  }
+  
+  .progress-step {
+    margin-bottom: 0;
+    margin-right: 10px;
   }
 }
 </style>

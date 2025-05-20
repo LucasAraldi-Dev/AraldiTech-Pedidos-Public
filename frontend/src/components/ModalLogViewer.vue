@@ -73,34 +73,42 @@
 
       <!-- Dashboard de estatísticas -->
       <div class="stats-dashboard" v-show="logs.length > 0">
-        <div class="stats-title">
-          <i class="material-icons">analytics</i>
-          Visão Geral da Auditoria
+        <div class="stats-header">
+          <div class="stats-title">
+            <i class="material-icons">analytics</i>
+            Visão Geral da Auditoria
+          </div>
+          <button class="toggle-stats-btn" @click="toggleStats">
+            <i class="material-icons">{{ isStatsExpanded ? 'keyboard_arrow_up' : 'keyboard_arrow_down' }}</i>
+            {{ isStatsExpanded ? 'Recolher' : 'Expandir' }}
+          </button>
         </div>
-        <div class="stats-cards">
-          <div class="stats-card">
-            <div class="stats-card-title">Total de Logs</div>
-            <div class="stats-card-value">{{ logs.length }}</div>
-          </div>
-          <div class="stats-card">
-            <div class="stats-card-title">Período</div>
-            <div class="stats-card-value">{{ getFilterPeriodLabel() }}</div>
-          </div>
-          <div class="stats-card">
-            <div class="stats-card-title">Logs por Tipo</div>
-            <div class="stats-card-content">
-              <div v-for="(count, type) in countLogsByType" :key="type" class="log-type-chip">
-                <span 
-                  class="log-type-indicator" 
-                  :class="`indicator-${type}`"
-                ></span>
-                {{ formatLogType(type) }}: {{ count }}
+        <div class="stats-content" v-if="isStatsExpanded">
+          <div class="stats-cards">
+            <div class="stats-card">
+              <div class="stats-card-title">Total de Logs</div>
+              <div class="stats-card-value">{{ logs.length }}</div>
+            </div>
+            <div class="stats-card">
+              <div class="stats-card-title">Período</div>
+              <div class="stats-card-value">{{ getFilterPeriodLabel() }}</div>
+            </div>
+            <div class="stats-card">
+              <div class="stats-card-title">Logs por Tipo</div>
+              <div class="stats-card-content">
+                <div v-for="(count, type) in countLogsByType" :key="type" class="log-type-chip">
+                  <span 
+                    class="log-type-indicator" 
+                    :class="`indicator-${type}`"
+                  ></span>
+                  {{ formatLogType(type) }}: {{ count }}
+                </div>
               </div>
             </div>
-          </div>
-          <div class="stats-card">
-            <div class="stats-card-title">Última Atualização</div>
-            <div class="stats-card-value">{{ formatDateTime(new Date()) }}</div>
+            <div class="stats-card">
+              <div class="stats-card-title">Última Atualização</div>
+              <div class="stats-card-value">{{ formatDateTime(new Date()) }}</div>
+            </div>
           </div>
         </div>
       </div>
@@ -266,7 +274,8 @@ export default {
         JSON.parse(localStorage.getItem("user")).tipo_usuario === "admin" : 
         false,
       isLogDetailOpen: false,
-      selectedLog: null
+      selectedLog: null,
+      isStatsExpanded: false
     };
   },
   computed: {
@@ -746,28 +755,10 @@ export default {
       this.isLogDetailOpen = false;
     },
     showOrderInfoFromDetail(pedidoId) {
-      console.log(`[CRÍTICO] showOrderInfoFromDetail chamado com pedidoId: ${pedidoId}`);
-      
-      // Verificar se pedidoId é válido
-      if (!pedidoId) {
-        console.error('[CRÍTICO] ID do pedido inválido passado para showOrderInfoFromDetail');
-        this.toast.error('ID do pedido inválido');
-        return;
-      }
-      
-      // Fechar o modal de detalhes do log
-      this.closeLogDetail();
-      
-      // Garantir que pedidoId seja numérico
-      const pedidoIdNum = typeof pedidoId === 'string' ? parseInt(pedidoId, 10) : pedidoId;
-      
-      // Emitir evento para buscar o pedido no modal principal
-      console.log(`[CRÍTICO] Emitindo evento open-order com pedidoId: ${pedidoIdNum}`);
-      this.$emit('open-order', pedidoIdNum);
-      
-      // Não fechamos mais o modal para que ele possa ser reaberto quando o pedido for fechado
-      // console.log('[CRÍTICO] Fechando modal de logs após emitir o evento');
-      // this.onClose();
+      this.showOrderInfo(pedidoId);
+    },
+    toggleStats() {
+      this.isStatsExpanded = !this.isStatsExpanded;
     }
   }
 };
@@ -787,7 +778,6 @@ export default {
   justify-content: center;
   align-items: center;
   z-index: 1100;
-  overflow-y: auto;
   padding: 15px;
   box-sizing: border-box;
 }
@@ -797,42 +787,22 @@ export default {
   border-radius: 10px;
   width: 90%;
   max-width: 1200px;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  height: 90vh; /* Definir altura fixa */
   display: flex;
   flex-direction: column;
-  position: relative;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
   color: #f5f5f5;
-  scrollbar-width: thin;
-  scrollbar-color: #ff6f61 #333;
-}
-
-.log-viewer-modal::-webkit-scrollbar {
-  width: 8px;
-}
-
-.log-viewer-modal::-webkit-scrollbar-track {
-  background: #333;
-  border-radius: 10px;
-}
-
-.log-viewer-modal::-webkit-scrollbar-thumb {
-  background-color: #ff6f61;
-  border-radius: 10px;
+  overflow: hidden;
 }
 
 .modal-header {
-  padding: 20px;
+  padding: 15px 20px;
   border-bottom: 1px solid #333;
   display: flex;
   flex-direction: column;
-  position: sticky;
-  top: 0;
   background-color: #1f1f1f;
   z-index: 10;
-  border-top-left-radius: 10px;
-  border-top-right-radius: 10px;
+  flex-shrink: 0; /* Evitar que o cabeçalho encolha */
 }
 
 .modal-title {
@@ -945,10 +915,12 @@ export default {
 }
 
 .logs-container {
-  flex-grow: 1;
+  flex: 1;
   overflow-y: auto;
-  padding: 20px;
+  padding: 15px;
   background-color: #252525;
+  display: flex;
+  flex-direction: column;
 }
 
 .loading-container {
@@ -978,6 +950,7 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 15px;
+  width: 100%;
 }
 
 .log-item {
@@ -987,6 +960,10 @@ export default {
   overflow: hidden;
   border-left: 5px solid #444;
   transition: transform 0.2s;
+  width: 100%;
+  margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
 }
 
 .log-item:hover {
@@ -1000,6 +977,8 @@ export default {
   padding: 12px 15px;
   background-color: #333;
   border-bottom: 1px solid #444;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .log-icon {
@@ -1026,6 +1005,8 @@ export default {
   font-weight: bold;
   margin-right: auto;
   color: #f5f5f5;
+  min-width: 80px;
+  text-align: center;
 }
 
 .log-date {
@@ -1042,6 +1023,8 @@ export default {
 
 .log-content {
   padding: 15px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .log-description {
@@ -1049,6 +1032,10 @@ export default {
   font-size: 1rem;
   line-height: 1.5;
   color: #f5f5f5;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  max-width: 100%;
+  white-space: pre-line; /* Preservar quebras de linha no texto */
 }
 
 .log-details {
@@ -1058,6 +1045,8 @@ export default {
   margin-top: 10px;
   flex-wrap: wrap;
   gap: 10px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .log-tags {
@@ -1103,6 +1092,7 @@ export default {
 .log-actions {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .action-button {
@@ -1177,9 +1167,10 @@ export default {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 15px;
+  padding: 10px 15px;
   background-color: #252525;
   border-top: 1px solid #333;
+  flex-shrink: 0; /* Evitar que a paginação encolha */
 }
 
 .pagination-button {
@@ -1221,6 +1212,7 @@ export default {
   padding: 15px;
   background-color: #1f1f1f;
   border-top: 1px solid #333;
+  flex-shrink: 0; /* Evitar que os botões encolham */
 }
 
 .refresh-button,
@@ -1269,9 +1261,17 @@ export default {
 
 /* Dashboard de estatísticas */
 .stats-dashboard {
-  padding: 15px;
+  padding: 10px 15px;
   background-color: #252525;
   border-bottom: 1px solid #333;
+  flex-shrink: 0; /* Evitar que as estatísticas encolham */
+}
+
+.stats-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
 }
 
 .stats-title {
@@ -1279,13 +1279,48 @@ export default {
   align-items: center;
   font-size: 1.1rem;
   font-weight: bold;
-  margin-bottom: 10px;
   color: #f5f5f5;
 }
 
 .stats-title i {
   margin-right: 8px;
   color: #ff6f61;
+}
+
+.toggle-stats-btn {
+  display: flex;
+  align-items: center;
+  padding: 6px 12px;
+  background-color: #333;
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: #f5f5f5;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.2s;
+}
+
+.toggle-stats-btn:hover {
+  background-color: #444;
+}
+
+.toggle-stats-btn i {
+  margin-right: 5px;
+}
+
+.stats-content {
+  animation: slideDown 0.3s ease-in-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .stats-cards {
@@ -1385,11 +1420,14 @@ export default {
   background-color: #bdc3c7;
 }
 
-/* Responsividade */
+/* Responsividade melhorada */
 @media (max-width: 768px) {
   .log-viewer-modal {
-    width: 95%;
-    height: 95vh;
+    width: 100%;
+    height: 100vh;
+    border-radius: 0;
+    max-height: none;
+    padding-bottom: 100px; /* Adicionar espaço para evitar que os botões fiquem escondidos */
   }
   
   .filters-container {
@@ -1406,6 +1444,31 @@ export default {
     grid-template-columns: 1fr;
   }
   
+  .logs-container {
+    padding: 10px;
+    padding-bottom: 150px; /* Adicionar padding para evitar que os logs fiquem escondidos pelos botões fixos */
+    max-height: calc(100vh - 200px); /* Garantir espaço adequado para rolagem, considerando cabeçalho e botões */
+  }
+  
+  .log-item {
+    margin-bottom: 15px;
+  }
+  
+  .log-header {
+    flex-wrap: wrap;
+  }
+  
+  .log-type-tag {
+    margin-right: 10px;
+    margin-bottom: 5px;
+  }
+  
+  .log-date {
+    width: 100%;
+    margin-top: 5px;
+    justify-content: flex-end;
+  }
+  
   .log-details {
     flex-direction: column;
     align-items: flex-start;
@@ -1414,7 +1477,97 @@ export default {
   .log-actions {
     margin-top: 10px;
     width: 100%;
-    justify-content: flex-end;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+  
+  .log-tag {
+    margin-bottom: 5px;
+  }
+  
+  .action-button {
+    margin-bottom: 5px;
+  }
+  
+  /* Estilos para garantir que a paginação e botões de ação fiquem visíveis */
+  .pagination {
+    position: fixed;
+    bottom: 60px;
+    left: 0;
+    right: 0;
+    background-color: #252525;
+    z-index: 10;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
+  }
+  
+  .modal-actions {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: #1f1f1f;
+    z-index: 10;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
+    padding: 10px;
+  }
+}
+
+/* Estilização personalizada dos scrollbars */
+.logs-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.logs-container::-webkit-scrollbar-track {
+  background: #333;
+  border-radius: 10px;
+}
+
+.logs-container::-webkit-scrollbar-thumb {
+  background-color: #ff6f61;
+  border-radius: 10px;
+}
+
+.logs-container {
+  scrollbar-width: thin;
+  scrollbar-color: #ff6f61 #333;
+}
+
+/* Telas muito pequenas - ajuste adicional */
+@media (max-width: 480px) {
+  .log-viewer-modal {
+    padding-bottom: 120px; /* Mais espaço para dispositivos muito pequenos */
+  }
+  
+  .logs-container {
+    padding-bottom: 170px; /* Espaço extra para dispositivos pequenos */
+    max-height: calc(100vh - 220px); /* Ajuste extra para telas muito pequenas */
+  }
+  
+  .pagination {
+    padding: 8px 5px;
+    bottom: 65px;
+  }
+  
+  .pagination-button {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+  }
+  
+  .page-info {
+    font-size: 0.8rem;
+    margin: 0 5px;
+  }
+  
+  .modal-actions {
+    padding: 8px 5px;
+    gap: 5px;
+  }
+  
+  .refresh-button,
+  .export-button,
+  .close-button {
+    padding: 6px 10px;
+    font-size: 0.8rem;
   }
 }
 </style>

@@ -684,11 +684,11 @@ export default {
 .order-form {
   background-color: #1f1f1f; 
   color: #f5f5f5;
-  padding: 30px; 
+  padding: var(--spacing-sm);
+  width: var(--modal-width-lg);
+  max-width: var(--modal-max-width);
+  padding-bottom: 120px; /* Espaço adicional para não ocultar conteúdo */
   border-radius: 10px;
-  width: 100%;
-  max-width: 900px; 
-  box-sizing: border-box;
   position: relative;
   text-transform: none;
   font-size: 1.1rem;
@@ -764,6 +764,7 @@ export default {
   grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
   gap: 20px;
   margin-top: 20px;
+  margin-bottom: 70px; /* Espaço para a paginação fixa */
 }
 
 .order-card {
@@ -1476,6 +1477,19 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
       align-items: flex-start;
       padding-top: 5px;
     }
+  }
+  
+  /* Ajuste para botões de paginação */
+  .pagination {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: #1f1f1f;
+    z-index: 10;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
+    padding: 10px;
+    margin: 0;
   }
 }
 

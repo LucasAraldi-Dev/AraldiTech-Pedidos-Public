@@ -5,15 +5,288 @@
         <i class="material-icons">close</i>
       </button>
       <div class="form-header">
-        <h2>ADICIONAR PEDIDO</h2>
+        <h2>{{ createMultiple ? 'MÚLTIPLOS PEDIDOS' : 'ADICIONAR PEDIDO' }}</h2>
         <div class="user-info" v-if="userName">
           <span class="user-label">Criado por:</span>
           <span class="user-name">{{ userName }}</span>
         </div>
       </div>
 
+      <!-- Modo de múltiplos pedidos -->
+      <div v-if="createMultiple && !successMessage" class="multi-orders-container">
+        <div class="multi-orders-header">
+          <div class="multi-orders-info">
+            <span class="orders-count">{{ multipleOrdersQueue.length }} {{ multipleOrdersQueue.length === 1 ? 'pedido adicionado' : 'pedidos adicionados' }}</span>
+            <button class="clear-queue-btn" @click="clearOrdersQueue" v-if="multipleOrdersQueue.length > 0">
+              <i class="material-icons">delete_sweep</i>
+              Limpar lista
+            </button>
+          </div>
+          <div class="common-fields-title">Campos comuns a todos os pedidos:</div>
+          <div class="common-fields">
+            <div class="common-field">
+              <label>
+                <i class="material-icons">person</i>
+                RESPONSÁVEL PELA COMPRA
+              </label>
+              <div class="common-field-value">{{ orderSender || 'Não definido' }}</div>
+            </div>
+            <div class="common-field">
+              <label>
+                <i class="material-icons">business</i>
+                SETOR DO SOLICITANTE
+              </label>
+              <div class="common-field-value">{{ orderSenderSector || 'Não definido' }}</div>
+            </div>
+            <div class="common-field">
+              <label>
+                <i class="material-icons">category</i>
+                CATEGORIA
+              </label>
+              <div class="common-field-value">{{ orderCategory || 'Não definida' }}</div>
+            </div>
+            <div class="common-field">
+              <label>
+                <i class="material-icons">priority_high</i>
+                URGÊNCIA
+              </label>
+              <div class="common-field-value">{{ orderUrgency }}</div>
+            </div>
+            <div class="common-field">
+              <label>
+                <i class="material-icons">event</i>
+                DATA DO PEDIDO
+              </label>
+              <div class="common-field-value">{{ orderDeliveryDate }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="multi-orders-form">
+          <div class="form-group full-width">
+            <label for="multiOrderDescription">
+              <i class="material-icons">description</i>
+              DESCRIÇÃO DO PEDIDO
+            </label>
+            <textarea
+              id="multiOrderDescription"
+              v-model="orderDescription"
+              placeholder="DESCRIÇÃO DO PEDIDO"
+              required
+              @blur="validateDescription"
+              :class="{ 'invalid': validationErrors.description }"
+            ></textarea>
+            <span class="error-message" v-if="validationErrors.description">{{ validationErrors.description }}</span>
+          </div>
+
+          <div class="form-group">
+            <label for="multiOrderQuantity">
+              <i class="material-icons">format_list_numbered</i>
+              QUANTIDADE
+            </label>
+            <div class="quantity-input-container">
+              <button type="button" class="quantity-btn" @click="decrementQuantity" :disabled="orderQuantity <= 1">
+                <i class="material-icons">remove</i>
+              </button>
+              <input 
+                id="multiOrderQuantity" 
+                type="number" 
+                v-model.number="orderQuantity" 
+                min="1" 
+                @input="validateQuantity"
+                @blur="validateQuantity"
+                required 
+                :class="{ 'invalid': validationErrors.quantity }"
+              />
+              <button type="button" class="quantity-btn" @click="incrementQuantity">
+                <i class="material-icons">add</i>
+              </button>
+            </div>
+            <span class="error-message" v-if="validationErrors.quantity">{{ validationErrors.quantity }}</span>
+          </div>
+          
+          <div class="form-group">
+            <label for="multiOrderCategory">
+              <i class="material-icons">category</i>
+              CATEGORIA
+            </label>
+            <select id="multiOrderCategory" v-model="orderCategory" required>
+              <option value="" disabled selected>SELECIONE A CATEGORIA</option>
+              <option value="Matérias-primas">Matérias-primas</option>
+              <option value="Equipamentos e Máquinas">Equipamentos e Máquinas</option>
+              <option value="Peças de Reposição">Peças de Reposição</option>
+              <option value="Serviços">Serviços</option>
+              <option value="Mercadorias diversas">Mercadorias diversas</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label for="multiOrderUrgency">
+              <i class="material-icons">priority_high</i>
+              URGÊNCIA
+            </label>
+            <select id="multiOrderUrgency" v-model="orderUrgency" required>
+              <option value="Padrão">Padrão (Sem prioridade)</option>
+              <option value="Urgente">Urgente (Para o mesmo dia)</option>
+              <option value="Crítico">Crítico (Fábrica parada)</option>
+            </select>
+          </div>
+          
+          <div class="form-group full-width">
+            <label for="multiOrderNotes">
+              <i class="material-icons">notes</i>
+              OBSERVAÇÃO
+            </label>
+            <textarea
+              id="multiOrderNotes"
+              v-model="orderNotes"
+              placeholder="OBSERVAÇÃO"
+            ></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="multiOrderFile">
+              <i class="material-icons">attach_file</i>
+              ANEXO (IMAGEM/ARQUIVO)
+            </label>
+            <div class="file-input-container">
+              <input id="multiOrderFile" type="file" @change="handleFileUpload" class="file-input" />
+              <div class="custom-file-button">
+                <i class="material-icons">cloud_upload</i>
+                <span>{{ orderFile ? 'Arquivo selecionado' : 'Escolher arquivo' }}</span>
+              </div>
+              <div class="file-info" v-if="orderFile">
+                <div class="file-name">
+                  <i class="material-icons">insert_drive_file</i>
+                  <span>{{ orderFile.name }}</span>
+                </div>
+                <button type="button" class="remove-file" @click="removeFile">
+                  <i class="material-icons">close</i>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="multiOrderSender">
+              <i class="material-icons">person</i>
+              RESPONSÁVEL PELA COMPRA
+            </label>
+            <input id="multiOrderSender" type="text" v-model="orderSender" required />
+          </div>
+
+          <div class="multi-add-btn-container">
+            <button type="button" class="add-to-queue-btn" @click="addToOrdersQueue" :disabled="!canAddToQueue">
+              <i class="material-icons">add_circle</i>
+              Adicionar à lista
+            </button>
+          </div>
+        </div>
+
+        <div class="multi-orders-list-container" v-if="multipleOrdersQueue.length > 0">
+          <div class="list-header" @click="toggleOrdersList" :class="{ 'expanded': isOrdersListExpanded }">
+            <h3 class="list-heading">
+              <i class="material-icons expand-icon" :class="{ 'expanded': isOrdersListExpanded }">
+                {{ isOrdersListExpanded ? 'expand_less' : 'expand_more' }}
+              </i>
+              Lista de Pedidos ({{ multipleOrdersQueue.length }})
+            </h3>
+            <div class="list-actions">
+              <span class="order-count-badge">{{ multipleOrdersQueue.length }} {{ multipleOrdersQueue.length === 1 ? 'item' : 'itens' }}</span>
+              <button type="button" class="clear-list-btn" @click.stop="clearOrdersQueue" v-if="multipleOrdersQueue.length > 1">
+                <i class="material-icons">delete_sweep</i>
+                Limpar
+              </button>
+            </div>
+          </div>
+          
+          <transition name="slide-fade">
+            <div class="orders-list-wrapper" v-if="isOrdersListExpanded">
+              <div class="orders-list">
+                <div 
+                  v-for="(order, index) in multipleOrdersQueue" 
+                  :key="index" 
+                  class="order-item"
+                  :class="{ 'has-file': order.hasFile }"
+                >
+                  <div class="order-item-header">
+                    <div class="order-info">
+                      <span class="order-number">#{{ index + 1 }}</span>
+                      <span class="order-category">{{ order.categoria }}</span>
+                      <span class="order-urgency" :class="'urgency-' + order.urgencia.toLowerCase()">{{ order.urgencia }}</span>
+                    </div>
+                    <button type="button" class="remove-order-btn" @click.stop="removeOrderFromQueue(index)" title="Remover pedido">
+                      <i class="material-icons">close</i>
+                    </button>
+                  </div>
+                  
+                  <div class="order-item-content">
+                    <div class="order-item-field description">
+                      <div class="field-label">
+                        <i class="material-icons">description</i>
+                        Descrição:
+                      </div>
+                      <p class="field-value">{{ order.descricao }}</p>
+                    </div>
+                    
+                    <div class="order-details">
+                      <div class="order-item-field quantity">
+                        <div class="field-label">
+                          <i class="material-icons">format_list_numbered</i>
+                          Qtd:
+                        </div>
+                        <span class="field-value bold">{{ order.quantidade }}</span>
+                      </div>
+                      
+                      <div class="order-item-field sender">
+                        <div class="field-label">
+                          <i class="material-icons">person</i>
+                          Responsável:
+                        </div>
+                        <span class="field-value">{{ order.sender }}</span>
+                      </div>
+                    </div>
+                    
+                    <div class="order-item-field notes" v-if="order.observacao">
+                      <div class="field-label">
+                        <i class="material-icons">notes</i>
+                        Obs:
+                      </div>
+                      <p class="field-value">{{ order.observacao }}</p>
+                    </div>
+                    
+                    <div class="order-item-field file" v-if="order.hasFile">
+                      <i class="material-icons">attach_file</i>
+                      <span>Arquivo anexado</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </transition>
+        </div>
+
+        <div class="form-buttons">
+          <button type="button" class="submit-all-btn" @click="handleSubmitAllOrders" :disabled="isSubmitting || multipleOrdersQueue.length === 0">
+            <LoadingIndicator v-if="isSubmitting" size="small" />
+            <template v-else>
+              <i class="material-icons">send</i>
+              ENVIAR {{ multipleOrdersQueue.length }} {{ multipleOrdersQueue.length === 1 ? 'PEDIDO' : 'PEDIDOS' }}
+            </template>
+          </button>
+          <button type="button" class="edit-mode-btn" @click="forceNormalMode">
+            <i class="material-icons">edit</i>
+            MODO NORMAL
+          </button>
+          <button type="button" class="close-btn" @click="closeForm" :disabled="isSubmitting">
+            <i class="material-icons">close</i>
+            CANCELAR
+          </button>
+        </div>
+      </div>
+
       <!-- Formulário de Criação de Pedido -->
-      <form v-show="!successMessage" @submit.prevent="handleCreateOrder">
+      <form v-show="!successMessage && !createMultiple" @submit.prevent="handleCreateOrder">
         <div class="form-grid">
           <div class="form-group full-width">
             <label for="orderDescription">
@@ -194,7 +467,7 @@
           <div class="form-group">
             <label for="orderSenderSector">
               <i class="material-icons">business</i>
-              SETOR DO RESPONSÁVEL
+              SETOR DO SOLICITANTE
             </label>
             <select 
               id="orderSenderSector" 
@@ -212,21 +485,16 @@
               <option value="Favorito">Favorito</option>
             </select>
             <div class="input-note" v-if="!isAdminOrGestor">
-              O setor é definido automaticamente com base no seu perfil
+              O setor do solicitante é definido automaticamente com base no seu perfil
             </div>
           </div>
 
           <div class="form-group options-group full-width">
-            <label class="toggle-container">
-              <span class="toggle-label">
-                <i class="material-icons">repeat</i>
-                Criar múltiplos pedidos em sequência
-              </span>
-              <div class="toggle-switch">
-                <input type="checkbox" v-model="createMultiple" />
-                <span class="slider"></span>
-              </div>
-            </label>
+            <button type="button" class="multi-mode-btn" @click="activateMultiMode">
+              <i class="material-icons">list_alt</i>
+              MODO MÚLTIPLOS PEDIDOS
+              <span class="development-badge">EM DESENVOLVIMENTO</span>
+            </button>
           </div>
         </div>
 
@@ -244,6 +512,118 @@
           </button>
         </div>
       </form>
+
+      <!-- Cards de pedidos criados -->
+      <div v-if="showOrderCards" class="created-orders-cards">
+        <div class="cards-header">
+          <h3>Pedidos Criados com Sucesso!</h3>
+          <div class="cards-counter">
+            <span>{{ currentCardIndex + 1 }} de {{ createdOrders.length }}</span>
+          </div>
+        </div>
+        
+        <div class="cards-navigation">
+          <button 
+            class="nav-button prev" 
+            @click="previousCard" 
+            :disabled="currentCardIndex === 0"
+          >
+            <i class="material-icons">chevron_left</i>
+          </button>
+          
+          <div class="order-card">
+            <div class="order-card-header">
+              <span class="order-status" :class="createdOrders[currentCardIndex]?.status?.toLowerCase()">
+                {{ createdOrders[currentCardIndex]?.status || 'Pendente' }}
+              </span>
+              <span class="order-number">#{{ createdOrders[currentCardIndex]?.id || '000' }}</span>
+            </div>
+            
+            <div class="order-card-body">
+              <div class="card-field description">
+                <i class="material-icons">description</i>
+                <div class="field-content">
+                  <span class="field-label">Descrição:</span>
+                  <span class="field-value">{{ createdOrders[currentCardIndex]?.descricao }}</span>
+                </div>
+              </div>
+              
+              <div class="card-field">
+                <i class="material-icons">format_list_numbered</i>
+                <div class="field-content">
+                  <span class="field-label">Quantidade:</span>
+                  <span class="field-value bold">{{ createdOrders[currentCardIndex]?.quantidade }}</span>
+                </div>
+              </div>
+              
+              <div class="card-field">
+                <i class="material-icons">category</i>
+                <div class="field-content">
+                  <span class="field-label">Categoria:</span>
+                  <span class="field-value">{{ createdOrders[currentCardIndex]?.categoria }}</span>
+                </div>
+              </div>
+              
+              <div class="card-field">
+                <i class="material-icons">priority_high</i>
+                <div class="field-content">
+                  <span class="field-label">Urgência:</span>
+                  <span class="field-value" :class="'urgency-' + createdOrders[currentCardIndex]?.urgencia?.toLowerCase()">
+                    {{ createdOrders[currentCardIndex]?.urgencia }}
+                  </span>
+                </div>
+              </div>
+              
+              <div class="card-field">
+                <i class="material-icons">person</i>
+                <div class="field-content">
+                  <span class="field-label">Responsável:</span>
+                  <span class="field-value">{{ createdOrders[currentCardIndex]?.sender }}</span>
+                </div>
+              </div>
+              
+              <div class="card-field">
+                <i class="material-icons">business</i>
+                <div class="field-content">
+                  <span class="field-label">Setor:</span>
+                  <span class="field-value">{{ createdOrders[currentCardIndex]?.setor }}</span>
+                </div>
+              </div>
+              
+              <div class="card-field" v-if="createdOrders[currentCardIndex]?.observacao">
+                <i class="material-icons">notes</i>
+                <div class="field-content">
+                  <span class="field-label">Observação:</span>
+                  <span class="field-value">{{ createdOrders[currentCardIndex]?.observacao }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <button 
+            class="nav-button next" 
+            @click="nextCard" 
+            :disabled="currentCardIndex === createdOrders.length - 1"
+          >
+            <i class="material-icons">chevron_right</i>
+          </button>
+        </div>
+        
+        <div class="card-actions">
+          <button type="button" class="action-button print" @click="printCurrentOrder">
+            <i class="material-icons">print</i>
+            IMPRIMIR
+          </button>
+          <button type="button" class="action-button new-order" @click="startNewOrderAfterCards">
+            <i class="material-icons">add_circle</i>
+            CRIAR NOVO PEDIDO
+          </button>
+          <button type="button" class="action-button close" @click="closeForm">
+            <i class="material-icons">close</i>
+            FECHAR
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -284,6 +664,7 @@ export default {
       userSector: null,
       token: null,
       createMultiple: false,
+      multipleOrdersQueue: [],
       isUrgencyTooltipVisible: false,
       isFileTooltipVisible: false,
       validationErrors: {
@@ -303,7 +684,12 @@ export default {
       fileTooltipStyle: {
         top: '25px',
         left: '0'
-      }
+      },
+      // Novos estados para o sistema de navegação em cards
+      createdOrders: [], // Lista de pedidos criados com sucesso
+      showOrderCards: false, // Mostra a visualização em cards 
+      currentCardIndex: 0, // Índice do card atual sendo visualizado
+      isOrdersListExpanded: false, // Estado para expandir/recolher a lista de pedidos
     };
   },
   computed: {
@@ -312,6 +698,9 @@ export default {
     },
     isAdmin() {
       return this.userType === "admin";
+    },
+    canAddToQueue() {
+      return this.orderDescription && this.orderQuantity >= 1 && this.orderCategory && this.orderSender && !this.validationErrors.description && !this.validationErrors.quantity;
     }
   },
   mounted() {
@@ -380,6 +769,171 @@ export default {
     }
   },
   methods: {
+    toggleCreateMultiple() {
+      // Verificar se estamos entrando ou saindo do modo múltiplos pedidos
+      if (this.createMultiple) {
+        // Se está entrando no modo múltiplos pedidos, resetar a lista
+        this.multipleOrdersQueue = [];
+        
+        // Caso o usuário tenha preenchido algo no formulário normal, podemos adicionar à lista
+        if (this.orderDescription && this.orderQuantity > 0) {
+          const toast = useToast();
+          toast.info("Entrando no modo de múltiplos pedidos. Os campos preenchidos serão mantidos.");
+        }
+      } else {
+        // Se está saindo do modo múltiplos pedidos e há itens na fila
+        if (this.multipleOrdersQueue.length > 0) {
+          if (!confirm(`Você tem ${this.multipleOrdersQueue.length} pedidos na lista. Sair do modo de múltiplos pedidos irá descartar esta lista. Deseja continuar?`)) {
+            // Cancelar a ação e voltar para o modo múltiplo
+            // Importante: Precisamos fazer isto de forma assíncrona para evitar conflito com o v-model
+            this.$nextTick(() => {
+              this.createMultiple = true;
+            });
+          }
+        }
+      }
+    },
+    addToOrdersQueue() {
+      if (!this.canAddToQueue) return;
+      
+      // Criar cópia do pedido atual
+      const newOrder = {
+        descricao: this.orderDescription,
+        quantidade: this.orderQuantity,
+        categoria: this.orderCategory,
+        urgencia: this.orderUrgency,
+        deliveryDate: this.orderDeliveryDate,
+        observacao: this.orderNotes || "",
+        sender: this.orderSender,
+        setor: this.orderSenderSector,
+        hasFile: !!this.orderFile,
+        fileBase64: this.orderFileBase64 || null,
+      };
+      
+      // Adicionar à fila
+      this.multipleOrdersQueue.push(newOrder);
+      
+      // Limpar campos específicos para o próximo pedido
+      this.orderDescription = "";
+      this.orderQuantity = 1;
+      this.orderNotes = "";
+      this.orderFile = null;
+      this.orderFileBase64 = "";
+      
+      // Expandir a lista de pedidos para mostrar o novo item
+      this.isOrdersListExpanded = true;
+      
+      // Mostrar mensagem de sucesso
+      const toast = useToast();
+      toast.success(`Pedido adicionado à lista! Total: ${this.multipleOrdersQueue.length}`);
+    },
+    removeOrderFromQueue(index) {
+      this.multipleOrdersQueue.splice(index, 1);
+    },
+    clearOrdersQueue() {
+      if (confirm("Tem certeza que deseja limpar toda a lista de pedidos?")) {
+        this.multipleOrdersQueue = [];
+      }
+    },
+    async handleSubmitAllOrders() {
+      if (this.multipleOrdersQueue.length === 0) {
+        const toast = useToast();
+        toast.warning("Adicione pelo menos um pedido à lista primeiro.");
+        return;
+      }
+      
+      const toast = useToast();
+      
+      // Validar se usuário está logado
+      const token = localStorage.getItem("access_token");
+      if (!token) {
+        toast.error("É necessário estar autenticado para criar pedidos.");
+        return;
+      }
+      
+      // Garantir que temos um token CSRF válido
+      try {
+        await ensureCsrfToken();
+      } catch (error) {
+        console.error("Erro ao obter token CSRF:", error);
+        toast.error("Erro de segurança. Tente fazer login novamente.");
+        return;
+      }
+      
+      // Ativar indicador de carregamento
+      this.isSubmitting = true;
+      
+      // Data e hora exata da criação
+      const creationDateTime = new Date().toISOString();
+      
+      // Capturar informações adicionais para auditoria
+      let userAgent = navigator.userAgent;
+      let browserInfo = {
+        userAgent: userAgent,
+        platform: navigator.platform,
+        language: navigator.language,
+        screenWidth: window.screen.width,
+        screenHeight: window.screen.height
+      };
+      
+      try {
+        // Criar os pedidos um por um
+        const results = [];
+        const totalOrders = this.multipleOrdersQueue.length;
+        
+        for (let i = 0; i < totalOrders; i++) {
+          const order = this.multipleOrdersQueue[i];
+          
+          const payload = {
+            ...order,
+            usuario_nome: this.userName || "Usuário do Sistema",
+            status: "Pendente",
+            // Informações de auditoria
+            audit_info: {
+              created_at_exact: creationDateTime,
+              browser_info: browserInfo,
+              user_email: this.userEmail,
+              user_type: this.userType,
+              created_by_id: localStorage.getItem("user_id") || null
+            }
+          };
+          
+          try {
+            const response = await axiosService.post('/pedidos/', payload);
+            results.push(response.data);
+            toast.success(`Pedido ${i+1}/${totalOrders} criado com sucesso!`);
+          } catch (error) {
+            console.error("Erro ao criar pedido:", error);
+            toast.error(`Erro ao criar pedido ${i+1}/${totalOrders}: ${error.response?.data?.detail || "Erro desconhecido"}`);
+            // Continuar para o próximo pedido mesmo com erro
+          }
+        }
+        
+        // Limpar a fila depois de enviar tudo
+        this.multipleOrdersQueue = [];
+        
+        // Mensagem final de sucesso
+        if (results.length === totalOrders) {
+          toast.success(`Todos os ${totalOrders} pedidos foram criados com sucesso!`);
+        } else {
+          toast.info(`${results.length} de ${totalOrders} pedidos foram criados com sucesso.`);
+        }
+        
+        // Ao invés de emitir um evento, vamos mostrar os cards dos pedidos criados
+        if (results.length > 0) {
+          this.createdOrders = results;
+          this.showOrderCards = true;
+          this.currentCardIndex = 0;
+        }
+        
+      } catch (error) {
+        toast.error("Ocorreu um erro durante o envio dos pedidos.");
+        console.error("Erro geral ao enviar pedidos:", error);
+      } finally {
+        // Desativar indicador de carregamento
+        this.isSubmitting = false;
+      }
+    },
     async handleCreateOrder() {
       const toast = useToast();
 
@@ -463,27 +1017,30 @@ export default {
       const creationDateTime = new Date().toISOString();
 
       // Criar o payload para o pedido com informações de auditoria
-      const payload = {
-        descricao: this.orderDescription,
-        quantidade: this.orderQuantity,
-        categoria: this.orderCategory,
-        urgencia: this.orderUrgency,
-        deliveryDate: this.orderDeliveryDate,
-        observacao: this.orderNotes || "",
-        sender: this.orderSender,
-        setor: this.orderSenderSector,
-        usuario_nome: this.userName || "Usuário do Sistema",
-        file: this.orderFileBase64 || null,
-        status: "Pendente",
-        // Informações de auditoria
-        audit_info: {
-          created_at_exact: creationDateTime,
-          browser_info: browserInfo,
-          user_email: this.userEmail,
-          user_type: this.userType,
-          created_by_id: localStorage.getItem("user_id") || null
-        }
-      };
+              const payload = {
+          descricao: this.orderDescription,
+          quantidade: this.orderQuantity,
+          categoria: this.orderCategory,
+          urgencia: this.orderUrgency,
+          deliveryDate: this.orderDeliveryDate,
+          observacao: this.orderNotes || "",
+          sender: this.orderSender, // Campo responsável pela compra
+          setor: this.orderSenderSector,
+          usuario_nome: this.userName || "Usuário do Sistema",
+          file: this.orderFileBase64 || null,
+          status: "Pendente",
+          // Informações de auditoria
+          audit_info: {
+            created_at_exact: creationDateTime,
+            browser_info: browserInfo,
+            user_email: this.userEmail,
+            user_type: this.userType,
+            created_by_id: localStorage.getItem("user_id") || null
+          }
+        };
+        
+        // Log para debug do valor do responsável pela compra
+        console.log("[DEBUG] Enviando pedido com sender:", this.orderSender);
 
       console.log("Enviando pedido com nome de usuário:", this.userName);
 
@@ -693,6 +1250,61 @@ export default {
     },
     hideFileTooltip() {
       this.isFileTooltipVisible = false;
+    },
+    forceNormalMode() {
+      // Se não há pedidos na fila, simplesmente muda para o modo normal
+      if (this.multipleOrdersQueue.length === 0) {
+        this.createMultiple = false;
+        return;
+      }
+      
+      // Se há pedidos na fila, perguntar se o usuário realmente deseja sair
+      if (confirm(`Você tem ${this.multipleOrdersQueue.length} pedidos na lista. Sair do modo de múltiplos pedidos irá descartar esta lista. Deseja continuar?`)) {
+        this.createMultiple = false;
+        this.multipleOrdersQueue = []; // Limpar a fila ao sair
+      }
+    },
+    activateMultiMode() {
+      this.createMultiple = true;
+      this.multipleOrdersQueue = [];
+      this.orderDescription = "";
+      this.orderQuantity = 1;
+      this.orderNotes = "";
+      this.orderFile = null;
+      this.orderFileBase64 = "";
+      // Não preencher automaticamente o responsável com o nome do usuário atual
+      this.orderSender = "";
+      this.orderDeliveryDate = new Date().toISOString().split('T')[0];
+      // Inicializar a lista de pedidos como recolhida
+      this.isOrdersListExpanded = false;
+    },
+    // Métodos para a navegação em cards
+    nextCard() {
+      if (this.currentCardIndex < this.createdOrders.length - 1) {
+        this.currentCardIndex++;
+      }
+    },
+    previousCard() {
+      if (this.currentCardIndex > 0) {
+        this.currentCardIndex--;
+      }
+    },
+    printCurrentOrder() {
+      if (this.createdOrders.length > 0) {
+        const currentOrder = this.createdOrders[this.currentCardIndex];
+        this.$emit("open-print-modal", currentOrder);
+      }
+    },
+    startNewOrderAfterCards() {
+      // Limpar os pedidos criados e voltar para o modo de criação
+      this.createdOrders = [];
+      this.showOrderCards = false;
+      this.resetForm();
+    },
+    toggleOrdersList() {
+      console.log("toggleOrdersList chamado, valor anterior:", this.isOrdersListExpanded);
+      this.isOrdersListExpanded = !this.isOrdersListExpanded;
+      console.log("Novo valor após toggle:", this.isOrdersListExpanded);
     },
   },
 };
@@ -1003,6 +1615,8 @@ textarea {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
   cursor: pointer;
   margin: 15px 0;
   padding: 10px;
@@ -1813,6 +2427,833 @@ button i {
   textarea {
     min-height: 60px;
   }
+}
+
+/* Estilos para o modo de múltiplos pedidos */
+.multi-orders-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1rem;
+}
+
+.multi-orders-header {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+  background-color: var(--bg-color-secondary);
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.multi-orders-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.orders-count {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
+.clear-queue-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background-color: var(--danger-color-light);
+  color: var(--danger-color);
+  border: 1px solid var(--danger-color);
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.clear-queue-btn:hover {
+  background-color: var(--danger-color);
+  color: white;
+}
+
+.common-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.common-field {
+  display: flex;
+  flex-direction: column;
+  padding: 0.5rem;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.common-field label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.multi-orders-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  background-color: var(--bg-color-secondary);
+  padding: 1.5rem;
+  border-radius: 8px;
+}
+
+.multi-add-btn-container {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+.add-to-queue-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+}
+
+.add-to-queue-btn:hover:not(:disabled) {
+  background-color: var(--accent-color-dark);
+  transform: translateY(-2px);
+}
+
+.add-to-queue-btn:disabled {
+  background-color: #515151;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.multi-orders-list {
+  background-color: var(--bg-color-secondary);
+  border-radius: 8px;
+  padding: 1.5rem;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.list-heading {
+  margin-top: 0;
+  padding-bottom: 0.5rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-color-bright);
+  font-size: 1.2rem;
+}
+
+.orders-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.order-item {
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  padding: 1rem;
+  border-left: 4px solid var(--primary-color);
+  position: relative;
+}
+
+.order-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.order-number {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--primary-color);
+}
+
+.remove-order-btn {
+  background-color: transparent;
+  color: var(--danger-color);
+  border: none;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.remove-order-btn:hover {
+  background-color: rgba(220, 53, 69, 0.3);
+  color: #dc3545;
+}
+
+.remove-order-btn i {
+  font-size: 16px;
+}
+
+.order-item-content {
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.order-item-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.order-details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.field-label {
+  display: flex;
+  align-items: center;
+  color: #999;
+  font-size: 0.85rem;
+  gap: 5px;
+}
+
+.field-label i {
+  color: #ff6f61;
+  font-size: 16px;
+}
+
+.field-value {
+  margin: 0;
+  color: #f5f5f5;
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.field-value.bold {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: #fff;
+}
+
+.order-item-field.file {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background-color: rgba(40, 167, 69, 0.1);
+  color: #28a745;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+}
+
+.order-item-field.file i {
+  font-size: 16px;
+}
+
+/* Animações para a lista */
+.slide-fade-enter-active {
+  transition: all 0.3s ease-out;
+}
+
+.slide-fade-leave-active {
+  transition: all 0.3s cubic-bezier(1, 0.5, 0.8, 1);
+}
+
+.slide-fade-enter-from,
+.slide-fade-leave-to {
+  transform: translateY(-10px);
+  opacity: 0;
+  max-height: 0;
+}
+
+/* Responsividade para dispositivos móveis */
+@media (max-width: 768px) {
+  .orders-list {
+    grid-template-columns: 1fr;
+  }
+  
+  .order-info {
+    gap: 6px;
+  }
+  
+  .order-category {
+    max-width: 90px;
+  }
+  
+  .orders-list-wrapper {
+    max-height: 300px;
+  }
+}
+
+@media (max-width: 480px) {
+  .list-header {
+    padding: 0.75rem 1rem;
+  }
+  
+  .list-heading {
+    font-size: 1rem;
+  }
+  
+  .order-count-badge {
+    font-size: 0.75rem;
+    padding: 3px 8px;
+  }
+  
+  .clear-list-btn {
+    font-size: 0.75rem;
+    padding: 3px 6px;
+  }
+  
+  .clear-list-btn i {
+    font-size: 14px;
+  }
+  
+  .orders-list-wrapper {
+    padding: 0.75rem;
+  }
+  
+  .order-item-header {
+    padding: 0.5rem 0.75rem;
+  }
+  
+  .order-item-content {
+    padding: 0.5rem 0.75rem;
+  }
+  
+  .field-value {
+    font-size: 0.9rem;
+  }
+  
+  .field-label {
+    font-size: 0.8rem;
+  }
+}
+
+.common-fields-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-color-bright);
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.common-field-value {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--text-color-bright);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 4px 8px;
+  border-radius: 3px;
+  margin-top: 3px;
+}
+
+.multi-mode-btn {
+  background-color: #333;
+  color: #f5f5f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 15px;
+  border: 1px solid #444;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  width: 100%;
+}
+
+.multi-mode-btn:hover {
+  background-color: #444;
+  border-color: #ff6f61;
+}
+
+.development-badge {
+  background-color: #ff6f61;
+  color: #1f1f1f;
+  font-size: 0.7rem;
+  padding: 3px 6px;
+  border-radius: 4px;
+  margin-left: 8px;
+  font-weight: bold;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.7;
+  }
+}
+
+/* Estilos para os cards de pedidos criados */
+.created-orders-cards {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.cards-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #444;
+  padding-bottom: 1rem;
+  margin-bottom: 1rem;
+}
+
+.cards-header h3 {
+  color: #ff6f61;
+  margin: 0;
+  font-size: 1.4rem;
+}
+
+.cards-counter {
+  background-color: #333;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  color: #f5f5f5;
+  font-weight: 600;
+}
+
+.cards-navigation {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  position: relative;
+}
+
+.nav-button {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: #333;
+  border: 1px solid #555;
+  color: #f5f5f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.nav-button:hover:not(:disabled) {
+  background-color: #444;
+  transform: translateY(-2px);
+}
+
+.nav-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.order-card {
+  background-color: #2a2a2a;
+  border-radius: 8px;
+  padding: 1.5rem;
+  width: 100%;
+  max-width: 600px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border-left: 5px solid #ff6f61;
+}
+
+.order-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.8rem;
+  border-bottom: 1px solid #444;
+}
+
+.order-status {
+  text-transform: uppercase;
+  font-weight: 700;
+  font-size: 0.9rem;
+  padding: 5px 10px;
+  border-radius: 4px;
+  background-color: #555;
+}
+
+.order-status.pendente {
+  background-color: rgba(255, 193, 7, 0.2);
+  color: #ffc107;
+}
+
+.order-status.aprovado {
+  background-color: rgba(40, 167, 69, 0.2);
+  color: #28a745;
+}
+
+.order-status.concluído {
+  background-color: rgba(40, 167, 69, 0.2);
+  color: #28a745;
+}
+
+.order-status.rejeitado {
+  background-color: rgba(220, 53, 69, 0.2);
+  color: #dc3545;
+}
+
+.order-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.card-field {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.card-field i {
+  color: #ff6f61;
+  font-size: 1.2rem;
+  margin-top: 2px;
+}
+
+.field-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.field-label {
+  font-size: 0.85rem;
+  color: #999;
+}
+
+.field-value {
+  font-size: 1rem;
+  color: #f5f5f5;
+  word-break: break-word;
+}
+
+.field-value.bold {
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.card-field.description .field-value {
+  line-height: 1.4;
+}
+
+.urgency-padrão {
+  color: #17a2b8;
+}
+
+.urgency-urgente {
+  color: #ffc107;
+  font-weight: 600;
+}
+
+.urgency-crítico {
+  color: #dc3545;
+  font-weight: 700;
+}
+
+.card-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  justify-content: center;
+}
+
+.action-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.action-button.print {
+  background-color: #17a2b8;
+  color: white;
+}
+
+.action-button.print:hover {
+  background-color: #138496;
+}
+
+.action-button.new-order {
+  background-color: #ff6f61;
+  color: white;
+}
+
+.action-button.new-order:hover {
+  background-color: #e05545;
+}
+
+.action-button.close {
+  background-color: #444;
+  color: #f5f5f5;
+  border: 1px solid #555;
+}
+
+.action-button.close:hover {
+  background-color: #555;
+}
+
+/* Melhorias na ordem da lista de pedidos */
+.orders-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+.order-item {
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  padding: 1rem;
+  border-left: 4px solid var(--primary-color);
+  position: relative;
+  transition: all 0.2s ease;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.order-item:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+@media (max-width: 768px) {
+  .orders-list {
+    grid-template-columns: 1fr;
+  }
+  
+  .card-actions {
+    flex-direction: column;
+  }
+  
+  .action-button {
+    width: 100%;
+  }
+}
+
+/* Estilos para a lista de pedidos - versão renovada */
+.multi-orders-list-container {
+  margin-top: 1.5rem;
+  background-color: rgba(35, 35, 35, 0.7);
+  border-radius: 8px;
+  border: 1px solid #444;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.25rem;
+  background-color: #2a2a2a;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-bottom: 1px solid transparent;
+  user-select: none; /* Impede seleção de texto ao clicar */
+}
+
+.list-header:hover {
+  background-color: #333;
+}
+
+.list-header.expanded {
+  border-bottom-color: #444;
+}
+
+.list-heading {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  font-size: 1.1rem;
+  color: #f5f5f5;
+}
+
+.expand-icon {
+  margin-right: 8px;
+  color: #ff6f61;
+  transition: transform 0.3s ease;
+}
+
+.expand-icon.expanded {
+  transform: rotate(180deg);
+}
+
+.list-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.order-count-badge {
+  background-color: rgba(255, 111, 97, 0.2);
+  color: #ff6f61;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: 1px solid rgba(255, 111, 97, 0.3);
+}
+
+.clear-list-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background-color: rgba(220, 53, 69, 0.1);
+  color: #dc3545;
+  border: 1px solid rgba(220, 53, 69, 0.3);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.clear-list-btn:hover {
+  background-color: rgba(220, 53, 69, 0.2);
+}
+
+.orders-list-wrapper {
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 1rem;
+}
+
+.orders-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.order-item {
+  background-color: #2a2a2a;
+  border-radius: 8px;
+  border-left: 4px solid #17a2b8;
+  overflow: hidden;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.order-item.has-file {
+  border-left-color: #28a745;
+}
+
+.order-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+.order-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background-color: rgba(0, 0, 0, 0.15);
+  border-bottom: 1px solid #333;
+}
+
+.order-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow: hidden;
+}
+
+.order-number {
+  font-weight: 700;
+  color: #ff6f61;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.order-category {
+  background-color: rgba(23, 162, 184, 0.2);
+  color: #17a2b8;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+}
+
+.order-urgency {
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.urgency-padrão {
+  background-color: rgba(23, 162, 184, 0.2);
+  color: #17a2b8;
+}
+
+.urgency-urgente {
+  background-color: rgba(255, 193, 7, 0.2);
+  color: #ffc107;
+}
+
+.urgency-crítico {
+  background-color: rgba(220, 53, 69, 0.2);
+  color: #dc3545;
+}
+
+.remove-order-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(220, 53, 69, 0.1);
+  color: rgba(220, 53, 69, 0.8);
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
 }
 </style>
 

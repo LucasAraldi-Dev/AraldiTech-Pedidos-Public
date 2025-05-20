@@ -44,55 +44,54 @@
       >
         Visualizar Logs
       </button>
-      <!-- Botão de Ajuda para todos os usuários -->
-      <button class="menu-btn help-btn" @click="openHelp">
-        Ajuda
-      </button>
-      <button class="menu-btn logout-btn" @click="logout">Sair</button>
+      <div class="logout-spacer"></div>
+      <button class="menu-btn logout-btn" @click="confirmLogout">Sair</button>
     </div>
 
     <!-- Menu de tela cheia no mobile -->
     <div v-if="isMenuOpen && isMobile" class="fullscreen-menu">
-      <button class="menu-btn" @click="openCreateOrderSection">Criar Pedido</button>
-      <button class="menu-btn" @click="openConsultOrdersSection">Consultar Pedidos</button>
-      <!-- Botão Dashboard apenas para gestores -->
-      <button 
-        v-if="isGestor" 
-        class="menu-btn gestor-btn" 
-        @click="openDashboard"
-      >
-        Dashboard de Gestão
-      </button>
-      <!-- Botão Relatório Financeiro para gestores -->
-      <button 
-        v-if="isGestor" 
-        class="menu-btn finance-btn" 
-        @click="openFinancialReport"
-      >
-        Relatório Financeiro
-      </button>
-      <!-- Botão Gerenciar Usuários apenas para administradores -->
-      <button 
-        v-if="isAdmin" 
-        class="menu-btn admin-btn" 
-        @click="openUserManagementModal"
-      >
-        Gerenciar Usuários
-      </button>
-      <!-- Botão Visualizador de Logs para administradores -->
-      <button 
-        v-if="isAdmin" 
-        class="menu-btn log-btn" 
-        @click="openLogViewer"
-      >
-        Visualizar Logs
-      </button>
-      <!-- Botão de Ajuda para todos os usuários -->
-      <button class="menu-btn help-btn" @click="openHelp">
-        Ajuda
-      </button>
-      <button class="menu-btn close-menu-btn" @click="toggleMenu">Fechar Menu</button>
-      <button class="menu-btn logout-btn" @click="logout">Sair</button>
+      <div class="menu-header">
+        <button class="close-menu-btn" @click="toggleMenu">X</button>
+      </div>
+      <div class="menu-content">
+        <button class="menu-btn" @click="openCreateOrderSection">Criar Pedido</button>
+        <button class="menu-btn" @click="openConsultOrdersSection">Consultar Pedidos</button>
+        <!-- Botão Dashboard apenas para gestores -->
+        <button 
+          v-if="isGestor" 
+          class="menu-btn gestor-btn" 
+          @click="openDashboard"
+        >
+          Dashboard de Gestão
+        </button>
+        <!-- Botão Relatório Financeiro para gestores -->
+        <button 
+          v-if="isGestor" 
+          class="menu-btn finance-btn" 
+          @click="openFinancialReport"
+        >
+          Relatório Financeiro
+        </button>
+        <!-- Botão Gerenciar Usuários apenas para administradores -->
+        <button 
+          v-if="isAdmin" 
+          class="menu-btn admin-btn" 
+          @click="openUserManagementModal"
+        >
+          Gerenciar Usuários
+        </button>
+        <!-- Botão Visualizador de Logs para administradores -->
+        <button 
+          v-if="isAdmin" 
+          class="menu-btn log-btn" 
+          @click="openLogViewer"
+        >
+          Visualizar Logs
+        </button>
+      </div>
+      
+      <!-- Botão Sair flutuante para mobile -->
+      <button class="floating-logout-btn" @click="confirmLogout">Sair</button>
     </div>
 
     <div class="main-content" :class="{'has-content': isCreateOrderSectionOpen || isConsultOrdersSectionOpen || isEditOrderOpen || isUserManagementOpen || isFinancialReportOpen || isDashboardOpen}">
@@ -170,6 +169,18 @@
         @new-order="handleNewOrderFromPrintModal"
       />
     </div>
+    
+    <!-- Modal de Confirmação de Logout -->
+    <div v-if="showLogoutConfirmation" class="logout-confirmation-modal">
+      <div class="logout-confirmation-content">
+        <h3>Confirmação</h3>
+        <p>Deseja realmente sair do sistema de pedidos?</p>
+        <div class="logout-confirmation-buttons">
+          <button class="confirm-btn" @click="proceedWithLogout">Sim</button>
+          <button class="cancel-btn" @click="cancelLogout">Não</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -227,7 +238,9 @@ export default {
       // Adicionar variável para debug
       debugInterval: null,
       // Adicionar variável para rastrear modal aberto anteriormente
-      previousOpenModal: null
+      previousOpenModal: null,
+      // Modal de confirmação de logout
+      showLogoutConfirmation: false
     };
   },
   created() {
@@ -331,6 +344,20 @@ export default {
         // Apenas removemos o código que fecha todos os modais
         
         // Garantir que todos os campos necessários existam
+        console.log('[DEBUG] Pedido original:', pedido);
+        console.log('[DEBUG] Valor de sender no pedido:', pedido.sender);
+        
+        // Obter informações do usuário do localStorage
+        let userInfo = null;
+        try {
+          if (localStorage.getItem('user')) {
+            userInfo = JSON.parse(localStorage.getItem('user'));
+            console.log('[DEBUG] Informações do usuário:', userInfo);
+          }
+        } catch (e) {
+          console.error('[DEBUG] Erro ao obter informações do usuário:', e);
+        }
+        
         this.pedidoCriado = {
           ...pedido,
           // Definir valores padrão para campos que podem estar ausentes
@@ -340,8 +367,10 @@ export default {
           categoria: pedido.categoria || 'Geral',
           deliveryDate: pedido.deliveryDate || new Date().toISOString().split('T')[0],
           observacao: pedido.observacao || '',
-          sender: pedido.sender || (localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')).name : '')
+          sender: pedido.sender || (userInfo ? userInfo.nome : '')
         };
+        
+        console.log('[DEBUG] Valor final de sender para o modal:', this.pedidoCriado.sender);
         
         console.log('[CRÍTICO] Abrindo modal de impressão com pedido:', pedido.id);
         
@@ -570,11 +599,6 @@ export default {
     closeFinancialReport() {
       this.isFinancialReportOpen = false;
     },
-    openHelp() {
-      // Redirecionar para a página de ajuda
-      this.$router.push({ name: "Ajuda" });
-      this.isMenuOpen = false;
-    },
     openLogViewer() {
       this.isLogViewerOpen = true;
     },
@@ -626,7 +650,7 @@ export default {
               categoria: pedido.categoria || 'Geral',
               deliveryDate: pedido.deliveryDate || new Date().toISOString().split('T')[0],
               observacao: pedido.observacao || '',
-              sender: pedido.sender || localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')).name : ''
+              sender: pedido.sender || (localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')).nome : '')
             };
             
             // Abrir o modal
@@ -673,6 +697,20 @@ export default {
         this.previousOpenModal = null;
       }
       console.log(`[CRÍTICO] Modal anterior salvo: ${this.previousOpenModal}`);
+    },
+    confirmLogout() {
+      // Exibir o modal de confirmação
+      this.showLogoutConfirmation = true;
+    },
+    proceedWithLogout() {
+      // Fechar o modal de confirmação
+      this.showLogoutConfirmation = false;
+      // Executar o logout
+      this.logout();
+    },
+    cancelLogout() {
+      // Apenas fecha o modal de confirmação
+      this.showLogoutConfirmation = false;
     },
   },
 };
@@ -831,9 +869,57 @@ export default {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: var(--spacing-lg);
+  justify-content: flex-start;
+  padding: 0;
   overflow-y: auto;
+}
+
+/* Novos estilos para a estrutura do menu */
+.menu-header {
+  width: 100%;
+  display: flex;
+  justify-content: flex-end;
+  padding: 1rem;
+  position: sticky;
+  top: 0;
+  z-index: 1002;
+  background-color: rgba(0, 0, 0, 0.8);
+}
+
+.menu-content {  
+  width: 100%;  
+  display: flex;  
+  flex-direction: column;  
+  align-items: center;  
+  flex: 1;  
+  overflow-y: auto;  
+  padding: 1rem 0 2rem 0;  
+  /* Ajustando a altura para evitar scrolling desnecessário */  
+  height: auto;  
+  max-height: calc(100vh - 10rem); /* Altura máxima considerando o header e o botão flutuante */
+}
+
+.menu-footer {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  padding: 1rem 0;
+  position: sticky;
+  bottom: 0;
+  z-index: 1002;
+  background-color: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(5px);
+}
+
+.menu-footer .logout-btn {
+  background: linear-gradient(145deg, #b73c3c, #9a3232);
+  width: 80%;
+  max-width: 25rem;
+  margin-bottom: 0;
+}
+
+.menu-footer .logout-btn:hover {
+  background: linear-gradient(145deg, #c54040, #aa3636);
 }
 
 .fullscreen-menu .menu-btn {
@@ -842,10 +928,20 @@ export default {
   max-width: 25rem;
 }
 
-.close-menu-btn {
-  background-color: transparent;
-  border: 0.0625rem solid #555; /* Convertido de 1px para rem */
-  margin-top: var(--spacing-lg);
+/* Estilo para o botão fechar */
+.menu-header .close-menu-btn {
+  background-color: #333;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 2.5rem;
+  height: 2.5rem;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
 }
 
 /* Responsividade */
@@ -862,6 +958,40 @@ export default {
   
   .open-menu-btn {
     display: block;
+  }
+  
+  /* Ajustes específicos para mobile */
+  .fullscreen-menu {
+    max-height: 100vh;
+    overflow-y: auto;
+    justify-content: flex-start;
+    padding: 0;
+    padding-bottom: 6rem; /* Espaço adicional para garantir que conteúdo não fique sob o botão flutuante */
+  }
+  
+  .menu-header {
+    padding: 1rem;
+    background-color: rgba(0, 0, 0, 0.8);
+  }
+  
+  .menu-content {
+    padding: 0.5rem 0 5rem 0; /* Padding inferior maior para evitar que o conteúdo fique sob o botão flutuante */
+    flex: 1;
+    max-height: none; /* Deixar o conteúdo fluir normalmente */
+  }
+  
+  /* Garantir espaçamento adequado entre botões no mobile */
+  .menu-content .menu-btn {
+    margin-bottom: 0.8rem;
+  }
+  
+  /* Ajustar botão flutuante em diferentes orientações de tela */
+  @media (orientation: landscape) {
+    .floating-logout-btn {
+      bottom: 3rem;
+      padding: 0.8rem;
+      font-size: 1.1rem;
+    }
   }
 }
 
@@ -955,5 +1085,168 @@ export default {
 
 .high-priority-modal-container > * {
   pointer-events: auto;
+}
+
+/* Espaçador antes do botão Sair */
+.logout-spacer {
+  flex-grow: 1;
+  min-height: 2rem;
+  margin-top: 1rem;
+}
+
+/* Estilo para o botão Sair */
+.logout-btn {
+  background: linear-gradient(145deg, #b73c3c, #9a3232);
+  color: white;
+  font-weight: bold;
+}
+
+.logout-btn:hover {
+  background: linear-gradient(145deg, #c54040, #aa3636);
+}
+
+/* Modal de Confirmação de Logout */
+.logout-confirmation-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.7);
+  z-index: 10000;
+}
+
+.logout-confirmation-content {
+  background-color: #333;
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  max-width: 90%;
+  width: 25rem;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.5);
+  text-align: center;
+}
+
+.logout-confirmation-content h3 {
+  margin-top: 0;
+  font-size: 1.5rem;
+  color: white;
+  margin-bottom: 1rem;
+}
+
+.logout-confirmation-content p {
+  margin-bottom: 1.5rem;
+  color: white;
+  font-size: 1.1rem;
+}
+
+.logout-confirmation-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.confirm-btn, .cancel-btn {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 0.25rem;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.confirm-btn {
+  background-color: #b73c3c;
+  color: white;
+}
+
+.confirm-btn:hover {
+  background-color: #c54040;
+}
+
+.cancel-btn {
+  background-color: #444;
+  color: white;
+}
+
+.cancel-btn:hover {
+  background-color: #555;
+}
+
+/* Ajustes específicos para botão Sair no sidebar */
+.sidebar .logout-btn {
+  width: 90%;
+  margin: 0 auto;
+}
+
+@media (max-width: 768px) {
+  .logout-confirmation-content {
+    padding: 1.25rem;
+    max-width: 85%;
+    width: 20rem;
+  }
+  
+  .logout-confirmation-content h3 {
+    font-size: 1.25rem;
+  }
+  
+  .logout-confirmation-content p {
+    font-size: 1rem;
+  }
+  
+  .confirm-btn, .cancel-btn {
+    padding: 0.625rem 1.25rem;
+  }
+}
+
+/* Botão sair flutuante para mobile */
+.floating-logout-btn {
+  position: fixed;
+  bottom: 4.5rem; /* Posicionado mais alto para evitar a barra do navegador */
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80%;
+  max-width: 20rem;
+  padding: 1.25rem;
+  background: linear-gradient(145deg, #b73c3c, #9a3232);
+  color: white;
+  font-weight: bold;
+  font-size: 1.2rem;
+  border: none;
+  border-radius: 0.5rem;
+  box-shadow: 0 0.25rem 1rem rgba(0, 0, 0, 0.4);
+  z-index: 1010; /* Garantir que esteja acima de tudo */
+  cursor: pointer;
+  animation: pulse 2s infinite; /* Adicionar animação para chamar atenção */
+}
+
+.floating-logout-btn:active {
+  background: linear-gradient(145deg, #c54040, #aa3636);
+  transform: translateX(-50%) scale(0.98);
+  animation: none; /* Parar animação ao clicar */
+}
+
+/* Animação de pulse para chamar atenção */
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(183, 60, 60, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(183, 60, 60, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(183, 60, 60, 0);
+  }
+}
+
+@media (max-height: 600px) {
+  /* Para telas muito pequenas em altura */
+  .floating-logout-btn {
+    bottom: 3.5rem;
+    padding: 0.75rem;
+  }
 }
 </style>

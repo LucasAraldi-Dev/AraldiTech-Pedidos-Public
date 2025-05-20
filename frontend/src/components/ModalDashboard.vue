@@ -8,150 +8,118 @@
         </button>
       </div>
       
-      <div class="dashboard-container">        
-        <div class="dashboard-sections">
-          <!-- Gráficos e estatísticas de Pedidos (agora no topo) -->
-          <div class="dashboard-section full-width">
-            <h2><i class="material-icons section-icon">insights</i>Estatísticas de Pedidos</h2>
-            <div class="statistics-container">
-              <div v-if="isLoadingCharts" class="loading-charts">
-                <LoadingIndicator message="Carregando estatísticas..." />
-              </div>
-              <template v-else>
-                <div class="statistics-row">
-                  <!-- KPIs -->
-                  <div class="kpi-card">
-                    <i class="material-icons kpi-icon">assignment</i>
-                    <h3>Total de Pedidos</h3>
-                    <div class="kpi-value">{{ totalPedidos }}</div>
-                  </div>
-                  <div class="kpi-card">
-                    <i class="material-icons kpi-icon">timer</i>
-                    <h3>Tempo Médio de Conclusão</h3>
-                    <div class="kpi-value">{{ tempoMedioConclusao }}</div>
-                  </div>
-                  <div class="kpi-card">
-                    <i class="material-icons kpi-icon">pending_actions</i>
-                    <h3>Pedidos Pendentes</h3>
-                    <div class="kpi-value">{{ pedidosPendentes }}</div>
-                  </div>
-                </div>
-                
-                <!-- Gráficos -->
-                <div class="charts-container">
-                  <div class="chart-wrapper">
-                    <h3>Pedidos por Status</h3>
-                    <canvas ref="statusChart"></canvas>
-                  </div>
-                  <div class="chart-wrapper">
-                    <h3>Pedidos por Categoria</h3>
-                    <canvas ref="categoryChart"></canvas>
-                  </div>
-                  <div class="chart-wrapper">
-                    <h3>Pedidos por Urgência</h3>
-                    <canvas ref="urgencyChart"></canvas>
-                  </div>
-                </div>
-              </template>
-            </div>
-          </div>
-          
-          <!-- Feed de atividades recentes -->
-          <div class="dashboard-section">
-            <h2><i class="material-icons section-icon">history</i>Atividades Recentes</h2>
-            <div class="activity-feed">
-              <div v-if="isLoading" class="loading">
-                <LoadingIndicator message="Carregando atividades..." />
-              </div>
-              <div v-else-if="activities.length === 0" class="empty-feed">
-                <i class="material-icons">info</i>
-                Nenhuma atividade recente encontrada.
-              </div>
-              <div v-else class="activity-list">
-                <div class="cache-indicator" v-if="dataFromCache">
-                  <i class="material-icons">cached</i>
-                  Dados carregados do cache
-                </div>
-                <div v-for="activity in activities" :key="activity.id" class="activity-item">
-                  <div class="activity-icon" :class="getActivityIcon(activity.tipo)">
-                    <i :class="getActivityIconClass(activity.tipo)"></i>
-                  </div>
-                  <div class="activity-content">
-                    <div class="activity-header">
-                      <span class="activity-user">{{ activity.usuario_nome }}</span>
-                      <span class="activity-date">{{ formatDate(activity.data) }}</span>
-                    </div>
-                    <div class="activity-description">{{ activity.descricao }}</div>
-                    <div v-if="activity.pedido_id" class="activity-details">
-                      <a @click="openOrderDetails(activity.pedido_id)">Ver detalhes do pedido #{{ activity.pedido_id }}</a>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Geração de Relatórios -->
-          <div class="dashboard-section">
-            <h2><i class="material-icons section-icon">description</i>Relatórios</h2>
-            <div class="reports-container">
-              <div class="report-options">
-                <div class="form-group">
-                  <label for="reportType">Tipo de Relatório:</label>
-                  <select id="reportType" v-model="reportOptions.tipo">
-                    <option value="pedidos">Pedidos</option>
-                    <option value="atividades">Atividades</option>
-                  </select>
-                </div>
-                
-                <div class="form-group">
-                  <label for="reportPeriod">Período:</label>
-                  <select id="reportPeriod" v-model="reportOptions.periodo">
-                    <option value="diario">Diário</option>
-                    <option value="semanal">Semanal</option>
-                    <option value="mensal">Mensal</option>
-                    <option value="personalizado">Personalizado</option>
-                  </select>
-                </div>
-                
-                <div class="form-group date-range" v-if="reportOptions.periodo === 'personalizado'">
-                  <div>
-                    <label for="startDate">Data Inicial:</label>
-                    <input type="date" id="startDate" v-model="reportOptions.dataInicial">
-                  </div>
-                  <div>
-                    <label for="endDate">Data Final:</label>
-                    <input type="date" id="endDate" v-model="reportOptions.dataFinal">
-                  </div>
-                </div>
-                
-                <div class="form-group">
-                  <label for="reportFormat">Formato:</label>
-                  <select id="reportFormat" v-model="reportOptions.formato">
-                    <option value="pdf">PDF</option>
-                    <option value="excel">Excel</option>
-                  </select>
-                </div>
-              </div>
-              
-              <div class="report-actions">
-                <button class="btn-generate" @click="generateReport" :disabled="isDownloadingReport">
-                  <LoadingIndicator v-if="isDownloadingReport" size="small" />
-                  <span v-else>Gerar Relatório</span>
+      <div class="dashboard-container">
+        <!-- Indicador de cache e carregamento -->
+        <div v-if="dataFromCache" class="cache-indicator">
+          <i class="material-icons">cached</i>
+          Dados carregados do cache
+        </div>
+        
+        <div v-if="isLoading" class="dashboard-loading">
+          <LoadingIndicator message="Carregando dados do dashboard..." size="large" />
+        </div>
+        
+        <div v-else class="dashboard-sections">
+          <!-- KPIs - Cards com métricas principais -->
+          <div class="dashboard-section kpi-section">
+            <div class="section-header">
+              <h3><i class="material-icons section-icon">insights</i>Métricas Principais</h3>
+              <div class="section-actions">
+                <button class="refresh-btn" @click="fetchData(true)">
+                  <i class="material-icons">refresh</i>
+                  Atualizar
                 </button>
               </div>
             </div>
+            
+            <div class="dashboard-metrics">
+              <div class="metric-card">
+                <div class="metric-icon">
+                  <i class="material-icons">shopping_cart</i>
+                </div>
+                <div class="metric-content">
+                  <h4 class="metric-title">Total de Pedidos</h4>
+                  <div class="metric-value">{{ totalPedidos }}</div>
+                </div>
+              </div>
+              
+              <div class="metric-card">
+                <div class="metric-icon">
+                  <i class="material-icons">pending_actions</i>
+                </div>
+                <div class="metric-content">
+                  <h4 class="metric-title">Pedidos Pendentes</h4>
+                  <div class="metric-value">{{ pedidosPendentes }}</div>
+                </div>
+              </div>
+              
+              <div class="metric-card">
+                <div class="metric-icon">
+                  <i class="material-icons">timer</i>
+                </div>
+                <div class="metric-content">
+                  <h4 class="metric-title">Tempo Médio</h4>
+                  <div class="metric-value">{{ tempoMedioConclusao }}</div>
+                </div>
+              </div>
+              
+              <div class="metric-card">
+                <div class="metric-icon">
+                  <i class="material-icons">account_balance_wallet</i>
+                </div>
+                <div class="metric-content">
+                  <h4 class="metric-title">Orçamento Total</h4>
+                  <div class="metric-value">R$ {{ formatCurrency(orcamentoTotal) }}</div>
+                </div>
+              </div>
+            </div>
           </div>
           
-          <!-- Componente de Resumo Financeiro (agora no final) -->
-          <div class="dashboard-section">
-            <h2><i class="material-icons section-icon">account_balance</i>Resumo Financeiro</h2>
-            <div class="financial-summary-compact">
+          <!-- Gráficos e visualizações -->
+          <div class="dashboard-section charts-section">
+            <div class="section-header">
+              <h3><i class="material-icons section-icon">bar_chart</i>Análise de Pedidos</h3>
+            </div>
+            
+            <div v-if="isLoadingCharts" class="charts-loading">
+              <LoadingIndicator message="Carregando gráficos..." />
+            </div>
+            
+            <div v-else class="charts-container">
+              <div class="chart-wrapper">
+                <h4 class="chart-title">Status dos Pedidos</h4>
+                <canvas id="statusChart" ref="statusChart"></canvas>
+              </div>
+              
+              <div class="chart-wrapper">
+                <h4 class="chart-title">Categorias</h4>
+                <canvas id="categoryChart" ref="categoryChart"></canvas>
+              </div>
+              
+              <div class="chart-wrapper">
+                <h4 class="chart-title">Urgência</h4>
+                <canvas id="urgencyChart" ref="urgencyChart"></canvas>
+              </div>
+              
+              <div class="chart-wrapper">
+                <h4 class="chart-title">Orçamento vs. Custo Real</h4>
+                <canvas id="budgetChart" ref="budgetChart"></canvas>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Seção Financeira -->
+          <div class="dashboard-section financial-section">
+            <div class="section-header">
+              <h3><i class="material-icons section-icon">account_balance</i>Resumo Financeiro</h3>
+            </div>
+            
+            <div class="financial-overview">
               <div class="financial-kpis">
                 <div class="financial-kpi">
                   <i class="material-icons kpi-icon">monetization_on</i>
                   <div class="kpi-content">
-                    <h3>Orçamento Total</h3>
+                    <h4>Orçamento Total</h4>
                     <div class="kpi-value">R$ {{ formatCurrency(orcamentoTotal) }}</div>
                   </div>
                 </div>
@@ -159,24 +127,18 @@
                 <div class="financial-kpi">
                   <i class="material-icons kpi-icon">shopping_cart</i>
                   <div class="kpi-content">
-                    <h3>Custo Real Total</h3>
+                    <h4>Custo Real</h4>
                     <div class="kpi-value">R$ {{ formatCurrency(custoRealTotal) }}</div>
                   </div>
                 </div>
                 
-                <div class="financial-kpi" :class="saldoClass">
+                <div class="financial-kpi" :class="saldoFinanceiro >= 0 ? 'positive-balance' : 'negative-balance'">
                   <i class="material-icons kpi-icon">{{ saldoFinanceiro >= 0 ? 'savings' : 'money_off' }}</i>
                   <div class="kpi-content">
-                    <h3>{{ saldoFinanceiro >= 0 ? 'Economia' : 'Déficit' }}</h3>
+                    <h4>{{ saldoFinanceiro >= 0 ? 'Economia' : 'Déficit' }}</h4>
                     <div class="kpi-value">R$ {{ formatCurrency(Math.abs(saldoFinanceiro)) }}</div>
                   </div>
                 </div>
-              </div>
-              
-              <!-- Gráfico de orçamento vs custo real -->
-              <div class="chart-wrapper full-width">
-                <h3>Orçamento vs Custo Real</h3>
-                <canvas id="budgetChart"></canvas>
               </div>
               
               <div class="financial-summary-actions">
@@ -187,17 +149,103 @@
               </div>
             </div>
           </div>
+          
+          <!-- Relatórios -->
+          <div class="dashboard-section reports-section">
+            <div class="section-header">
+              <h3><i class="material-icons section-icon">description</i>Relatórios</h3>
+            </div>
+            
+            <div class="reports-container">
+              <div class="report-form">
+                <div class="report-form-group">
+                  <label for="reportType">Tipo de Relatório:</label>
+                  <select id="reportType" v-model="reportOptions.tipo" class="report-select">
+                    <option value="pedidos">Pedidos</option>
+                    <option value="atividades">Atividades</option>
+                  </select>
+                </div>
+                
+                <div class="report-form-group">
+                  <label for="reportPeriod">Período:</label>
+                  <select id="reportPeriod" v-model="reportOptions.periodo" class="report-select">
+                    <option value="diario">Diário</option>
+                    <option value="semanal">Semanal</option>
+                    <option value="mensal">Mensal</option>
+                    <option value="personalizado">Personalizado</option>
+                  </select>
+                </div>
+                
+                <div class="report-date-range" v-if="reportOptions.periodo === 'personalizado'">
+                  <div class="report-form-group">
+                    <label for="startDate">Data Inicial:</label>
+                    <input type="date" id="startDate" v-model="reportOptions.dataInicial" class="date-input">
+                  </div>
+                  <div class="report-form-group">
+                    <label for="endDate">Data Final:</label>
+                    <input type="date" id="endDate" v-model="reportOptions.dataFinal" class="date-input">
+                  </div>
+                </div>
+                
+                <div class="report-form-group">
+                  <label for="reportFormat">Formato:</label>
+                  <select id="reportFormat" v-model="reportOptions.formato" class="report-select">
+                    <option value="pdf">PDF</option>
+                    <option value="excel">Excel</option>
+                    <option value="csv">CSV</option>
+                  </select>
+                </div>
+                
+                <div class="report-actions">
+                  <button 
+                    class="btn-generate" 
+                    @click="generateReport" 
+                    :disabled="isDownloadingReport"
+                  >
+                    <i class="material-icons">file_download</i>
+                    {{ isDownloadingReport ? 'Gerando...' : 'Gerar Relatório' }}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Atividades Recentes -->
+          <div class="dashboard-section activities-section">
+            <div class="section-header">
+              <h3><i class="material-icons section-icon">history</i>Atividades Recentes</h3>
+            </div>
+            
+            <div class="activities-container">
+              <div v-if="activities.length === 0" class="empty-state">
+                <i class="material-icons empty-icon">info</i>
+                <p class="empty-message">Nenhuma atividade recente encontrada</p>
+              </div>
+              
+              <div v-else class="activity-list">
+                <div v-for="(activity, index) in activities.slice(0, 5)" :key="index" class="activity-item">
+                  <div class="activity-icon">
+                    <i class="material-icons">{{ getActivityIcon(activity.tipo) }}</i>
+                  </div>
+                  <div class="activity-content">
+                    <div class="activity-details">{{ activity.descricao }}</div>
+                    <div class="activity-time">{{ formatDateTime(activity.data_hora) }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-        
-        <!-- Modal para detalhes financeiros -->
-        <ModalFinanceiro
-          v-if="showFinancialDetails"
-          :isOpen="showFinancialDetails"
-          @close="closeFinancialDetails"
-        />
       </div>
     </div>
   </div>
+  
+  <!-- Modal para detalhes financeiros -->
+  <ModalFinanceiro
+    v-if="showFinancialDetails"
+    :isOpen="showFinancialDetails"
+    @close="closeFinancialDetails"
+  />
 </template>
 
 <script>
@@ -206,7 +254,6 @@ import * as axiosModule from "axios";
 const axios = axiosModule.default || axiosModule;
 import { Chart, registerables } from 'chart.js';
 import authService from '@/api/authService';
-import axiosService from '@/api/axiosService';
 import { cachedRequest } from '@/utils/cacheService';
 import ModalFinanceiro from '@/components/ModalFinanceiro.vue';
 import LoadingIndicator from '@/components/ui/LoadingIndicator.vue';
@@ -282,79 +329,107 @@ export default {
     }
   },
   methods: {
-    async fetchData() {
+    // Método principal para buscar dados
+    async fetchData(forceRefresh = false) {
       this.isLoading = true;
-      this.dataFromCache = false;
       
       try {
-        // Carregar dados das atividades usando o cacheService
-        const activityResponse = await cachedRequest(
-          axiosService.get,
-          '/atividades',
-          { params: { limit: 10 } },  // Limitar a 10 atividades recentes
-          this.cacheOptions.activities
-        );
+        // Buscar pedidos
+        await this.fetchPedidos(forceRefresh);
         
-        // Marcar se os dados vieram do cache
-        if (activityResponse.cached) {
-          this.dataFromCache = true;
-          console.log('Dados de atividades carregados do cache');
-        }
+        // Buscar atividades recentes
+        await this.fetchActivities(forceRefresh);
         
-        this.activities = activityResponse.data;
-        
-        // Carregar dados dos pedidos
-        this.isLoadingCharts = true;
-        const pedidosResponse = await cachedRequest(
-          axiosService.get,
-          '/pedidos',
-          {},
-          this.cacheOptions.dashboard
-        );
-        
-        if (pedidosResponse.cached) {
-          this.dataFromCache = true;
-          console.log('Dados de pedidos carregados do cache');
-        }
-        
-        this.pedidos = pedidosResponse.data;
-        
-        // Calcular métricas
-        this.calculateMetrics();
-        
-        // Renderizar gráficos
-        this.$nextTick(() => {
-          this.renderCharts();
-        });
+        // Inicializar gráficos depois de obter os dados
+        this.initCharts();
       } catch (error) {
-        console.error('Erro ao carregar dados do dashboard:', error);
+        console.error("Erro ao carregar dados do dashboard:", error);
         const toast = useToast();
-        toast.error('Erro ao carregar dados do dashboard. Tente novamente.');
+        toast.error("Erro ao carregar dados. Tente novamente mais tarde.");
       } finally {
         this.isLoading = false;
-        this.isLoadingCharts = false;
       }
     },
     
-    calculateMetrics() {
-      // Total de pedidos
+    // Buscar pedidos do backend com suporte a cache
+    async fetchPedidos(forceRefresh = false) {
+      this.dataFromCache = false;
+      
+      try {
+        // Usar cachedRequest para buscar pedidos com cache
+        const cacheKey = 'dashboard_pedidos';
+        const { data, fromCache: cached } = await cachedRequest({
+          key: cacheKey,
+          ttl: this.cacheOptions.dashboard.ttl,
+          forceRefresh,
+          request: async () => {
+            const response = await axios.get(`${process.env.VUE_APP_API_URL}/pedidos`, {
+              headers: authService.getAuthHeaders()
+            });
+            return response.data;
+          }
+        });
+        
+        this.pedidos = data || [];
+        this.dataFromCache = cached;
+        
+        // Calcular métricas
+        this.calcularMetricas();
+      } catch (error) {
+        console.error("Erro ao buscar pedidos:", error);
+        throw error;
+      }
+    },
+    
+    // Buscar atividades recentes
+    async fetchActivities(forceRefresh = false) {
+      try {
+        // Usar cachedRequest para buscar atividades com cache
+        const cacheKey = 'dashboard_activities';
+        const { data, fromCache: cached } = await cachedRequest({
+          key: cacheKey,
+          ttl: this.cacheOptions.activities.ttl,
+          forceRefresh,
+          request: async () => {
+            const response = await axios.get(`${process.env.VUE_APP_API_URL}/atividades`, {
+              headers: authService.getAuthHeaders()
+            });
+            return response.data;
+          }
+        });
+        
+        this.activities = data || [];
+        this.dataFromCache = this.dataFromCache || cached;
+      } catch (error) {
+        console.error("Erro ao buscar atividades:", error);
+        // Não lançamos o erro aqui para que o dashboard ainda funcione sem atividades
+        this.activities = [];
+      }
+    },
+    
+    // Calcular métricas com base nos pedidos
+    calcularMetricas() {
+      // Calcular total de pedidos
       this.totalPedidos = this.pedidos.length;
       
-      // Pedidos pendentes
-      this.pedidosPendentes = this.pedidos.filter(p => 
-        p.status !== 'Concluído' && p.status !== 'Cancelado'
-      ).length;
+      // Calcular pedidos pendentes
+      this.pedidosPendentes = this.pedidos.filter(p => p.status === 'Pendente').length;
       
-      // Tempo médio de conclusão
+      // Calcular tempo médio de conclusão
       const pedidosConcluidos = this.pedidos.filter(p => p.status === 'Concluído');
       if (pedidosConcluidos.length > 0) {
-        const tempoTotal = pedidosConcluidos.reduce((acc, p) => {
-          const criacao = new Date(p.data_criacao || p.deliveryDate);
-          const conclusao = new Date(p.data_atualizacao || new Date());
-          return acc + (conclusao - criacao) / (1000 * 60 * 60 * 24); // Converter para dias
-        }, 0);
-        const mediaEmDias = Math.round(tempoTotal / pedidosConcluidos.length);
-        this.tempoMedioConclusao = `${mediaEmDias} dias`;
+        let tempoTotal = 0;
+        
+        pedidosConcluidos.forEach(pedido => {
+          const dataInicio = new Date(pedido.data_pedido);
+          const dataFim = new Date(pedido.data_conclusao);
+          const diffTime = Math.abs(dataFim - dataInicio);
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          tempoTotal += diffDays;
+        });
+        
+        const tempoMedio = tempoTotal / pedidosConcluidos.length;
+        this.tempoMedioConclusao = `${tempoMedio.toFixed(1)} dias`;
       } else {
         this.tempoMedioConclusao = 'N/A';
       }
@@ -373,42 +448,67 @@ export default {
       this.saldoFinanceiro = orcamento - custo;
     },
     
-    renderCharts() {
-      this.renderStatusChart();
-      this.renderCategoryChart();
-      this.renderUrgencyChart();
-      this.renderBudgetChart();
+    // Inicializar gráficos
+    async initCharts() {
+      this.isLoadingCharts = true;
+      
+      try {
+        // Destruir gráficos existentes para evitar duplicação
+        this.destroyCharts();
+        
+        // Criar novos gráficos
+        await this.createStatusChart();
+        await this.createCategoryChart();
+        await this.createUrgencyChart();
+        await this.createBudgetChart();
+      } catch (error) {
+        console.error("Erro ao inicializar gráficos:", error);
+      } finally {
+        this.isLoadingCharts = false;
+      }
     },
     
-    renderStatusChart() {
-      const ctx = this.$refs.statusChart.getContext('2d');
-      
-      // Contar pedidos por status
-      const statusCount = {};
-      this.pedidos.forEach(p => {
-        statusCount[p.status] = (statusCount[p.status] || 0) + 1;
+    // Destruir gráficos existentes
+    destroyCharts() {
+      Object.keys(this.charts).forEach(chartKey => {
+        if (this.charts[chartKey] instanceof Chart) {
+          this.charts[chartKey].destroy();
+          this.charts[chartKey] = null;
+        }
       });
+    },
+    
+    // Criar gráfico de status
+    async createStatusChart() {
+      if (!this.$refs.statusChart) return;
       
-      // Cores para cada status
-      const statusColors = {
-        'Aguardando Aprovação': '#f39c12',
-        'Em Andamento': '#3498db',
-        'Concluído': '#2ecc71',
-        'Cancelado': '#e74c3c',
-        'Em Espera': '#9b59b6'
+      const statusCount = {
+        Pendente: 0,
+        'Em Andamento': 0,
+        Concluído: 0,
+        Cancelado: 0
       };
       
-      if (this.charts.status) {
-        this.charts.status.destroy();
-      }
+      this.pedidos.forEach(pedido => {
+        if (Object.prototype.hasOwnProperty.call(statusCount, pedido.status)) {
+          statusCount[pedido.status]++;
+        }
+      });
       
+      const ctx = this.$refs.statusChart.getContext('2d');
       this.charts.status = new Chart(ctx, {
         type: 'pie',
         data: {
           labels: Object.keys(statusCount),
           datasets: [{
             data: Object.values(statusCount),
-            backgroundColor: Object.keys(statusCount).map(status => statusColors[status] || '#95a5a6')
+            backgroundColor: [
+              '#FF6F61', // Vermelho/Coral para Pendente
+              '#FFA726', // Laranja para Em Andamento
+              '#66BB6A', // Verde para Concluído
+              '#78909C'  // Cinza para Cancelado
+            ],
+            borderWidth: 1
           }]
         },
         options: {
@@ -416,208 +516,216 @@ export default {
           maintainAspectRatio: false,
           plugins: {
             legend: {
-              position: 'right',
+              position: 'bottom',
               labels: {
-                color: '#f5f5f5'
+                color: '#f5f5f5',
+                font: {
+                  size: 12
+                }
               }
+            },
+            tooltip: {
+              backgroundColor: 'rgba(0, 0, 0, 0.7)'
             }
           }
         }
       });
     },
     
-    renderCategoryChart() {
-      const ctx = this.$refs.categoryChart.getContext('2d');
+    // Criar gráfico de categorias
+    async createCategoryChart() {
+      if (!this.$refs.categoryChart) return;
       
-      // Contar pedidos por categoria
       const categoryCount = {};
-      this.pedidos.forEach(p => {
-        categoryCount[p.categoria] = (categoryCount[p.categoria] || 0) + 1;
+      
+      this.pedidos.forEach(pedido => {
+        const categoria = pedido.categoria || 'Sem Categoria';
+        if (!categoryCount[categoria]) {
+          categoryCount[categoria] = 0;
+        }
+        categoryCount[categoria]++;
       });
       
-      if (this.charts.category) {
-        this.charts.category.destroy();
-      }
+      // Ordenar por contagem
+      const sortedCategories = Object.entries(categoryCount)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 7); // Limitar a 7 categorias
       
+      const ctx = this.$refs.categoryChart.getContext('2d');
       this.charts.category = new Chart(ctx, {
         type: 'bar',
         data: {
-          labels: Object.keys(categoryCount),
+          labels: sortedCategories.map(item => item[0]),
           datasets: [{
-            label: 'Pedidos por Categoria',
-            data: Object.values(categoryCount),
-            backgroundColor: '#ff6f61'
+            label: 'Quantidade',
+            data: sortedCategories.map(item => item[1]),
+            backgroundColor: '#FF6F61',
+            borderWidth: 0,
+            borderRadius: 4
           }]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          scales: {
-            y: {
-              beginAtZero: true,
-              ticks: {
-                color: '#f5f5f5'
-              },
-              grid: {
-                color: 'rgba(255, 255, 255, 0.1)'
-              }
-            },
-            x: {
-              ticks: {
-                color: '#f5f5f5'
-              },
-              grid: {
-                color: 'rgba(255, 255, 255, 0.1)'
-              }
-            }
-          },
+          indexAxis: 'y',
           plugins: {
             legend: {
               display: false
+            },
+            tooltip: {
+              backgroundColor: 'rgba(0, 0, 0, 0.7)'
+            }
+          },
+          scales: {
+            x: {
+              grid: {
+                color: 'rgba(255, 255, 255, 0.1)'
+              },
+              ticks: {
+                color: '#f5f5f5'
+              }
+            },
+            y: {
+              grid: {
+                display: false
+              },
+              ticks: {
+                color: '#f5f5f5'
+              }
             }
           }
         }
       });
     },
     
-    renderUrgencyChart() {
-      const ctx = this.$refs.urgencyChart.getContext('2d');
+    // Criar gráfico de urgência
+    async createUrgencyChart() {
+      if (!this.$refs.urgencyChart) return;
       
-      // Contar pedidos por urgência
-      const urgencyCount = {};
-      this.pedidos.forEach(p => {
-        urgencyCount[p.urgencia] = (urgencyCount[p.urgencia] || 0) + 1;
-      });
-      
-      // Cores para cada nível de urgência
-      const urgencyColors = {
-        'Padrão': '#3498db',
-        'Urgente': '#f39c12',
-        'Crítico': '#e74c3c'
+      const urgencyCount = {
+        'Baixa': 0,
+        'Média': 0,
+        'Alta': 0,
+        'Crítica': 0
       };
       
-      if (this.charts.urgency) {
-        this.charts.urgency.destroy();
-      }
+      this.pedidos.forEach(pedido => {
+        const urgencia = pedido.urgencia || 'Média';
+        if (Object.prototype.hasOwnProperty.call(urgencyCount, urgencia)) {
+          urgencyCount[urgencia]++;
+        }
+      });
       
+      const ctx = this.$refs.urgencyChart.getContext('2d');
       this.charts.urgency = new Chart(ctx, {
         type: 'doughnut',
         data: {
           labels: Object.keys(urgencyCount),
           datasets: [{
             data: Object.values(urgencyCount),
-            backgroundColor: Object.keys(urgencyCount).map(urgency => urgencyColors[urgency] || '#95a5a6')
+            backgroundColor: [
+              '#66BB6A', // Verde para Baixa
+              '#FFA726', // Laranja para Média
+              '#FF7043', // Laranja mais escuro para Alta
+              '#EF5350'  // Vermelho para Crítica
+            ],
+            borderWidth: 2,
+            borderColor: '#2a2a2a'
           }]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
+          cutout: '70%',
           plugins: {
             legend: {
-              position: 'right',
+              position: 'bottom',
               labels: {
-                color: '#f5f5f5'
+                color: '#f5f5f5',
+                font: {
+                  size: 12
+                }
               }
+            },
+            tooltip: {
+              backgroundColor: 'rgba(0, 0, 0, 0.7)'
             }
           }
         }
       });
     },
     
-    renderBudgetChart() {
-      // Verificar se o elemento do gráfico existe no DOM
-      const chartElement = this.$el.querySelector('#budgetChart');
-      if (!chartElement) return;
+    // Criar gráfico de orçamento vs custo real
+    async createBudgetChart() {
+      if (!this.$refs.budgetChart) return;
       
-      const ctx = chartElement.getContext('2d');
+      // Filtrar pedidos que têm dados financeiros
+      const pedidosFinanceiros = this.pedidos
+        .filter(p => (parseFloat(p.orcamento_previsto || 0) > 0) || (parseFloat(p.custo_real || 0) > 0))
+        .sort((a, b) => parseFloat(b.orcamento_previsto || 0) - parseFloat(a.orcamento_previsto || 0))
+        .slice(0, 6); // Limitando aos 6 maiores para melhor visualização
       
-      // Filtrar apenas pedidos com dados financeiros
-      const pedidosComOrcamento = this.pedidos.filter(p => 
-        (p.orcamento_previsto && p.orcamento_previsto > 0) || 
-        (p.custo_real && p.custo_real > 0)
-      ).slice(0, 8); // Limitar aos 8 principais para melhor visualização
-      
-      // Ordenar por orçamento previsto (decrescente)
-      pedidosComOrcamento.sort((a, b) => 
-        (parseFloat(b.orcamento_previsto || 0) - parseFloat(a.orcamento_previsto || 0))
-      );
-      
-      // Preparar dados para o gráfico
-      const labels = pedidosComOrcamento.map(p => `#${p.id}`);
-      const orcamentoData = pedidosComOrcamento.map(p => parseFloat(p.orcamento_previsto || 0));
-      const custoData = pedidosComOrcamento.map(p => parseFloat(p.custo_real || 0));
-      
-      if (this.charts.budget) {
-        this.charts.budget.destroy();
-      }
-      
-      // Criar o gráfico
+      const ctx = this.$refs.budgetChart.getContext('2d');
       this.charts.budget = new Chart(ctx, {
         type: 'bar',
         data: {
-          labels: labels,
+          labels: pedidosFinanceiros.map(p => `#${p.id}`),
           datasets: [
             {
-              label: 'Orçamento Previsto',
-              data: orcamentoData,
-              backgroundColor: 'rgba(54, 162, 235, 0.6)',
-              borderColor: 'rgba(54, 162, 235, 1)',
-              borderWidth: 1
+              label: 'Orçamento',
+              data: pedidosFinanceiros.map(p => parseFloat(p.orcamento_previsto || 0)),
+              backgroundColor: '#4DB6AC',
+              borderWidth: 0,
+              borderRadius: 4
             },
             {
               label: 'Custo Real',
-              data: custoData,
-              backgroundColor: 'rgba(255, 99, 132, 0.6)',
-              borderColor: 'rgba(255, 99, 132, 1)',
-              borderWidth: 1
+              data: pedidosFinanceiros.map(p => parseFloat(p.custo_real || 0)),
+              backgroundColor: '#FF6F61',
+              borderWidth: 0,
+              borderRadius: 4
             }
           ]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          scales: {
-            y: {
-              beginAtZero: true,
-              ticks: {
-                color: '#f5f5f5',
-                callback: function(value) {
-                  return 'R$ ' + value.toLocaleString('pt-BR');
-                }
-              },
-              grid: {
-                color: 'rgba(255, 255, 255, 0.1)'
-              }
-            },
-            x: {
-              ticks: {
-                color: '#f5f5f5'
-              },
-              grid: {
-                color: 'rgba(255, 255, 255, 0.1)'
-              }
-            }
-          },
           plugins: {
             legend: {
+              position: 'top',
               labels: {
-                color: '#f5f5f5'
+                color: '#f5f5f5',
+                font: {
+                  size: 12
+                }
               }
             },
             tooltip: {
+              backgroundColor: 'rgba(0, 0, 0, 0.7)',
               callbacks: {
                 label: function(context) {
-                  let label = context.dataset.label || '';
-                  if (label) {
-                    label += ': ';
-                  }
-                  if (context.parsed.y !== null) {
-                    label += 'R$ ' + context.parsed.y.toLocaleString('pt-BR', {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2
-                    });
-                  }
-                  return label;
+                  return `${context.dataset.label}: R$ ${context.raw.toFixed(2)}`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: {
+                color: 'rgba(255, 255, 255, 0.1)'
+              },
+              ticks: {
+                color: '#f5f5f5'
+              }
+            },
+            y: {
+              grid: {
+                color: 'rgba(255, 255, 255, 0.1)'
+              },
+              ticks: {
+                color: '#f5f5f5',
+                callback: function(value) {
+                  return `R$ ${value}`;
                 }
               }
             }
@@ -626,150 +734,113 @@ export default {
       });
     },
     
-    generateReport() {
-      // Implementação da geração de relatório
-      console.log('Gerando relatório com as seguintes opções:', this.reportOptions);
-      
+    // Método para gerar relatório
+    async generateReport() {
+      if (this.isDownloadingReport) return;
       this.isDownloadingReport = true;
       
-      let url = '';
-      const params = new URLSearchParams();
-      
-      // Adicionar parâmetros comuns
-      params.append('periodo', this.reportOptions.periodo);
-      params.append('formato', this.reportOptions.formato);
-      
-      // Adicionar datas se for um período personalizado
-      if (this.reportOptions.periodo === 'personalizado') {
-        params.append('dataInicial', this.reportOptions.dataInicial);
-        params.append('dataFinal', this.reportOptions.dataFinal);
-      }
-      
       try {
-        // Construir a URL baseada no tipo de relatório
-        if (this.reportOptions.tipo === 'financeiro') {
-          url = `${process.env.VUE_APP_API_URL}/relatorios/financeiro?${params.toString()}`;
-        } else {
-          url = `${process.env.VUE_APP_API_URL}/relatorios?tipo=${this.reportOptions.tipo}&${params.toString()}`;
+        const toast = useToast();
+        
+        // Verificar datas para período personalizado
+        if (this.reportOptions.periodo === 'personalizado') {
+          const dataInicial = new Date(this.reportOptions.dataInicial);
+          const dataFinal = new Date(this.reportOptions.dataFinal);
+          
+          if (isNaN(dataInicial.getTime()) || isNaN(dataFinal.getTime())) {
+            toast.error('Por favor, selecione datas válidas para o relatório.');
+            return;
+          }
+          
+          if (dataFinal < dataInicial) {
+            toast.error('A data final não pode ser anterior à data inicial.');
+            return;
+          }
         }
         
-        // Obter token de autenticação usando authService
-        const authToken = authService.getToken();
-        if (!authToken) {
-          throw new Error('Usuário não autenticado');
-        }
-
-        // Método 1: Realizar o download usando Axios com cabeçalhos de autenticação
-        axios({
-          url: url,
-          method: 'GET',
-          responseType: 'blob', // importante para receber arquivos
-          headers: authService.getAuthHeaders()
-        })
-        .then(response => {
-          // Criar URL para o blob
-          const blob = new Blob([response.data], { 
-            type: this.reportOptions.formato === 'pdf' ? 'application/pdf' : 'application/vnd.ms-excel' 
-          });
-          const fileURL = window.URL.createObjectURL(blob);
-          
-          // Criar link e simular clique para download
-          const fileLink = document.createElement('a');
-          fileLink.href = fileURL;
-          const filename = `relatorio_${this.reportOptions.tipo}_${new Date().toISOString().substring(0, 10)}.${this.reportOptions.formato}`;
-          fileLink.setAttribute('download', filename);
-          document.body.appendChild(fileLink);
-          fileLink.click();
-          document.body.removeChild(fileLink);
-        })
-        .catch(error => {
-          console.error('Erro ao baixar relatório:', error);
-          alert(`Erro ao baixar relatório: ${error.message || 'Erro desconhecido'}`);
-        })
-        .finally(() => {
-          this.isDownloadingReport = false;
+        // Fazer solicitação para gerar o relatório
+        const response = await axios.post(
+          `${process.env.VUE_APP_API_URL}/relatorios`,
+          {
+            tipo: this.reportOptions.tipo,
+            periodo: this.reportOptions.periodo,
+            data_inicial: this.reportOptions.dataInicial,
+            data_final: this.reportOptions.dataFinal,
+            formato: this.reportOptions.formato
+          },
+          {
+            headers: authService.getAuthHeaders(),
+            responseType: 'blob'
+          }
+        );
+        
+        // Criar URL para download
+        const blob = new Blob([response.data], { 
+          type: this.getMimeType(this.reportOptions.formato) 
         });
+        const url = window.URL.createObjectURL(blob);
+        
+        // Criar link para download e clicar nele automaticamente
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = this.getReportFileName();
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        toast.success('Relatório gerado com sucesso!');
       } catch (error) {
         console.error('Erro ao gerar relatório:', error);
-        alert(`Erro ao gerar relatório: ${error.message}`);
+        const toast = useToast();
+        toast.error('Erro ao gerar relatório. Tente novamente mais tarde.');
+      } finally {
         this.isDownloadingReport = false;
       }
     },
     
-    openOrderDetails(pedidoId) {
-      console.log(`ModalDashboard: Emitindo evento open-order com pedidoId: ${pedidoId}`);
-      
-      // Não fechamos mais o modal para que ele possa ser reaberto quando o pedido for fechado
-      // this.$emit('close');
-      
-      // Emitir evento para abrir o modal de impressão do pedido
-      this.$emit('open-order', pedidoId);
+    // Obter nome do arquivo para o relatório
+    getReportFileName() {
+      const date = new Date();
+      const formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+      return `relatorio-${this.reportOptions.tipo}-${formattedDate}.${this.getFileExtension(this.reportOptions.formato)}`;
     },
     
-    async fetchOrderById(pedidoId) {
-      try {
-        // Método mantido para compatibilidade, mas não utilizado diretamente
-        const response = await axios.get(`${process.env.VUE_APP_API_URL}/pedidos/${pedidoId}`, {
-          headers: authService.getAuthHeaders()
-        });
-        if (response.data) {
-          // Emitir evento para abrir o modal de impressão do pedido
-          this.$emit('open-order', pedidoId);
-        }
-      } catch (error) {
-        console.error(`Erro ao buscar detalhes do pedido #${pedidoId}:`, error);
-        alert('Não foi possível carregar os detalhes do pedido.');
+    // Obter extensão de arquivo com base no formato
+    getFileExtension(formato) {
+      switch (formato) {
+        case 'excel': return 'xlsx';
+        case 'csv': return 'csv';
+        case 'pdf':
+        default: return 'pdf';
       }
     },
     
-    getActivityIcon(tipo) {
-      const icons = {
-        'criacao': 'create-icon',
-        'atualizacao': 'update-icon',
-        'aprovacao': 'approve-icon',
-        'cancelamento': 'cancel-icon',
-        'conclusao': 'complete-icon'
-      };
+    // Obter MIME type com base no formato
+    getMimeType(formato) {
+      switch (formato) {
+        case 'excel': return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+        case 'csv': return 'text/csv';
+        case 'pdf':
+        default: return 'application/pdf';
+      }
+    },
+    
+    // Formatar data para campo de input
+    formatDateForInput(date) {
+      if (!date) return '';
       
-      return icons[tipo] || 'default-icon';
+      const d = new Date(date);
+      return d.toISOString().split('T')[0];
     },
     
-    getActivityIconClass(tipo) {
-      const iconClasses = {
-        'criacao': 'material-icons add_circle',
-        'atualizacao': 'material-icons update',
-        'aprovacao': 'material-icons check_circle',
-        'cancelamento': 'material-icons cancel',
-        'conclusao': 'material-icons task_alt'
-      };
-      
-      return iconClasses[tipo] || 'material-icons info';
-    },
-    
-    formatDate(dateString) {
-      const date = new Date(dateString);
-      return new Intl.DateTimeFormat('pt-BR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      }).format(date);
-    },
-    
+    // Obter data padrão para início (30 dias atrás)
     getDefaultStartDate() {
       const date = new Date();
-      date.setMonth(date.getMonth() - 1);
+      date.setDate(date.getDate() - 30);
       return this.formatDateForInput(date);
     },
     
-    formatDateForInput(date) {
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    },
-    
+    // Formatar valor monetário
     formatCurrency(value) {
       return parseFloat(value || 0).toLocaleString('pt-BR', {
         minimumFractionDigits: 2,
@@ -777,46 +848,73 @@ export default {
       });
     },
     
+    // Formatar data e hora
+    formatDateTime(dateString) {
+      if (!dateString) return '';
+      
+      const date = new Date(dateString);
+      
+      // Verificar se a data é válida
+      if (isNaN(date.getTime())) return dateString;
+      
+      return new Intl.DateTimeFormat('pt-BR', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      }).format(date);
+    },
+    
+    // Obter ícone para tipo de atividade
+    getActivityIcon(tipo) {
+      switch (tipo) {
+        case 'criar': return 'add_circle';
+        case 'editar': return 'edit';
+        case 'concluir': return 'check_circle';
+        case 'cancelar': return 'cancel';
+        case 'financeiro': return 'attach_money';
+        case 'comentario': return 'comment';
+        default: return 'info';
+      }
+    },
+    
+    // Abrir detalhes financeiros
     viewFinancialDetails() {
       this.showFinancialDetails = true;
     },
     
+    // Fechar detalhes financeiros
     closeFinancialDetails() {
       this.showFinancialDetails = false;
     }
-  },
-  computed: {
-    saldoClass() {
-      return this.saldoFinanceiro >= 0 ? 'positive-balance' : 'negative-balance';
-    }
   }
-}
+};
 </script>
 
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Material+Icons&display=swap');
 
-/* Modal Overlay */
+/* Overlay e Modal Base */
 .modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
+  right: 0;
+  bottom: 0;
   background-color: rgba(0, 0, 0, 0.8);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: var(--z-index-modal);
-  overflow-y: auto;
   padding: var(--spacing-md);
-  box-sizing: border-box;
+  overflow-y: auto;
 }
 
 .modal-content {
   background-color: #1f1f1f;
   border-radius: var(--border-radius-lg);
-  box-shadow: 0 5px 25px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0.3125rem 1.5625rem rgba(0, 0, 0, 0.5);
   width: var(--modal-width-md);
   max-width: var(--modal-max-width);
   max-height: var(--modal-max-height);
@@ -830,22 +928,23 @@ export default {
 }
 
 .modal-content::-webkit-scrollbar {
-  width: 8px;
+  width: 0.5rem;
 }
 
 .modal-content::-webkit-scrollbar-track {
   background: #333;
-  border-radius: 10px;
+  border-radius: 0.625rem;
 }
 
 .modal-content::-webkit-scrollbar-thumb {
   background-color: #ff6f61;
-  border-radius: 10px;
+  border-radius: 0.625rem;
 }
 
+/* Cabeçalho do Modal */
 .modal-header {
-  padding: 20px;
-  border-bottom: 1px solid #333;
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-bottom: 0.0625rem solid #333;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -853,15 +952,31 @@ export default {
   top: 0;
   background-color: #1f1f1f;
   z-index: 10;
-  border-top-left-radius: 10px;
-  border-top-right-radius: 10px;
+  border-top-left-radius: var(--border-radius-lg);
+  border-top-right-radius: var(--border-radius-lg);
+}
+
+.dashboard-title {
+  font-size: var(--font-size-xl);
+  margin: 0;
+  color: #f5f5f5;
+  display: flex;
+  align-items: center;
+}
+
+.dashboard-title::before {
+  content: 'dashboard';
+  font-family: 'Material Icons';
+  margin-right: var(--spacing-sm);
+  color: #ff6f61;
+  font-size: var(--font-size-xxl);
 }
 
 .close-btn {
   background: none;
   border: none;
   color: #ff6f61;
-  font-size: 24px;
+  font-size: var(--font-size-xl);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -873,414 +988,224 @@ export default {
   color: #e74c3c;
 }
 
+/* Container principal */
 .dashboard-container {
-  padding: 20px;
+  padding: var(--spacing-md);
 }
 
-.dashboard-title {
-  font-size: 28px;
-  margin: 0;
-  color: #f5f5f5;
+/* Indicador de Cache */
+.cache-indicator {
   display: flex;
   align-items: center;
+  justify-content: center;
+  background-color: rgba(102, 204, 255, 0.1);
+  color: #66ccff;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--border-radius-sm);
+  margin-bottom: var(--spacing-sm);
+  font-size: var(--font-size-sm);
 }
 
-.dashboard-title::before {
-  content: 'dashboard';
-  font-family: 'Material Icons';
-  margin-right: 15px;
-  color: #ff6f61;
-  font-size: 32px;
+.cache-indicator i {
+  margin-right: var(--spacing-xs);
+  font-size: var(--font-size-md);
 }
 
+/* Loading */
+.dashboard-loading, .charts-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 18.75rem;
+  width: 100%;
+}
+
+/* Seções */
 .dashboard-sections {
   display: flex;
   flex-direction: column;
-  gap: 30px;
+  gap: var(--spacing-lg);
 }
 
 .dashboard-section {
   background-color: #252525;
-  border-radius: 10px;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-  padding: 20px;
-  border: 1px solid #333;
+  border-radius: var(--border-radius-md);
+  box-shadow: 0 0.3125rem 0.9375rem rgba(0, 0, 0, 0.2);
+  padding: var(--spacing-md);
+  border: 0.0625rem solid #333;
   transition: transform 0.3s, box-shadow 0.3s;
 }
 
-.dashboard-section h2 {
-  font-size: 22px;
-  margin-top: 0;
-  margin-bottom: 20px;
-  color: #ff6f61;
-  border-bottom: 1px solid #333;
-  padding-bottom: 10px;
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-md);
+  padding-bottom: var(--spacing-sm);
+  border-bottom: 0.0625rem solid #333;
+}
+
+.section-header h3 {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  color: #f5f5f5;
   display: flex;
   align-items: center;
 }
 
 .section-icon {
-  margin-right: 10px;
-  font-size: 24px;
-}
-
-.full-width {
-  grid-column: 1 / -1;
-}
-
-/* KPI Cards */
-.statistics-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 20px;
-  margin-bottom: 20px;
-}
-
-.kpi-card {
-  background-color: #2a2a2a;
-  border-radius: 8px;
-  padding: 20px;
-  text-align: center;
-  border: 1px solid #333;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s;
-}
-
-.kpi-card:hover {
-  transform: translateY(-5px);
-}
-
-.kpi-icon {
-  font-size: 36px;
   color: #ff6f61;
-  margin-bottom: 10px;
+  margin-right: var(--spacing-xs);
+  font-size: var(--font-size-xl);
 }
 
-.kpi-card h3 {
-  font-size: 16px;
-  margin-top: 0;
-  margin-bottom: 10px;
+.section-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.refresh-btn {
+  background-color: transparent;
+  color: #f5f5f5;
+  border: 0.0625rem solid #444;
+  border-radius: var(--border-radius-sm);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  cursor: pointer;
+  transition: all 0.3s;
+  font-size: var(--font-size-sm);
+}
+
+.refresh-btn:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  border-color: #555;
+}
+
+.refresh-btn i {
+  font-size: var(--font-size-md);
+}
+
+/* Métricas (KPIs) */
+.dashboard-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--spacing-md);
+}
+
+.metric-card {
+  background-color: #2a2a2a;
+  border-radius: var(--border-radius-sm);
+  padding: var(--spacing-md);
+  display: flex;
+  align-items: center;
+  box-shadow: 0 0.25rem 0.625rem rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s, box-shadow 0.3s;
+  border: 0.0625rem solid #333;
+}
+
+.metric-card:hover {
+  transform: translateY(-0.3125rem);
+  box-shadow: 0 0.5rem 0.9375rem rgba(0, 0, 0, 0.2);
+  border-color: #ff6f61;
+}
+
+.metric-icon {
+  font-size: var(--font-size-xxl);
+  margin-right: var(--spacing-sm);
+  color: #ff6f61;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.metric-content {
+  flex: 1;
+}
+
+.metric-title {
+  margin: 0 0 var(--spacing-xs) 0;
+  font-size: var(--font-size-sm);
+  color: #ddd;
+  font-weight: 500;
+}
+
+.metric-value {
+  font-size: var(--font-size-lg);
+  font-weight: bold;
   color: #f5f5f5;
 }
 
-.kpi-value {
-  font-size: 28px;
-  font-weight: bold;
-  color: #ff6f61;
-}
-
-/* Charts */
+/* Gráficos */
 .charts-container {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--spacing-md);
 }
 
 .chart-wrapper {
   background-color: #2a2a2a;
-  border-radius: 8px;
-  padding: 20px;
-  height: 300px;
+  border-radius: var(--border-radius-sm);
+  padding: var(--spacing-md);
+  box-shadow: 0 0.25rem 0.625rem rgba(0, 0, 0, 0.1);
+  height: 15.625rem;
   position: relative;
-  border: 1px solid #333;
+  border: 0.0625rem solid #333;
+  transition: transform 0.3s, box-shadow 0.3s;
 }
 
-.chart-wrapper.full-width {
-  grid-column: 1 / -1;
-  height: 350px;
+.chart-wrapper:hover {
+  transform: translateY(-0.1875rem);
+  box-shadow: 0 0.5rem 0.9375rem rgba(0, 0, 0, 0.2);
+  border-color: #444;
 }
 
-.chart-wrapper h3 {
-  font-size: 16px;
-  margin-top: 0;
-  margin-bottom: 15px;
-  color: #f5f5f5;
+.chart-title {
+  margin: 0 0 var(--spacing-sm) 0;
+  font-size: var(--font-size-sm);
+  color: #ddd;
   text-align: center;
+  font-weight: 500;
 }
 
 canvas {
   width: 100% !important;
-  height: calc(100% - 40px) !important;
+  height: calc(100% - 2.5rem) !important;
 }
 
-/* Activity Feed */
-.activity-feed {
-  background-color: #2a2a2a;
-  border-radius: 8px;
-  border: 1px solid #333;
-  overflow: hidden;
-}
-
-.activity-list {
-  max-height: 400px;
-  overflow-y: auto;
-  padding: 10px;
-  scrollbar-width: thin;
-  scrollbar-color: #ff6f61 #333;
-}
-
-.activity-list::-webkit-scrollbar {
-  width: 6px;
-}
-
-.activity-list::-webkit-scrollbar-track {
-  background: #333;
-}
-
-.activity-list::-webkit-scrollbar-thumb {
-  background-color: #ff6f61;
-  border-radius: 3px;
-}
-
-.activity-item {
-  display: flex;
-  padding: 15px;
-  border-bottom: 1px solid #333;
-  transition: background-color 0.3s;
-}
-
-.activity-item:last-child {
-  border-bottom: none;
-}
-
-.activity-item:hover {
-  background-color: #303030;
-}
-
-.activity-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-right: 15px;
-  flex-shrink: 0;
-}
-
-.create-icon {
-  background-color: #2ecc71;
-}
-
-.update-icon {
-  background-color: #3498db;
-}
-
-.approve-icon {
-  background-color: #9b59b6;
-}
-
-.cancel-icon {
-  background-color: #e74c3c;
-}
-
-.complete-icon {
-  background-color: #f39c12;
-}
-
-.default-icon {
-  background-color: #95a5a6;
-}
-
-.activity-icon i {
-  color: #fff;
-  font-size: 20px;
-}
-
-.activity-content {
-  flex: 1;
-}
-
-.activity-header {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 5px;
-}
-
-.activity-user {
-  font-weight: bold;
-  color: #ff6f61;
-}
-
-.activity-date {
-  color: #888;
-  font-size: 0.9em;
-}
-
-.activity-description {
-  margin-bottom: 5px;
-  line-height: 1.4;
-}
-
-.activity-details a {
-  color: #3498db;
-  cursor: pointer;
-  text-decoration: none;
-  font-size: 0.9em;
-}
-
-.activity-details a:hover {
-  text-decoration: underline;
-}
-
-.empty-feed {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 40px 20px;
-  color: #888;
-}
-
-.empty-feed i {
-  margin-right: 10px;
-  color: #ff6f61;
-}
-
-.loading {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 40px 20px;
-  color: #888;
-}
-
-.loading-spinner {
-  width: 40px;
-  height: 40px;
-  border: 4px solid rgba(255, 111, 97, 0.3);
-  border-radius: 50%;
-  border-top-color: #ff6f61;
-  animation: spin 1s linear infinite;
-  margin-bottom: 10px;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* Report Section */
-.reports-container {
-  background-color: #2a2a2a;
-  border-radius: 8px;
-  padding: 20px;
-  border: 1px solid #333;
-}
-
-.report-options {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 20px;
-  margin-bottom: 20px;
-}
-
-.form-group {
-  margin-bottom: 15px;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 8px;
-  color: #f5f5f5;
-}
-
-.form-group select,
-.form-group input {
-  width: 100%;
-  padding: 10px;
-  border-radius: 5px;
-  border: 1px solid #444;
-  background-color: #2f2f2f;
-  color: #f5f5f5;
-  font-size: 14px;
-}
-
-.date-range {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-
-.report-actions {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.btn-generate {
-  background-color: #555555;
-  color: white;
-  border: none;
-  padding: 12px 20px;
-  border-radius: 5px;
-  cursor: pointer;
-  font-weight: bold;
-  transition: background-color 0.3s;
-  display: flex;
-  align-items: center;
-}
-
-.btn-generate:hover {
-  background-color: #666666;
-}
-
-.btn-generate::before {
-  content: 'description';
-  font-family: 'Material Icons';
-  margin-right: 10px;
-}
-
-.btn-generate:disabled {
-  background-color: #888;
-  cursor: not-allowed;
-}
-
-.loading-spinner-small {
-  display: inline-block;
-  width: 16px;
-  height: 16px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-radius: 50%;
-  border-top-color: #fff;
-  animation: spin 1s linear infinite;
-  margin-right: 8px;
-}
-
-/* Resumo Financeiro Compacto */
-.financial-summary-compact {
-  background-color: #252525;
-  border-radius: 8px;
-  padding: 15px;
+/* Seção Financeira */
+.financial-overview {
+  margin-bottom: var(--spacing-md);
 }
 
 .financial-kpis {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 15px;
-  margin-bottom: 20px;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
 }
 
 .financial-kpi {
   background-color: #2a2a2a;
-  border-radius: 8px;
-  padding: 15px;
+  border-radius: var(--border-radius-sm);
+  padding: var(--spacing-md);
   display: flex;
   align-items: center;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 0.25rem 0.625rem rgba(0, 0, 0, 0.1);
   transition: transform 0.3s, box-shadow 0.3s;
-  border: 1px solid #333;
+  border: 0.0625rem solid #333;
 }
 
 .financial-kpi:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+  transform: translateY(-0.3125rem);
+  box-shadow: 0 0.5rem 0.9375rem rgba(0, 0, 0, 0.2);
   border-color: #ff6f61;
 }
 
 .kpi-icon {
-  font-size: 30px;
-  margin-right: 12px;
+  font-size: var(--font-size-xxl);
+  margin-right: var(--spacing-sm);
   color: #ff6f61;
 }
 
@@ -1288,14 +1213,15 @@ canvas {
   flex: 1;
 }
 
-.financial-kpi h3 {
-  margin: 0 0 8px 0;
-  font-size: 14px;
+.financial-kpi h4 {
+  margin: 0 0 var(--spacing-xs) 0;
+  font-size: var(--font-size-sm);
   color: #ddd;
+  font-weight: 500;
 }
 
 .kpi-value {
-  font-size: 20px;
+  font-size: var(--font-size-lg);
   font-weight: bold;
   color: #f5f5f5;
 }
@@ -1311,183 +1237,283 @@ canvas {
 .financial-summary-actions {
   display: flex;
   justify-content: flex-end;
-  margin-top: 15px;
 }
 
 .btn-view-details {
   background-color: #555555;
   color: #f5f5f5;
   border: none;
-  padding: 10px 15px;
-  border-radius: 5px;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--border-radius-sm);
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--spacing-xs);
   transition: all 0.3s;
+  font-size: var(--font-size-sm);
 }
 
 .btn-view-details:hover {
   background-color: #666666;
-  transform: translateY(-2px);
+  transform: translateY(-0.125rem);
+}
+
+/* Relatórios */
+.reports-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.report-form {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.report-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.report-form-group label {
+  font-size: var(--font-size-sm);
+  color: #ddd;
+}
+
+.report-select, .date-input {
+  padding: var(--spacing-xs);
+  background-color: #333;
+  border: 0.0625rem solid #444;
+  border-radius: var(--border-radius-sm);
+  color: #f5f5f5;
+  font-size: var(--font-size-sm);
+  height: 2.5rem;
+}
+
+.report-date-range {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-sm);
+  grid-column: span 2;
+}
+
+.report-actions {
+  display: flex;
+  justify-content: flex-end;
+  grid-column: span 3;
+}
+
+.btn-generate {
+  background-color: #ff6f61;
+  color: #f5f5f5;
+  border: none;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  transition: all 0.3s;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  min-width: 10rem;
+  min-height: 2.5rem;
+  justify-content: center;
+}
+
+.btn-generate:hover {
+  background-color: #e74c3c;
+  transform: translateY(-0.125rem);
+}
+
+.btn-generate:disabled {
+  background-color: #555;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Atividades Recentes */
+.activities-container {
+  margin-top: var(--spacing-sm);
+}
+
+.activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.activity-item {
+  display: flex;
+  align-items: flex-start;
+  padding: var(--spacing-sm);
+  background-color: #2a2a2a;
+  border-radius: var(--border-radius-sm);
+  border: 0.0625rem solid #333;
+  transition: all 0.3s;
+}
+
+.activity-item:hover {
+  background-color: #303030;
+  border-color: #444;
+  transform: translateX(0.1875rem);
+}
+
+.activity-icon {
+  color: #ff6f61;
+  margin-right: var(--spacing-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.activity-content {
+  flex: 1;
+}
+
+.activity-details {
+  font-size: var(--font-size-sm);
+  margin-bottom: 0.3125rem;
+  color: #f5f5f5;
+}
+
+.activity-time {
+  font-size: var(--font-size-xs);
+  color: #aaa;
+}
+
+/* Estado vazio */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-xl);
+  color: #777;
+  text-align: center;
+}
+
+.empty-icon {
+  font-size: var(--font-size-3xl);
+  margin-bottom: var(--spacing-sm);
+  color: #555;
+}
+
+.empty-message {
+  font-size: var(--font-size-sm);
+  margin: 0;
 }
 
 /* Responsividade */
 @media (max-width: 1280px) {
-  .dashboard-container {
-    width: var(--modal-width-md);
-    max-width: var(--modal-max-width);
-  }
-  
-  .dashboard-header h2 {
-    font-size: var(--font-size-xl);
-  }
-  
-  .metrics-grid {
+  .dashboard-metrics {
     grid-template-columns: repeat(2, 1fr);
   }
   
-  .charts-grid {
+  .charts-container {
     grid-template-columns: 1fr;
+  }
+  
+  .chart-wrapper {
+    height: 18.75rem;
+  }
+  
+  .report-form {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .report-actions {
+    grid-column: span 2;
   }
 }
 
 @media (max-width: 768px) {
-  .dashboard-container {
-    width: var(--modal-width-lg);
-    max-width: var(--modal-max-width);
-    padding: var(--spacing-md);
+  .modal-overlay {
+    align-items: flex-start;
+    padding: var(--spacing-sm);
   }
   
-  .dashboard-header {
-    padding: var(--spacing-md);
+  .modal-content {
+    width: 100%;
+    max-height: 95vh;
+    margin-top: var(--spacing-sm);
   }
   
-  .dashboard-header h2 {
+  .dashboard-title {
     font-size: var(--font-size-lg);
   }
   
-  .dashboard-content {
-    padding: var(--spacing-md);
-  }
-  
-  .metrics-grid {
+  .dashboard-metrics {
     grid-template-columns: 1fr;
-    gap: var(--spacing-md);
   }
   
-  .metric-card {
-    padding: var(--spacing-md);
+  .financial-kpis {
+    grid-template-columns: 1fr;
   }
   
-  .period-selector {
-    flex-direction: column;
-    align-items: stretch;
+  .report-form {
+    grid-template-columns: 1fr;
   }
   
-  .period-buttons {
-    margin-top: var(--spacing-sm);
+  .report-date-range {
+    grid-template-columns: 1fr;
+    grid-column: span 1;
+  }
+  
+  .report-actions {
+    grid-column: span 1;
+  }
+  
+  .btn-generate {
+    width: 100%;
   }
 }
 
 @media (max-width: 480px) {
+  .modal-header {
+    padding: var(--spacing-sm);
+  }
+  
   .dashboard-container {
-    width: var(--modal-width-lg);
-    max-width: var(--modal-max-width);
     padding: var(--spacing-sm);
   }
   
-  .dashboard-header {
+  .dashboard-section {
     padding: var(--spacing-sm);
   }
   
-  .dashboard-header h2 {
+  .section-header h3 {
     font-size: var(--font-size-md);
   }
   
-  .dashboard-content {
+  .chart-wrapper {
+    height: 15.625rem;
+  }
+  
+  .metric-card, .financial-kpi, .activity-item {
     padding: var(--spacing-sm);
   }
   
-  .chart-container, .metric-card {
-    padding: var(--spacing-sm);
-    margin-bottom: var(--spacing-sm);
-  }
-  
-  .metric-value {
-    font-size: var(--font-size-xl);
-  }
-  
-  .metric-change {
-    font-size: var(--font-size-xs);
+  .metric-value, .kpi-value {
+    font-size: var(--font-size-md);
   }
 }
 
-/* Ajustes específicos para notebooks com zoom */
-@media screen and (min-resolution: 1.25dppx) {
-  .dashboard-container {
-    max-height: var(--modal-max-height);
-  }
-  
-  .dashboard-content {
-    padding: var(--spacing-md);
-  }
-}
-
-/* Ajustes para telas 720p */
-@media (min-height: 720px) and (max-height: 768px) {
+/* Ajustes para telas pequenas */
+@media screen and (max-height: 700px) {
   .modal-overlay {
     align-items: flex-start;
-    padding-top: 2vh;
+    padding-top: var(--spacing-sm);
   }
   
-  .dashboard-container {
-    max-height: 85vh;
-  }
-}
-
-/* Ajustes para monitores pequenos de 14 polegadas */
-@media screen and (max-width: 1366px) and (max-height: 768px) {
-  .dashboard-container {
-    width: var(--modal-width-md);
-    padding: var(--spacing-md);
+  .modal-content {
+    max-height: 95vh;
   }
   
-  .metrics-grid {
-    gap: var(--spacing-sm);
+  .chart-wrapper {
+    height: 12.5rem;
   }
-}
-
-.cache-indicator {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: rgba(102, 204, 255, 0.1);
-  color: #66ccff;
-  padding: 5px 10px;
-  border-radius: 4px;
-  margin-bottom: 10px;
-  font-size: 0.9rem;
-}
-
-.cache-indicator i {
-  margin-right: 5px;
-  font-size: 18px;
-}
-
-.loading-charts {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 300px;
-  width: 100%;
-}
-
-.btn-generate {
-  min-width: 160px;
-  min-height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 </style> 

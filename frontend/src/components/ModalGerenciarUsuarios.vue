@@ -719,6 +719,80 @@ h2 {
     width: 95%;
     padding: 15px;
   }
+  
+  .order-form {
+    padding-bottom: 100px; /* Espaço adicional para não ocultar botões */
+    width: 100%;
+    max-width: 100%;
+    border-radius: 10px;
+  }
+  
+  .button-row {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: #1e1e1e;
+    z-index: 10;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
+    padding: 10px;
+    margin: 0;
+    display: flex;
+    justify-content: space-between;
+  }
+  
+  .close-btn {
+    margin: 0;
+  }
+}
+
+/* Dispositivos móveis pequenos */
+@media (max-width: 480px) {
+  .order-form {
+    padding: 20px;
+    padding-bottom: 120px; /* Mais espaço para os botões */
+    height: 100%;
+    max-height: 100%;
+    border-radius: 0;
+  }
+  
+  .edit-modal {
+    width: 100%;
+    max-width: 100%;
+    height: 100%;
+    max-height: 100%;
+    border-radius: 0;
+    padding: 15px;
+    padding-bottom: 120px; /* Espaço para botões fixos */
+  }
+  
+  .button-group {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: #2a2a2a;
+    z-index: 10;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
+    padding: 15px;
+    margin: 0;
+    display: flex;
+    justify-content: space-between;
+  }
+  
+  .save-btn, .cancel-btn {
+    flex: 1;
+    margin: 0 5px;
+  }
+  
+  .button-row {
+    padding: 15px;
+  }
+  
+  .debug-btn, .close-btn {
+    padding: 12px 15px;
+    font-size: 14px;
+  }
 }
 
 .demo-notice {

@@ -1110,6 +1110,8 @@ button i {
     padding: var(--spacing-sm);
     width: var(--modal-width-lg);
     max-width: var(--modal-max-width);
+    padding-bottom: 100px; /* Espaço adicional para evitar que o conteúdo fique escondido */
+    overflow-y: auto;
   }
   
   .form-header h2 {
@@ -1118,6 +1120,14 @@ button i {
   
   .form-buttons {
     flex-direction: column;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: #1f1f1f;
+    z-index: 10;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
+    padding: 10px;
   }
   
   button {

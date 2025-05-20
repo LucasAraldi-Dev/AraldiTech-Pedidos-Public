@@ -2,6 +2,10 @@
 Todas as alterações notáveis deste projeto serão documentadas neste arquivo.
 
 ## [0.8.6] - 2025-05-19
+### Melhorado
+- **Responsividade**: Responsividade no geral foi melhorada , principalmente para telas pequenas e mobile.
+- **Botões e Menus**: Alguns foram refeitos para apresentar melhor consistência na versão mobile.
+
 ### Corrigido
 - **Visualizador de logs**: Correção nas informações presentes do modal de logs.
 - **ModalImprimirPedido**: Adaptação da opção de gerar imagem , para caber totalmente o form para sair a impressão correta.

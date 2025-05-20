@@ -148,7 +148,7 @@ export const cacheClear = () => {
  * @param {number} cacheOptions.ttl - Tempo de vida do cache
  * @returns {Promise<any>} - Resposta da requisição
  */
-export const cachedRequest = async (
+export const cachedAxiosRequest = async (
   axiosMethod,
   url,
   config = {},
@@ -177,6 +177,36 @@ export const cachedRequest = async (
   });
   
   return response;
+};
+
+/**
+ * Função de cache que suporta objeto de configuração
+ * @param {Object} options - Opções
+ * @param {string} options.key - Chave de cache
+ * @param {number} options.ttl - Tempo de vida em milissegundos
+ * @param {boolean} options.forceRefresh - Forçar atualização do cache
+ * @param {Function} options.request - Função que retorna uma Promise com os dados a serem cacheados
+ * @returns {Promise<{data: any, fromCache: boolean}>} - Dados e flag indicando se veio do cache
+ */
+export const cachedRequest = async (options) => {
+  const { key, ttl = cacheConfig.ttl, forceRefresh = false, request } = options;
+  
+  // Se forceRefresh estiver habilitado, pula a verificação do cache
+  if (!forceRefresh) {
+    // Verificar se os dados estão em cache
+    const cachedData = cacheGet(key);
+    if (cachedData) {
+      return { data: cachedData, fromCache: true };
+    }
+  }
+  
+  // Se não estiver em cache ou forceRefresh for true, executar a requisição
+  const data = await request();
+  
+  // Armazenar os dados no cache
+  cacheSet(key, data, { ttl });
+  
+  return { data, fromCache: false };
 };
 
 /**
@@ -212,6 +242,7 @@ export default {
   cacheDelete,
   cacheDeleteByPrefix,
   cacheClear,
+  cachedAxiosRequest,
   cachedRequest,
   cacheStats,
 }; 
