@@ -140,7 +140,22 @@ async def update_user(user_id: str, user_data: dict, db=Depends(database.get_db)
             )
         
         # Preparar dados para atualização
-        update_data = {k: v for k, v in user_data.items() if k not in ["_id", "log", "senha"]}
+        update_data = {k: v for k, v in user_data.items() if k not in ["_id", "log"]}
+        
+        # Verificar se há uma nova senha e criptografá-la
+        senha_alterada = False
+        if "senha" in update_data and update_data["senha"]:
+            # Criptografar a nova senha
+            update_data["senha"] = pwd_context.hash(update_data["senha"])
+            senha_alterada = True
+            logging.info(f"Senha do usuário {existing_user['username']} foi alterada")
+            
+            # Adicionar campo para indicar que o usuário precisa fazer login novamente
+            update_data["sessao_expirada"] = True
+        else:
+            # Se não há senha ou senha está vazia, remover o campo
+            if "senha" in update_data:
+                del update_data["senha"]
             
         # Verificar se o tipo de usuário foi alterado
         tipo_usuario_alterado = False
@@ -162,19 +177,28 @@ async def update_user(user_id: str, user_data: dict, db=Depends(database.get_db)
                 update_data["logs"] = [user_data["log"]]
         
         # Adicionar informações sobre a alteração
-        if tipo_usuario_alterado:
+        if tipo_usuario_alterado or senha_alterada:
             if "logs" not in update_data:
                 update_data["logs"] = existing_user.get("logs", [])
+            
+            changes = {}
+            
+            if tipo_usuario_alterado:
+                changes["tipo_usuario"] = {
+                    "from": existing_user.get("tipo_usuario"),
+                    "to": update_data["tipo_usuario"]
+                }
+                
+            if senha_alterada:
+                changes["senha"] = {
+                    "from": "[protegido]",
+                    "to": "[nova senha protegida]"
+                }
             
             update_data["logs"].append({
                 "changedBy": current_user.get("nome", "Admin"),
                 "changedAt": datetime.now().isoformat(),
-                "changes": {
-                    "tipo_usuario": {
-                        "from": existing_user.get("tipo_usuario"),
-                        "to": update_data["tipo_usuario"]
-                    }
-                }
+                "changes": changes
             })
         
         # Atualizar o usuário
@@ -189,7 +213,8 @@ async def update_user(user_id: str, user_data: dict, db=Depends(database.get_db)
         
         # Adicionar informações para o frontend
         result["info"] = {
-            "tipo_usuario_alterado": tipo_usuario_alterado
+            "tipo_usuario_alterado": tipo_usuario_alterado,
+            "senha_alterada": senha_alterada
         }
         
         return result

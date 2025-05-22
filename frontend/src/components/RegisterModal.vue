@@ -28,9 +28,12 @@
                     id="username" 
                     type="text" 
                     v-model="username" 
-                    @input="convertToLowercase"
+                    @input="validateUsername"
                     required 
                   />
+                </div>
+                <div v-if="usernameError" class="input-error">
+                  {{ usernameError }}
                 </div>
               </div>
 
@@ -74,11 +77,14 @@
                   </div>
                   <input
                     id="signupPassword"
-                    type="password"
+                    :type="showPassword ? 'text' : 'password'"
                     v-model="signupPassword"
                     required
                     @input="checkPasswordStrength"
                   />
+                  <div class="password-toggle" @click="togglePassword">
+                    <i :class="showPassword ? 'fa-eye-slash' : 'fa-eye'"></i>
+                  </div>
                 </div>
                 <div class="password-strength" :class="passwordStrengthClass">
                   {{ passwordStrengthMessage }}
@@ -93,11 +99,14 @@
                   </div>
                   <input
                     id="confirmPassword"
-                    type="password"
+                    :type="showConfirmPassword ? 'text' : 'password'"
                     v-model="confirmPassword"
                     required
                     @input="checkPasswordMatch"
                   />
+                  <div class="password-toggle" @click="toggleConfirmPassword">
+                    <i :class="showConfirmPassword ? 'fa-eye-slash' : 'fa-eye'"></i>
+                  </div>
                 </div>
                 <div v-if="!passwordsMatch && confirmPassword" class="password-error">
                   As senhas não coincidem
@@ -216,6 +225,9 @@ export default {
     const confirmPassword = ref("");
     const setor = ref("");
     
+    // Validação de username
+    const usernameError = ref("");
+    
     // Estados para o fluxo de cadastro
     const isRegistering = ref(false);
     const registerSuccess = ref(false);
@@ -238,6 +250,9 @@ export default {
     const passwordStrengthMessage = ref("");
     const passwordsMatch = ref(true);
     
+    const showPassword = ref(false);
+    const showConfirmPassword = ref(false);
+    
     const passwordStrengthClass = computed(() => ({
       'weak': passwordStrength.value < 2,
       'medium': passwordStrength.value === 2,
@@ -251,7 +266,8 @@ export default {
       signupPassword.value && 
       confirmPassword.value && 
       passwordsMatch.value &&
-      setor.value
+      setor.value &&
+      !usernameError.value
     );
     
     // Método para iniciar o processo de cadastro
@@ -475,9 +491,28 @@ export default {
       }
     });
     
-    // Função para transformar o username em minúsculo
-    const convertToLowercase = () => {
+    // Função para validar o username
+    const validateUsername = () => {
+      // Converter para minúsculo
       username.value = username.value.toLowerCase();
+      
+      // Remover caracteres não permitidos
+      const alphanumericOnly = username.value.replace(/[^a-z0-9]/g, '');
+      
+      if (username.value !== alphanumericOnly) {
+        usernameError.value = "O nome de usuário deve conter apenas letras e números";
+        username.value = alphanumericOnly;
+      } else {
+        usernameError.value = "";
+      }
+    };
+    
+    const togglePassword = () => {
+      showPassword.value = !showPassword.value;
+    };
+    
+    const toggleConfirmPassword = () => {
+      showConfirmPassword.value = !showConfirmPassword.value;
     };
     
     return {
@@ -524,8 +559,17 @@ export default {
       // Utilitários
       toast,
       
-      // Função para transformar o username em minúsculo
-      convertToLowercase
+      // Validação de username
+      usernameError,
+      validateUsername,
+      
+      // Métodos para alternar entre mostrar/ocultar senha
+      togglePassword,
+      toggleConfirmPassword,
+      
+      // Estado para mostrar/ocultar senha
+      showPassword,
+      showConfirmPassword
     };
   }
 };
@@ -831,16 +875,6 @@ h2 {
   transform: scale(0);
 }
 
-@keyframes scaleIn {
-  to { transform: scale(1); }
-}
-
-@keyframes pulse {
-  0% { box-shadow: 0 5px 15px rgba(0, 204, 102, 0.4); }
-  50% { box-shadow: 0 5px 25px rgba(0, 204, 102, 0.7); }
-  100% { box-shadow: 0 5px 15px rgba(0, 204, 102, 0.4); }
-}
-
 .success-message {
   font-size: 22px;
   font-weight: 600;
@@ -860,10 +894,6 @@ h2 {
   animation: fadeIn 0.5s ease-in-out forwards;
   opacity: 0;
   z-index: 10;
-}
-
-@keyframes fadeIn {
-  to { opacity: 1; }
 }
 
 .user-card-header {
@@ -977,13 +1007,6 @@ h2 {
   transform: translate3d(0, 0, 0);
 }
 
-@keyframes shakeError {
-  10%, 90% { transform: translate3d(-1px, 0, 0); }
-  20%, 80% { transform: translate3d(2px, 0, 0); }
-  30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
-  40%, 60% { transform: translate3d(4px, 0, 0); }
-}
-
 .error-icon {
   width: 70px;
   height: 70px;
@@ -997,12 +1020,6 @@ h2 {
   margin-bottom: 20px;
   box-shadow: 0 5px 15px rgba(255, 61, 113, 0.4);
   animation: pulseError 2s infinite;
-}
-
-@keyframes pulseError {
-  0% { transform: scale(1); box-shadow: 0 5px 15px rgba(255, 61, 113, 0.4); }
-  50% { transform: scale(1.05); box-shadow: 0 5px 25px rgba(255, 61, 113, 0.6); }
-  100% { transform: scale(1); box-shadow: 0 5px 15px rgba(255, 61, 113, 0.4); }
 }
 
 .error-title {
@@ -1516,5 +1533,156 @@ h2 {
     margin-bottom: 0;
     margin-right: 10px;
   }
+}
+
+.input-container select {
+  padding-left: 48px !important; /* Garante espaço extra para o ícone */
+  height: 48px; /* Mantém altura igual ao input, se necessário */
+  line-height: 1.2;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+.input-container .input-icon {
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* Estilos para o botão de mostrar/ocultar senha */
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 0.9375rem; /* 15px */
+  transform: translateY(-50%);
+  cursor: pointer;
+  color: #aaa;
+  transition: all 0.3s ease;
+  z-index: 2;
+}
+
+.password-toggle:hover {
+  color: #66ccff;
+}
+
+.password-toggle i::before {
+  content: '';
+  display: inline-block;
+  width: 1.125rem; /* 18px */
+  height: 1.125rem; /* 18px */
+  background-size: contain;
+  background-repeat: no-repeat;
+}
+
+.password-toggle .fa-eye::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='24' height='24'%3E%3Cpath fill='none' d='M0 0h24v24H0z'/%3E%3Cpath d='M12 6c-5.33 0-9.6 3.33-11.4 8 1.8 4.67 6.07 8 11.4 8 5.33 0 9.6-3.33 11.4-8-1.8-4.67-6.07-8-11.4-8zm0 13c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z' fill='%23aaa'/%3E%3C/svg%3E");
+}
+
+.password-toggle .fa-eye-slash::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='24' height='24'%3E%3Cpath fill='none' d='M0 0h24v24H0z'/%3E%3Cpath d='M12 6c-5.33 0-9.6 3.33-11.4 8 1.8 4.67 6.07 8 11.4 8 5.33 0 9.6-3.33 11.4-8-1.8-4.67-6.07-8-11.4-8zm0 13c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z' fill='%23aaa'/%3E%3Cline x1='3' y1='3' x2='21' y2='21' stroke='%23aaa' stroke-width='2'/%3E%3C/svg%3E");
+}
+
+/* Melhorar a responsividade */
+@media (max-width: 480px) {
+  .modal {
+    width: 95%;
+    max-width: 450px;
+    padding: 1.25rem; /* 20px */
+  }
+  
+  .form-grid {
+    grid-gap: 1rem; /* 16px */
+  }
+  
+  .form-group {
+    margin-bottom: 1rem; /* 16px */
+  }
+  
+  .input-container input,
+  .input-container select {
+    padding: 0.75rem 0.75rem; /* 12px */
+    padding-left: 2.5rem; /* 40px */
+    padding-right: 2.5rem; /* 40px para o botão de mostrar/ocultar */
+    min-height: 3.125rem; /* 50px */
+    font-size: 1rem; /* 16px - evitar zoom no iOS */
+  }
+  
+  .action-buttons {
+    flex-direction: column;
+  }
+  
+  .action-buttons button {
+    width: 100%;
+    margin: 0.5rem 0;
+  }
+  
+  .password-toggle {
+    right: 0.75rem; /* 12px */
+  }
+}
+
+/* Estilo para a mensagem de erro do username */
+.input-error {
+  color: #ff6b6b;
+  font-size: 13px;
+  margin-top: 5px;
+  padding-left: 5px;
+  animation: fadeIn 0.3s ease-in;
+}
+
+/* Animações mais suaves */
+.modal-overlay {
+  animation: fadeIn 0.3s forwards;
+}
+
+.modal {
+  animation: slideIn 0.4s forwards;
+}
+
+.register-progress,
+.register-success,
+.register-error {
+  animation: fadeInUp 0.5s forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideIn {
+  from { transform: translateY(-20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scaleIn {
+  from { transform: scale(0); }
+  to { transform: scale(1); }
+}
+
+@keyframes pulse {
+  0% { box-shadow: 0 5px 15px rgba(0, 204, 102, 0.4); }
+  50% { box-shadow: 0 5px 25px rgba(0, 204, 102, 0.7); }
+  100% { box-shadow: 0 5px 15px rgba(0, 204, 102, 0.4); }
+}
+
+@keyframes pulseError {
+  0% { transform: scale(1); box-shadow: 0 5px 15px rgba(255, 61, 113, 0.4); }
+  50% { transform: scale(1.05); box-shadow: 0 5px 25px rgba(255, 61, 113, 0.6); }
+  100% { transform: scale(1); box-shadow: 0 5px 15px rgba(255, 61, 113, 0.4); }
+}
+
+@keyframes shakeError {
+  10%, 90% { transform: translate3d(-1px, 0, 0); }
+  20%, 80% { transform: translate3d(2px, 0, 0); }
+  30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+  40%, 60% { transform: translate3d(4px, 0, 0); }
 }
 </style>

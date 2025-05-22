@@ -1,16 +1,22 @@
 <template>
   <div id="app">
-    <!-- Exibe o AppHeader apenas se não estiver na página do menu -->
-    <AppHeader v-if="!isInMenuPage" />
-    
-    <!-- Container principal para o conteúdo -->
-    <div class="main-content" :class="{ 'menu-page': isInMenuPage }">
-      <!-- Aqui vai o conteúdo dinâmico baseado nas rotas -->
-      <router-view />
-    </div>
-    
-    <!-- Exibe o AppFooter apenas se não estiver na página do menu -->
-    <AppFooter v-if="!isInMenuPage" />
+    <!-- Envolvendo todo o conteúdo em uma única transição -->
+    <router-view v-slot="{ Component }">
+      <transition name="router-view-transition" mode="out-in" appear>
+        <div class="page-wrapper" :key="$route.fullPath">
+          <!-- Exibe o AppHeader apenas se não estiver na página do menu -->
+          <AppHeader v-if="!isInMenuPage && !isLoadingSplash" />
+          
+          <!-- Container principal para o conteúdo -->
+          <div class="main-content" :class="{ 'menu-page': isInMenuPage }">
+            <component :is="Component" @splash-loading="updateSplashStatus" />
+          </div>
+          
+          <!-- Exibe o AppFooter apenas se não estiver na página do menu -->
+          <AppFooter v-if="!isInMenuPage && !isLoadingSplash" />
+        </div>
+      </transition>
+    </router-view>
   </div>
 </template>
 
@@ -24,10 +30,20 @@ export default {
     AppHeader,
     AppFooter
   },
+  data() {
+    return {
+      isLoadingSplash: false
+    }
+  },
   computed: {
     isInMenuPage() {
       // Verifica se a página atual é a do menu, usando $route
       return this.$route.name === 'Menu';
+    }
+  },
+  methods: {
+    updateSplashStatus(isLoading) {
+      this.isLoadingSplash = isLoading;
     }
   },
   created() {
@@ -67,6 +83,14 @@ html, body {
   overflow-x: hidden; /* Prevenir scrollbars horizontais */
 }
 
+/* Wrapper para a página inteira */
+.page-wrapper {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  width: 100%;
+}
+
 /* Container principal para conteúdo */
 .main-content {
   flex: 1;
@@ -76,6 +100,7 @@ html, body {
   flex-direction: column;
   min-height: calc(100vh - 9.375rem); /* Convertido de 150px para rem */
   overflow-y: auto;
+  transition: opacity 0.3s ease;
 }
 
 .main-content.menu-page {
@@ -383,5 +408,21 @@ input:focus, select:focus, textarea:focus {
   .modal-responsive {
     padding: var(--spacing-md);
   }
+}
+
+/* Estilos para o corpo durante o carregamento */
+body.loading {
+  overflow: hidden;
+}
+
+/* Efeito de transição suave para toda a aplicação */
+.router-view-transition-enter-active,
+.router-view-transition-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.router-view-transition-enter-from,
+.router-view-transition-leave-to {
+  opacity: 0;
 }
 </style>

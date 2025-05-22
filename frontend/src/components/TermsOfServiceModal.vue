@@ -12,92 +12,50 @@
           <p>Role até o final para aceitar os termos</p>
         </div>
         
-        <h3>1. Termos e Condições de Uso do Sistema AraldiTech Pedidos</h3>
-        <p>Ao se cadastrar e utilizar o sistema AraldiTech Pedidos ("Sistema"), você concorda integralmente com estes Termos de Serviço. Leia atentamente antes de prosseguir com seu cadastro.</p>
-        
-        <h3>2. Descrição do Serviço</h3>
-        <p>O Sistema AraldiTech Pedidos é uma plataforma desenvolvida para gerenciamento de pedidos, controle de inventário, e monitoramento de atividades operacionais. O sistema é fornecido no estado em que se encontra, sujeito a modificações e melhorias periódicas.</p>
-        
-        <h3>3. Registro e Segurança da Conta</h3>
-        <p>Para utilizar o Sistema, você deve criar uma conta com informações precisas e completas. Você é responsável por:</p>
+        <h3>1. Termos de Uso do Sistema AraldiTech Pedidos</h3>
+        <p>O AraldiTech Pedidos é uma plataforma corporativa para gestão de pedidos, controle de estoque e rastreabilidade de operações. Seu uso é restrito a colaboradores e parceiros autorizados da AraldiTech.</p>
+        <h3>2. Compromisso do Usuário</h3>
+        <p>Ao se cadastrar, você se compromete a:</p>
         <ul>
-          <li>Manter a confidencialidade de sua senha</li>
-          <li>Restringir o acesso ao seu computador e dispositivos</li>
-          <li>Assumir total responsabilidade por todas as atividades realizadas com sua conta</li>
-          <li>Notificar imediatamente a AraldiTech sobre qualquer uso não autorizado de sua conta</li>
+          <li>Fornecer informações verdadeiras e atualizadas;</li>
+          <li>Utilizar o sistema apenas para fins profissionais e autorizados pela empresa;</li>
+          <li>Manter a confidencialidade de suas credenciais de acesso;</li>
+          <li>Notificar imediatamente a equipe AraldiTech sobre qualquer uso não autorizado de sua conta;</li>
+          <li>Respeitar as regras internas de segurança e compliance da empresa.</li>
         </ul>
-        <p>A AraldiTech não será responsável por perdas ou danos decorrentes do não cumprimento dessas responsabilidades.</p>
-        
-        <h3>4. Dados do Usuário e Privacidade</h3>
-        <p>Ao utilizar o Sistema, você concorda que a AraldiTech poderá:</p>
+        <h3>3. Política de Privacidade</h3>
+        <p>A AraldiTech valoriza a privacidade dos seus dados. Ao utilizar o sistema, você concorda com a coleta e uso das seguintes informações:</p>
         <ul>
-          <li>Coletar e armazenar informações pessoais conforme detalhado em nossa Política de Privacidade</li>
-          <li>Registrar data, hora e IP do aceite destes termos para fins legais e de auditoria</li>
-          <li>Armazenar registros de atividades (logs) de sua utilização do sistema</li>
-          <li>Utilizar cookies e tecnologias semelhantes para melhorar a experiência do usuário</li>
+          <li>Dados cadastrais: nome, e-mail, setor, nome de usuário;</li>
+          <li>Registros de acesso: datas, horários, IPs e logs de operações realizadas;</li>
+          <li>Dados de navegação para melhoria contínua da plataforma.</li>
         </ul>
-        
-        <h3>5. Uso Apropriado do Sistema</h3>
-        <p>Você concorda em utilizar o Sistema apenas para fins legítimos e de acordo com estes termos. Você não deve:</p>
+        <p>Esses dados são utilizados exclusivamente para:</p>
         <ul>
-          <li>Usar o Sistema para atividades ilegais ou não autorizadas</li>
-          <li>Tentar obter acesso não autorizado ao Sistema ou a contas de outros usuários</li>
-          <li>Compartilhar suas credenciais de acesso com terceiros</li>
-          <li>Introduzir malware, vírus ou qualquer código prejudicial ao Sistema</li>
-          <li>Interferir ou interromper a integridade ou o desempenho do Sistema</li>
-          <li>Coletar ou armazenar informações pessoais de outros usuários do Sistema</li>
+          <li>Garantir a segurança e rastreabilidade das operações;</li>
+          <li>Auditoria interna e atendimento a obrigações legais;</li>
+          <li>Melhorias de usabilidade e suporte técnico;</li>
+          <li>Contato em caso de incidentes ou atualizações importantes.</li>
         </ul>
-        
-        <h3>6. Disponibilidade e Atualizações</h3>
-        <p>A AraldiTech se esforçará para manter o Sistema disponível, mas não garante que:</p>
+        <p>Seus dados não serão compartilhados com terceiros, exceto por obrigação legal ou ordem judicial. Você pode solicitar a revisão, atualização ou exclusão dos seus dados a qualquer momento, conforme a LGPD.</p>
+        <h3>4. Responsabilidades e Boas Práticas</h3>
         <ul>
-          <li>O Sistema estará disponível ininterruptamente</li>
-          <li>O Sistema estará livre de erros ou problemas técnicos</li>
-          <li>As funcionalidades atenderão a todos os requisitos específicos dos usuários</li>
+          <li>Não compartilhe sua senha ou acesso com terceiros;</li>
+          <li>Não utilize o sistema para fins ilícitos ou fora do escopo corporativo;</li>
+          <li>Respeite a integridade dos dados e das operações;</li>
+          <li>Em caso de dúvidas, entre em contato com o suporte AraldiTech.</li>
         </ul>
-        <p>A AraldiTech reserva-se o direito de modificar, atualizar ou descontinuar recursos do Sistema a qualquer momento, sem aviso prévio.</p>
-        
-        <h3>7. Propriedade Intelectual</h3>
-        <p>Todo o conteúdo e código do Sistema, incluindo mas não limitado a textos, gráficos, logos, ícones, imagens, clipes de áudio, downloads digitais e compilações de dados, são propriedade exclusiva da AraldiTech ou de seus fornecedores de conteúdo e estão protegidos por leis nacionais e internacionais de direitos autorais.</p>
-        
-        <h3>8. Limitação de Responsabilidade</h3>
-        <p>Em nenhuma circunstância a AraldiTech, seus diretores, funcionários, agentes ou parceiros serão responsáveis por quaisquer danos diretos, indiretos, incidentais, especiais, exemplares ou consequenciais, incluindo, entre outros, perda de lucros, dados, uso, boa vontade ou outras perdas intangíveis, resultantes de:</p>
-        <ul>
-          <li>Uso ou incapacidade de uso do Sistema</li>
-          <li>Acesso não autorizado ou alteração de suas transmissões ou dados</li>
-          <li>Declarações ou conduta de terceiros no Sistema</li>
-          <li>Perda de dados ou interrupções de negócios decorrentes do uso do Sistema</li>
-        </ul>
-        
-        <h3>9. Indenização</h3>
-        <p>Você concorda em defender, indenizar e isentar a AraldiTech, seus diretores, funcionários e agentes de e contra quaisquer reclamações, danos, obrigações, perdas, responsabilidades, custos ou dívidas e despesas (incluindo, mas não se limitando a honorários advocatícios) decorrentes de:</p>
-        <ul>
-          <li>Seu uso e acesso ao Sistema</li>
-          <li>Violação por parte do usuário de qualquer termo deste acordo</li>
-          <li>Violação por parte do usuário de qualquer direito de terceiros, incluindo, sem limitação, qualquer direito autoral, propriedade ou direito de privacidade</li>
-        </ul>
-        
-        <h3>10. Rescisão</h3>
-        <p>A AraldiTech pode, a seu exclusivo critério, suspender ou encerrar seu acesso ao Sistema por qualquer motivo, incluindo, sem limitação, violação destes Termos de Serviço. Após o término, seu direito de utilizar o Sistema cessará imediatamente.</p>
-        
-        <h3>11. Conformidade com Leis</h3>
-        <p>Você deve cumprir todas as leis locais, estaduais, nacionais e internacionais aplicáveis ao uso do Sistema, incluindo, sem limitação, as leis de proteção de dados como a Lei Geral de Proteção de Dados (LGPD) do Brasil.</p>
-        
-        <h3>12. Modificações dos Termos</h3>
-        <p>A AraldiTech reserva-se o direito de revisar estes termos a qualquer momento, sem aviso prévio. Ao continuar a usar o Sistema após tais alterações, você concorda em ficar vinculado aos termos revisados.</p>
-        
-        <h3>13. Lei Aplicável</h3>
-        <p>Estes termos e condições são regidos e interpretados de acordo com as leis do Brasil, e você se submete irrevogavelmente à jurisdição exclusiva dos tribunais brasileiros para a resolução de quaisquer disputas.</p>
-        
-        <h3>14. Contato</h3>
-        <p>Se você tiver dúvidas sobre estes Termos de Serviço, entre em contato conosco pelo e-mail: contato@aralditech.com</p>
+        <h3>5. Atualizações e Suporte</h3>
+        <p>A AraldiTech pode atualizar estes termos e a plataforma a qualquer momento para garantir segurança, conformidade e melhorias. O uso contínuo do sistema implica concordância com as versões mais recentes dos termos.</p>
+        <h3>6. Contato</h3>
+        <p>Para dúvidas sobre privacidade, uso do sistema ou solicitações relacionadas aos seus dados, entre em contato pelo e-mail: contato@aralditech.com</p>
       </div>
       <div class="terms-modal-footer">
         <div class="terms-acceptance">
           <label class="checkbox-container">
             <input type="checkbox" v-model="termsAccepted" :disabled="!hasScrolledToBottom">
             <span class="checkmark"></span>
-            <span class="acceptance-text">Li e aceito os termos de serviço</span>
+            <span class="acceptance-text">Li e aceito os Termos de Uso e a Política de Privacidade do AraldiTech Pedidos</span>
           </label>
         </div>
         <div class="terms-actions">

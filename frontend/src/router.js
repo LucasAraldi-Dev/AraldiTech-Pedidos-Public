@@ -113,6 +113,20 @@ const routes = [
 const router = createRouter({
   history: createWebHashHistory(process.env.BASE_URL),
   routes,
+  scrollBehavior(to, from, savedPosition) {
+    // Comportamento de rolagem suave
+    if (savedPosition) {
+      return {
+        ...savedPosition,
+        behavior: 'smooth',
+      }
+    } else {
+      return { 
+        top: 0,
+        behavior: 'smooth',
+      }
+    }
+  }
 });
 
 export default router;
