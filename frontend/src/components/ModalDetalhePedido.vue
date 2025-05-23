@@ -319,10 +319,7 @@ export default {
   font-weight: bold;
 }
 
-.status-em_andamento {
-  color: #17a2b8;
-  font-weight: bold;
-}
+
 
 .status-concluido {
   color: #28a745;

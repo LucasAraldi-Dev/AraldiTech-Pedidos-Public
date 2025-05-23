@@ -5,13 +5,12 @@
         <img src="../assets/logo.png" alt="Logo AraldiTech" class="logo" onerror="this.src='favicon.ico'" />
       </router-link>
       
-      <!-- Botão hamburger com design moderno e animação especial -->
-      <div class="hamburger-menu" @click="toggleMenu" :class="{ 'is-active': menuActive }">
-        <span></span>
-        <span></span>
-        <span></span>
-        <span></span>
-      </div>
+      <!-- Botão hamburger com animação 3D elástica -->
+      <button class="burger-button" @click="toggleMenu" :class="{ 'active': menuActive }">
+        <span class="burger-button__bar"></span>
+        <span class="burger-button__bar"></span>
+        <span class="burger-button__bar"></span>
+      </button>
       
       <nav :class="{ 'is-active': menuActive }">
         <ul>
@@ -83,72 +82,73 @@ header {
   display: block;
 }
 
-/* Novo design do hamburger menu com animação especial */
-.hamburger-menu {
+/* Burger button com animação 3D elástica */
+.burger-button {
   display: none;
-  width: 30px;
-  height: 25px;
-  position: relative;
+  background: none;
+  border: none;
+  padding: 10px;
   cursor: pointer;
   z-index: 150;
-  transform: rotate(0deg);
-  transition: 0.5s ease-in-out;
+  position: relative;
+  width: 48px; /* 28px + 2 * 10px */
+  height: 36px; /* (3px * 3) + (5px * 2) + 2 * 10px */
+  box-sizing: border-box;
 }
 
-.hamburger-menu span {
+.burger-button__bar {
   display: block;
-  position: absolute;
+  width: 28px;
   height: 3px;
-  width: 100%;
-  background: #66ccff;
-  border-radius: 3px;
-  opacity: 1;
-  left: 0;
-  transform: rotate(0deg);
-  transition: .25s ease-in-out;
+  background-color: #66ccff;
+  border-radius: 1.5px;
+  position: absolute;
+  left: 10px;
+  transition-property: transform, opacity, top;
+  transition-duration: 0.4s;
+  transform-origin: center;
   box-shadow: 0 0 8px rgba(102, 204, 255, 0.5);
 }
 
-.hamburger-menu span:nth-child(1) {
-  top: 0px;
-  transform-origin: left center;
-}
-
-.hamburger-menu span:nth-child(2),
-.hamburger-menu span:nth-child(3) {
+/* Posições iniciais das barras */
+.burger-button__bar:nth-child(1) {
   top: 10px;
-  transform-origin: left center;
+  transform: translateY(0) rotateY(0deg);
+  transition-timing-function: cubic-bezier(0.68, -0.55, 0.265, 1.55);
 }
 
-.hamburger-menu span:nth-child(4) {
-  top: 20px;
-  transform-origin: left center;
+.burger-button__bar:nth-child(2) {
+  top: 18px; /* 10px + 3px + 5px */
+  transform: scaleX(1);
+  opacity: 1;
+  transition-timing-function: ease-out;
+  transition-duration: 0.24s; /* 0.4s * 0.6 */
 }
 
-.hamburger-menu.is-active span:nth-child(1) {
-  transform: rotate(45deg);
-  top: -3px;
-  left: 4px;
+.burger-button__bar:nth-child(3) {
+  top: 26px; /* 10px + 2 * (3px + 5px) */
+  transform: translateY(0) rotateY(0deg);
+  transition-timing-function: cubic-bezier(0.68, -0.55, 0.265, 1.55);
 }
 
-.hamburger-menu.is-active span:nth-child(2) {
-  width: 0%;
+/* Estado ativo (formato X) com rotação 3D */
+.burger-button.active .burger-button__bar:nth-child(1) {
+  top: 18px; /* Move para o centro */
+  transform: rotate(45deg) rotateY(180deg);
+}
+
+.burger-button.active .burger-button__bar:nth-child(2) {
+  transform: scaleX(0);
   opacity: 0;
 }
 
-.hamburger-menu.is-active span:nth-child(3) {
-  transform: rotate(-45deg);
-  top: 22px;
-  left: 4px;
-}
-
-.hamburger-menu.is-active span:nth-child(4) {
-  width: 0%;
-  opacity: 0;
+.burger-button.active .burger-button__bar:nth-child(3) {
+  top: 18px; /* Move para o centro */
+  transform: rotate(-45deg) rotateY(180deg);
 }
 
 /* Efeito de glow no hover */
-.hamburger-menu:hover span {
+.burger-button:hover .burger-button__bar {
   background: #8adfff;
   box-shadow: 0 0 12px rgba(102, 204, 255, 0.8);
 }
@@ -198,7 +198,7 @@ nav ul li a.router-link-active {
 }
 
 @media (max-width: 768px) {
-  .hamburger-menu {
+  .burger-button {
     display: block;
   }
   
@@ -230,8 +230,8 @@ nav ul li a.router-link-active {
     width: 70%;
     height: 100vh;
     background: linear-gradient(135deg, #2c2c2c, #222);
-    /* Movendo o menu mais para cima conforme solicitado */
-    padding-top: 2rem; 
+    /* Aumentando o espaçamento superior para afastar do botão hambúrguer */
+    padding-top: 4rem; 
     transition: all 0.5s cubic-bezier(0.65, 0, 0.35, 1);
     z-index: 90;
     box-shadow: -5px 0 25px rgba(0, 0, 0, 0.3);
@@ -250,7 +250,7 @@ nav ul li a.router-link-active {
     gap: 1.25rem; /* 20px */
     width: 100%;
     padding: 0;
-    margin-top: 2rem;
+    margin-top: 3rem; /* Aumentando o margin-top para mais espaçamento */
   }
   
   nav ul li {
@@ -336,6 +336,11 @@ nav ul li a.router-link-active {
   
   nav {
     width: 80%;
+    padding-top: 4.5rem; /* Mais espaçamento em telas menores */
+  }
+  
+  nav ul {
+    margin-top: 2.5rem; /* Ajuste proporcional para telas menores */
   }
   
   header {
@@ -356,6 +361,14 @@ nav ul li a.router-link-active {
   
   .container {
     padding: 0 var(--spacing-xs);
+  }
+  
+  nav {
+    padding-top: 5rem; /* Ainda mais espaçamento em telas muito pequenas */
+  }
+  
+  nav ul {
+    margin-top: 2rem; /* Ajuste para telas muito pequenas */
   }
   
   nav ul li a {

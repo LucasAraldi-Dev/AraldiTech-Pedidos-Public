@@ -1,6 +1,32 @@
 # Changelog
 Todas as alterações notáveis deste projeto serão documentadas neste arquivo.
 
+## [0.8.8] - 2025-05-23
+### Adicionado
+- **Dashboard**: Foi refeito completamente , dividido em menus para melhor organização.
+- **Relatórios**: Criado um sistema no backend especifico para relatórios, porém ainda em desenvolvimento.
+
+### Corrigido
+- **Responsividade** : Novamente foi detectado problemas com a responsividade , foram feitos os ajustes necessários.
+
+
+
+## [0.8.7] - 2025-05-21
+### Adicionado
+- **UI Interativa**: Criado alguns componentes para a UI-UX para os usuários
+- **Confirmação Logout**: Criado um modal para confirmar o logout para evitar cliques por engano.
+- **Menu Burguer**: Versão mobile foi implementado o menu burguer no Home do App
+- **Splash Screen**: Agora tem uma melhor UX com uma tela de carregamento para preparar demais componentes do sistema , sem que o usuário perceba.
+
+### Melhorado
+- **AppLogin**: Foi refeito algumas funcionalidades e etapas após o login.
+- **Modal de Cadastro**: Otimizado validação dos campos e informações ao usuário.
+
+### Corrigido
+- **Responsividade**: Depois de algumas atualizações de layout foi necessário fazer o ajuste e centralizar a parte de responsividade em um arquivo separado.
+- **Modal de Cadastro**: Era possivel colocar o espaço no nome do usuário , e ao usar o auto-preenchimento foi observado que as vezes colocava espaço ao final do nome de usuário.
+- **Verificação de token**: Algumas rotas foi retirado a necessidade de token , porém foi adicionada uma camada de segurança para evitar problemas futuros.
+
 ## [0.8.6] - 2025-05-19
 ### Melhorado
 - **Responsividade**: Responsividade no geral foi melhorada , principalmente para telas pequenas e mobile.

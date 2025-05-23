@@ -1,777 +1,349 @@
 <template>
   <div class="financial-summary">
-    <h2 class="section-title">
-      <i class="material-icons">account_balance</i>
-      Resumo Financeiro
-    </h2>
-    
-    <!-- Estatísticas de resumo -->
-    <div class="financial-kpis">
-      <div class="financial-kpi">
-        <i class="material-icons kpi-icon">monetization_on</i>
-        <div class="kpi-content">
-          <h3>Orçamento Total</h3>
-          <div class="kpi-value">R$ {{ formatCurrency(orcamentoTotal) }}</div>
-        </div>
-      </div>
-      
-      <div class="financial-kpi">
-        <i class="material-icons kpi-icon">shopping_cart</i>
-        <div class="kpi-content">
-          <h3>Custo Real Total</h3>
-          <div class="kpi-value">R$ {{ formatCurrency(custoRealTotal) }}</div>
-        </div>
-      </div>
-      
-      <div class="financial-kpi" :class="saldoClass">
-        <i class="material-icons kpi-icon" :class="saldoIconClass">{{ saldoIcon }}</i>
-        <div class="kpi-content">
-          <h3>{{ saldoLabel }}</h3>
-          <div class="kpi-value">
-            R$ {{ formatCurrency(Math.abs(saldoFinanceiro)) }}
-            <span class="trend-indicator">
-              <i class="material-icons trend-icon">{{ saldoTrendIcon }}</i>
-              {{ saldoPercentage }}%
-            </span>
-          </div>
-        </div>
-      </div>
-    </div>
-    
-    <!-- Progresso do orçamento -->
-    <div class="budget-progress-container">
-      <h3>Consumo do Orçamento</h3>
-      <div class="budget-progress">
-        <div class="progress-bar" :style="{ width: progressPercentage + '%' }" :class="progressClass"></div>
-      </div>
-      <div class="progress-labels">
-        <span>{{ progressPercentage }}% utilizado</span>
-        <span>Meta: 100%</span>
-      </div>
-    </div>
-    
-    <!-- Tabela dos últimos pedidos com informações financeiras -->
-    <div class="financial-table-container">
+    <div class="summary-header">
       <h3>
-        <i class="material-icons">list_alt</i>
-        Últimos Pedidos com Dados Financeiros
+        <i class="material-icons">account_balance</i>
+        Resumo Financeiro
       </h3>
-      <table class="financial-table">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Descrição</th>
-            <th>Orçamento</th>
-            <th>Custo Real</th>
-            <th>Diferença</th>
-            <th>Status</th>
-            <th>Ação</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-if="isLoading">
-            <td colspan="7" class="loading-cell">
-              <div class="loading-spinner"></div>
-              Carregando dados financeiros...
-            </td>
-          </tr>
-          <tr v-else-if="pedidosComFinancas.length === 0">
-            <td colspan="7" class="empty-cell">
-              <i class="material-icons empty-icon">info</i>
-              Nenhum pedido com dados financeiros encontrado
-            </td>
-          </tr>
-          <tr v-for="pedido in pedidosComFinancas" :key="pedido.id" :class="{'highlight-row': isOverBudget(pedido)}">
-            <td>#{{ pedido.id }}</td>
-            <td class="description-cell">{{ truncateText(pedido.descricao, 30) }}</td>
-            <td>R$ {{ formatCurrency(pedido.orcamento_previsto) }}</td>
-            <td>R$ {{ formatCurrency(pedido.custo_real) }}</td>
-            <td :class="getDiffClass(pedido.orcamento_previsto - pedido.custo_real)">
-              <span class="diff-value">
-                <i class="material-icons diff-icon">{{ getDiffIcon(pedido.orcamento_previsto - pedido.custo_real) }}</i>
-                R$ {{ formatCurrency(Math.abs(pedido.orcamento_previsto - pedido.custo_real)) }}
-              </span>
-            </td>
-            <td>
-              <span class="status-badge" :class="getStatusClass(pedido.status)">
-                {{ pedido.status }}
-              </span>
-            </td>
-            <td>
-              <button class="edit-btn" @click="editPedido(pedido)">
-                <i class="material-icons">edit</i>
-                Editar
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
     </div>
-    
-    <!-- Dicas para melhorar a gestão financeira -->
-    <div class="financial-tips" v-if="showTips">
-      <h3>
-        <i class="material-icons">lightbulb</i>
-        Dicas para Gestão Financeira
-      </h3>
-      <ul class="tips-list">
-        <li v-if="custoRealTotal > orcamentoTotal">
-          <i class="material-icons tip-icon">warning</i>
-          <span>Os custos reais estão excedendo o orçamento em {{ percentageOver }}%. Considere revisar seus gastos.</span>
-        </li>
-        <li v-else>
-          <i class="material-icons tip-icon">thumb_up</i>
-          <span>Seu projeto está dentro do orçamento. Continue monitorando os custos.</span>
-        </li>
-        <li v-if="pedidosComFinancas.filter(p => p.status === 'Pendente' && p.orcamento_previsto > 0).length > 0">
-          <i class="material-icons tip-icon">assignment</i>
-          <span>Existem {{ pedidosComFinancas.filter(p => p.status === 'Pendente' && p.orcamento_previsto > 0).length }} pedidos pendentes com orçamento alocado.</span>
-        </li>
-      </ul>
+
+    <div class="summary-cards">
+      <div class="summary-card">
+        <div class="card-icon">
+          <i class="material-icons">monetization_on</i>
+        </div>
+        <div class="card-content">
+          <h4>Orçamento Total</h4>
+          <div class="card-value">R$ {{ formatCurrency(orcamentoTotal) }}</div>
+        </div>
+      </div>
+
+      <div class="summary-card">
+        <div class="card-icon spent">
+          <i class="material-icons">shopping_cart</i>
+        </div>
+        <div class="card-content">
+          <h4>Custo Real</h4>
+          <div class="card-value">R$ {{ formatCurrency(custoRealTotal) }}</div>
+        </div>
+      </div>
+
+      <div class="summary-card" :class="saldoFinanceiro >= 0 ? 'positive' : 'negative'">
+        <div class="card-icon" :class="saldoFinanceiro >= 0 ? 'savings' : 'deficit'">
+          <i class="material-icons">{{ saldoFinanceiro >= 0 ? 'savings' : 'money_off' }}</i>
+        </div>
+        <div class="card-content">
+          <h4>{{ saldoFinanceiro >= 0 ? 'Economia' : 'Déficit' }}</h4>
+          <div class="card-value">R$ {{ formatCurrency(Math.abs(saldoFinanceiro)) }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="summary-details" v-if="pedidos.length > 0">
+      <h4>Detalhes por Pedido</h4>
+      <div class="details-table">
+        <div class="table-header">
+          <span>Pedido</span>
+          <span>Categoria</span>
+          <span>Orçamento</span>
+          <span>Custo Real</span>
+          <span>Diferença</span>
+          <span>Ações</span>
+        </div>
+        <div 
+          v-for="pedido in pedidos.slice(0, 10)" 
+          :key="pedido.id"
+          class="table-row"
+        >
+          <span>#{{ pedido.id }}</span>
+          <span>{{ pedido.categoria || 'N/A' }}</span>
+          <span>R$ {{ formatCurrency(pedido.orcamento_previsto || 0) }}</span>
+          <span>R$ {{ formatCurrency(pedido.custo_real || 0) }}</span>
+          <span :class="getDifferenceClass(pedido)">
+            R$ {{ formatCurrency(getDifference(pedido)) }}
+          </span>
+          <span>
+            <button class="edit-btn" @click="$emit('edit-pedido', pedido)">
+              <i class="material-icons">edit</i>
+            </button>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div v-else class="empty-state">
+      <i class="material-icons">info</i>
+      <p>Nenhum dado financeiro disponível</p>
     </div>
   </div>
 </template>
 
 <script>
-import axios from 'axios';
+import { computed } from 'vue';
 
 export default {
-  name: "FinancialSummary",
-  data() {
-    return {
-      pedidos: [],
-      isLoading: true,
-      orcamentoTotal: 0,
-      custoRealTotal: 0,
-      saldoFinanceiro: 0,
-      showTips: true
-    };
-  },
-  computed: {
-    pedidosComFinancas() {
-      return this.pedidos
-        .filter(p => parseFloat(p.orcamento_previsto || 0) > 0 || parseFloat(p.custo_real || 0) > 0)
-        .sort((a, b) => parseFloat(b.orcamento_previsto || 0) - parseFloat(a.orcamento_previsto || 0))
-        .slice(0, 10);
-    },
-    saldoClass() {
-      return this.saldoFinanceiro >= 0 ? 'positive-balance' : 'negative-balance';
-    },
-    saldoIcon() {
-      return this.saldoFinanceiro >= 0 ? 'savings' : 'money_off';
-    },
-    saldoIconClass() {
-      return this.saldoFinanceiro >= 0 ? 'economy-icon' : 'deficit-icon';
-    },
-    saldoLabel() {
-      return this.saldoFinanceiro >= 0 ? 'Economia' : 'Déficit';
-    },
-    saldoTrendIcon() {
-      return this.saldoFinanceiro >= 0 ? 'trending_up' : 'trending_down';
-    },
-    saldoPercentage() {
-      if (this.orcamentoTotal === 0) return 0;
-      return Math.abs(Math.round((this.saldoFinanceiro / this.orcamentoTotal) * 100));
-    },
-    progressPercentage() {
-      if (this.orcamentoTotal === 0) return 0;
-      const percentage = Math.round((this.custoRealTotal / this.orcamentoTotal) * 100);
-      return Math.min(percentage, 100); // Limitar a 100% para visualização
-    },
-    progressClass() {
-      if (this.progressPercentage < 70) return 'progress-good';
-      if (this.progressPercentage < 90) return 'progress-warning';
-      return 'progress-danger';
-    },
-    percentageOver() {
-      if (this.orcamentoTotal === 0) return 0;
-      return Math.round(((this.custoRealTotal - this.orcamentoTotal) / this.orcamentoTotal) * 100);
+  name: 'FinancialSummary',
+  emits: ['edit-pedido'],
+  props: {
+    pedidos: {
+      type: Array,
+      default: () => []
     }
   },
-  mounted() {
-    this.fetchPedidos();
-  },
-  methods: {
-    async fetchPedidos() {
-      this.isLoading = true;
-      
-      try {
-        const response = await axios.get(`${process.env.VUE_APP_API_URL}/pedidos`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem("access_token")}` },
-        });
-        
-        this.pedidos = response.data || [];
-        
-        // Calcular totais
-        let orcamento = 0;
-        let custo = 0;
-        
-        this.pedidos.forEach(pedido => {
-          orcamento += parseFloat(pedido.orcamento_previsto || 0);
-          custo += parseFloat(pedido.custo_real || 0);
-        });
-        
-        this.orcamentoTotal = orcamento;
-        this.custoRealTotal = custo;
-        this.saldoFinanceiro = orcamento - custo;
-      } catch (error) {
-        console.error("Erro ao carregar dados financeiros:", error);
-      } finally {
-        this.isLoading = false;
-      }
-    },
-    truncateText(text, maxLength) {
-      if (!text) return '';
-      return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
-    },
-    formatCurrency(value) {
+  setup(props) {
+    const orcamentoTotal = computed(() => {
+      return props.pedidos.reduce((total, pedido) => {
+        return total + parseFloat(pedido.orcamento_previsto || 0);
+      }, 0);
+    });
+
+    const custoRealTotal = computed(() => {
+      return props.pedidos.reduce((total, pedido) => {
+        return total + parseFloat(pedido.custo_real || 0);
+      }, 0);
+    });
+
+    const saldoFinanceiro = computed(() => {
+      return orcamentoTotal.value - custoRealTotal.value;
+    });
+
+    const formatCurrency = (value) => {
       return parseFloat(value || 0).toLocaleString('pt-BR', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
       });
-    },
-    getDiffClass(diff) {
-      if (diff > 0) return 'positive-diff';
-      if (diff < 0) return 'negative-diff';
-      return '';
-    },
-    getDiffIcon(diff) {
-      if (diff > 0) return 'arrow_drop_down';
-      if (diff < 0) return 'arrow_drop_up';
-      return 'remove';
-    },
-    getStatusClass(status) {
-      switch (status) {
-        case 'Concluído':
-          return 'status-completed';
-        case 'Pendente':
-          return 'status-pending';
-        case 'Cancelado':
-          return 'status-canceled';
-        default:
-          return '';
-      }
-    },
-    isOverBudget(pedido) {
-      return parseFloat(pedido.custo_real || 0) > parseFloat(pedido.orcamento_previsto || 0);
-    },
-    editPedido(pedido) {
-      this.$emit('edit-pedido', pedido);
-    }
+    };
+
+    const getDifference = (pedido) => {
+      const orcamento = parseFloat(pedido.orcamento_previsto || 0);
+      const custo = parseFloat(pedido.custo_real || 0);
+      return orcamento - custo;
+    };
+
+    const getDifferenceClass = (pedido) => {
+      const diff = getDifference(pedido);
+      if (diff > 0) return 'positive';
+      if (diff < 0) return 'negative';
+      return 'neutral';
+    };
+
+    return {
+      orcamentoTotal,
+      custoRealTotal,
+      saldoFinanceiro,
+      formatCurrency,
+      getDifference,
+      getDifferenceClass
+    };
   }
 };
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Material+Icons&display=swap');
-
 .financial-summary {
-  background-color: #1f1f1f;
-  border-radius: 10px;
-  padding: 20px;
-  margin-bottom: 30px;
-  color: #f5f5f5;
-  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
-  border: 1px solid #333;
+  background: #1a1a1a;
+  border-radius: var(--border-radius-md);
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-lg);
 }
 
-.section-title {
+.summary-header {
+  margin-bottom: var(--spacing-lg);
+}
+
+.summary-header h3 {
+  margin: 0;
   color: #f5f5f5;
-  border-bottom: 1px solid #333;
-  padding-bottom: 15px;
-  margin-top: 0;
-  margin-bottom: 20px;
-  font-size: 24px;
   display: flex;
   align-items: center;
+  gap: var(--spacing-xs);
+  font-size: var(--font-size-lg);
 }
 
-.section-title i {
-  margin-right: 15px;
-  font-size: 28px;
+.summary-header h3 i {
   color: #ff6f61;
+  font-size: var(--font-size-xl);
 }
 
-.financial-kpis {
+.summary-cards {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
-  margin-bottom: 30px;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
 }
 
-.financial-kpi {
-  background-color: #2a2a2a;
-  border-radius: 8px;
-  padding: 18px;
+.summary-card {
+  background: linear-gradient(135deg, #2a2a2a 0%, #252525 100%);
+  border-radius: var(--border-radius-md);
+  padding: var(--spacing-lg);
   display: flex;
   align-items: center;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s, box-shadow 0.3s;
+  gap: var(--spacing-md);
   border: 1px solid #333;
+  transition: all 0.3s ease;
 }
 
-.financial-kpi:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
-  border-color: #ff6f61;
+.summary-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+  border-color: #444;
 }
 
-.kpi-icon {
-  font-size: 36px;
-  margin-right: 15px;
-  color: #ff6f61;
-}
-
-.economy-icon {
-  color: #2ecc71;
-}
-
-.deficit-icon {
-  color: #e74c3c;
-}
-
-.kpi-content {
-  flex: 1;
-}
-
-.financial-kpi h3 {
-  margin: 0 0 10px 0;
-  font-size: 16px;
-  color: #ddd;
-}
-
-.kpi-value {
-  font-size: 24px;
-  font-weight: bold;
-  color: #f5f5f5;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-}
-
-.trend-indicator {
-  display: flex;
-  align-items: center;
-  font-size: 14px;
-  margin-left: 10px;
-  padding: 3px 8px;
-  border-radius: 12px;
-  background-color: #333;
-}
-
-.trend-icon {
-  font-size: 18px;
-  margin-right: 5px;
-}
-
-.positive-balance .trend-indicator {
-  background-color: rgba(46, 204, 113, 0.2);
-  color: #2ecc71;
-}
-
-.positive-balance .kpi-value {
-  color: #2ecc71;
-}
-
-.negative-balance .trend-indicator {
-  background-color: rgba(231, 76, 60, 0.2);
-  color: #e74c3c;
-}
-
-.negative-balance .kpi-value {
-  color: #e74c3c;
-}
-
-/* Barra de progresso */
-.budget-progress-container {
-  background-color: #2a2a2a;
-  border-radius: 8px;
-  padding: 18px;
-  margin-bottom: 30px;
-  border: 1px solid #333;
-  transition: transform 0.3s, box-shadow 0.3s;
-}
-
-.budget-progress-container:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
-  border-color: #ff6f61;
-}
-
-.budget-progress-container h3 {
-  margin-top: 0;
-  margin-bottom: 15px;
-  font-size: 18px;
-  color: #ff6f61;
-  display: flex;
-  align-items: center;
-}
-
-.budget-progress-container h3::before {
-  content: 'trending_up';
-  font-family: 'Material Icons';
-  margin-right: 10px;
-  font-size: 22px;
-}
-
-.budget-progress {
-  height: 20px;
-  background-color: #333;
-  border-radius: 10px;
-  overflow: hidden;
-  margin-bottom: 10px;
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
-}
-
-.progress-bar {
-  height: 100%;
-  border-radius: 10px;
-  transition: width 0.5s ease;
-}
-
-.progress-good {
-  background-color: #2ecc71;
-  background-image: linear-gradient(45deg, rgba(255, 255, 255, 0.15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0.15) 75%, transparent 75%, transparent);
-  background-size: 20px 20px;
-  animation: progress-bar-stripes 1s linear infinite;
-}
-
-.progress-warning {
-  background-color: #f39c12;
-  background-image: linear-gradient(45deg, rgba(255, 255, 255, 0.15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0.15) 75%, transparent 75%, transparent);
-  background-size: 20px 20px;
-  animation: progress-bar-stripes 1s linear infinite;
-}
-
-.progress-danger {
-  background-color: #e74c3c;
-  background-image: linear-gradient(45deg, rgba(255, 255, 255, 0.15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0.15) 75%, transparent 75%, transparent);
-  background-size: 20px 20px;
-  animation: progress-bar-stripes 1s linear infinite;
-}
-
-@keyframes progress-bar-stripes {
-  from { background-position: 40px 0; }
-  to { background-position: 0 0; }
-}
-
-.progress-labels {
-  display: flex;
-  justify-content: space-between;
-  color: #ddd;
-  font-size: 14px;
-}
-
-/* Tabela de dados financeiros */
-.financial-table-container {
-  background-color: #2a2a2a;
-  border-radius: 8px;
-  padding: 20px;
-  margin-bottom: 30px;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-  border: 1px solid #333;
-  transition: transform 0.3s, box-shadow 0.3s;
-}
-
-.financial-table-container:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
-  border-color: #ff6f61;
-}
-
-.financial-table-container h3 {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  text-align: left;
-  margin-top: 0;
-  margin-bottom: 15px;
-  color: #ff6f61;
-  font-size: 18px;
-  border-bottom: 1px solid #333;
-  padding-bottom: 10px;
-}
-
-.financial-table {
-  width: 100%;
-  border-collapse: collapse;
-  color: #f5f5f5;
-}
-
-.financial-table th,
-.financial-table td {
-  padding: 12px 10px;
-  text-align: left;
-  border-bottom: 1px solid #333;
-}
-
-.financial-table th {
-  background-color: #222;
-  color: #ff6f61;
-  font-weight: 600;
-  text-transform: uppercase;
-  font-size: 12px;
-  letter-spacing: 1px;
-}
-
-.financial-table tr {
-  transition: background-color 0.3s;
-}
-
-.financial-table tr:hover {
-  background-color: #333;
-}
-
-.highlight-row {
-  background-color: rgba(231, 76, 60, 0.1);
-}
-
-.highlight-row:hover {
-  background-color: rgba(231, 76, 60, 0.2);
-}
-
-.description-cell {
-  max-width: 250px;
-}
-
-.loading-cell,
-.empty-cell {
-  text-align: center;
-  padding: 40px;
-  color: #999;
-  font-style: italic;
-}
-
-.loading-spinner {
-  display: inline-block;
-  width: 20px;
-  height: 20px;
-  margin-right: 10px;
-  border: 3px solid rgba(255, 255, 255, 0.3);
+.card-icon {
+  width: 50px;
+  height: 50px;
   border-radius: 50%;
-  border-top-color: #ff6f61;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-.empty-icon {
-  font-size: 24px;
-  margin-right: 10px;
-  vertical-align: middle;
-}
-
-.diff-value {
+  background: linear-gradient(135deg, #4DB6AC, #66BB6A);
   display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.card-icon.spent {
+  background: linear-gradient(135deg, #FF6F61, #FF8A80);
+}
+
+.card-icon.savings {
+  background: linear-gradient(135deg, #66BB6A, #81C784);
+}
+
+.card-icon.deficit {
+  background: linear-gradient(135deg, #EF5350, #E57373);
+}
+
+.card-icon i {
+  color: white;
+  font-size: var(--font-size-lg);
+}
+
+.card-content h4 {
+  margin: 0 0 var(--spacing-xs) 0;
+  font-size: var(--font-size-sm);
+  color: #aaa;
+  font-weight: 500;
+}
+
+.card-value {
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  color: #f5f5f5;
+}
+
+.summary-details h4 {
+  margin: 0 0 var(--spacing-md) 0;
+  color: #f5f5f5;
+  font-size: var(--font-size-md);
+}
+
+.details-table {
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: var(--border-radius-sm);
+  overflow: hidden;
+}
+
+.table-header,
+.table-row {
+  display: grid;
+  grid-template-columns: 80px 1fr 120px 120px 120px 60px;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
   align-items: center;
 }
 
-.diff-icon {
-  margin-right: 5px;
-  font-size: 20px;
+.table-header {
+  background: rgba(255, 255, 255, 0.05);
+  font-weight: 600;
+  color: #f5f5f5;
+  font-size: var(--font-size-sm);
 }
 
-.positive-diff {
-  color: #2ecc71;
+.table-row {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: var(--font-size-sm);
+  color: #ccc;
+  transition: background 0.3s ease;
 }
 
-.negative-diff {
-  color: #e74c3c;
+.table-row:hover {
+  background: rgba(255, 255, 255, 0.05);
 }
 
-.status-badge {
-  display: inline-block;
-  padding: 6px 10px;
-  border-radius: 20px;
-  font-size: 0.85em;
-  font-weight: bold;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+.table-row:last-child {
+  border-bottom: none;
 }
 
-.status-completed {
-  background-color: #2ecc71;
-  color: white;
+.positive {
+  color: #4caf50;
 }
 
-.status-pending {
-  background-color: #f39c12;
-  color: white;
+.negative {
+  color: #f44336;
 }
 
-.status-canceled {
-  background-color: #e74c3c;
-  color: white;
+.neutral {
+  color: #9e9e9e;
 }
 
 .edit-btn {
+  background: rgba(255, 111, 97, 0.2);
+  border: none;
+  color: #ff6f61;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
-  gap: 5px;
-  background-color: #ff6f61;
-  color: #1f1f1f;
-  border: none;
-  padding: 8px 12px;
-  border-radius: 20px;
+  justify-content: center;
   cursor: pointer;
-  font-size: 0.85em;
-  font-weight: bold;
-  transition: all 0.3s;
+  transition: all 0.3s ease;
 }
 
 .edit-btn:hover {
-  background-color: #e55b55;
-  transform: translateY(-2px);
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  background: rgba(255, 111, 97, 0.3);
+  transform: scale(1.1);
 }
 
 .edit-btn i {
-  font-size: 16px;
+  font-size: var(--font-size-sm);
 }
 
-/* Dicas financeiras */
-.financial-tips {
-  background-color: #2a2a2a;
-  border-radius: 8px;
-  padding: 20px;
-  border: 1px solid #333;
-  transition: transform 0.3s, box-shadow 0.3s;
-}
-
-.financial-tips:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
-  border-color: #ff6f61;
-}
-
-.financial-tips h3 {
+.empty-state {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 10px;
-  color: #ff6f61;
-  margin-top: 0;
-  margin-bottom: 15px;
-  font-size: 18px;
-  border-bottom: 1px solid #333;
-  padding-bottom: 10px;
+  justify-content: center;
+  padding: var(--spacing-xl);
+  color: #777;
+  text-align: center;
 }
 
-.tips-list {
-  list-style-type: none;
-  padding: 0;
+.empty-state i {
+  font-size: var(--font-size-3xl);
+  margin-bottom: var(--spacing-sm);
+  color: #555;
+}
+
+.empty-state p {
+  font-size: var(--font-size-sm);
   margin: 0;
 }
 
-.tips-list li {
-  display: flex;
-  align-items: center;
-  padding: 12px 15px;
-  margin-bottom: 10px;
-  background-color: #333;
-  border-radius: 8px;
-  transition: transform 0.3s, background-color 0.3s;
-  border: 1px solid #444;
-}
-
-.tips-list li:hover {
-  transform: translateY(-2px);
-  background-color: #3a3a3a;
-  border-color: #ff6f61;
-}
-
-.tip-icon {
-  font-size: 20px;
-  margin-right: 10px;
-  color: #ff6f61;
-}
-
-@media (max-width: 992px) {
-  .financial-kpis {
-    grid-template-columns: 1fr 1fr;
-  }
-  
-  .financial-kpi:last-child {
-    grid-column: span 2;
-  }
-}
-
+/* Responsividade */
 @media (max-width: 768px) {
-  .financial-kpis {
+  .summary-cards {
     grid-template-columns: 1fr;
   }
-  
-  .financial-kpi:last-child {
-    grid-column: auto;
-  }
-  
-  .financial-table {
-    display: block;
-    overflow-x: auto;
-    white-space: nowrap;
-  }
-  
-  .financial-table th,
-  .financial-table td {
-    padding: 10px 8px;
-    font-size: 0.9em;
-  }
-  
-  .description-cell {
-    max-width: 150px;
-  }
-  
-  .edit-btn {
-    padding: 6px 10px;
-  }
-  
-  .edit-btn span {
-    display: none;
-  }
-}
 
-@media (max-width: 480px) {
-  .financial-summary {
-    padding: 15px;
+  .table-header,
+  .table-row {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-xs);
   }
-  
-  .section-title {
-    font-size: 20px;
-  }
-  
-  .financial-kpi {
-    padding: 12px;
-  }
-  
-  .kpi-icon {
-    font-size: 28px;
-  }
-  
-  .kpi-value {
-    font-size: 20px;
-  }
-  
-  .financial-table-container,
-  .budget-progress-container,
-  .financial-tips {
-    padding: 15px;
-  }
-  
-  .financial-table th,
-  .financial-table td {
-    padding: 8px 6px;
-    font-size: 0.8em;
-  }
-  
-  .description-cell {
-    max-width: 100px;
-  }
-  
-  .tips-list li {
-    padding: 10px;
+
+  .table-header span,
+  .table-row span {
+    padding: 0.25rem 0;
   }
 }
 </style> 

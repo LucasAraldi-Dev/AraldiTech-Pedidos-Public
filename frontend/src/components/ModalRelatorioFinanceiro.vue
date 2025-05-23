@@ -13,7 +13,7 @@
       
       <div class="modal-body">
         <!-- Componente de Resumo Financeiro -->
-        <FinancialSummary @edit-pedido="handleEditPedido" />
+        <FinancialSummary :pedidos="pedidos" @edit-pedido="handleEditPedido" />
         
         <!-- Filtros adicionais para relatório -->
         <div class="filters-section">

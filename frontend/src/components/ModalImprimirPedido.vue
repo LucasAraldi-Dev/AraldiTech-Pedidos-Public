@@ -187,7 +187,6 @@ export default {
     statusClass() {
       const status = (this.pedido.status || '').toLowerCase();
       if (status === 'concluído' || status === 'concluido') return 'status-completed';
-      if (status === 'em andamento') return 'status-progress';
       if (status === 'cancelado') return 'status-canceled';
       return 'status-pending';
     },

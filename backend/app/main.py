@@ -26,6 +26,9 @@ import os
 # Importar e incluir o router de usuários
 from .user_routes import router as user_router
 
+# Importar o novo módulo de relatórios
+from .reports import report_generator
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
@@ -1397,9 +1400,24 @@ async def gerar_relatorio(
     request: Request,
     dataInicial: Optional[str] = None,
     dataFinal: Optional[str] = None,
+    # Novos parâmetros para filtros personalizados
+    status: Optional[str] = Query(None, description="Filtrar por status"),
+    categoria: Optional[str] = Query(None, description="Filtrar por categoria"),
+    urgencia: Optional[str] = Query(None, description="Filtrar por urgência"),
+    setor: Optional[str] = Query(None, description="Filtrar por setor"),
+    usuario: Optional[str] = Query(None, description="Filtrar por usuário"),
     db=Depends(database.get_db),
     current_user=Depends(get_current_user)
 ):
+    """
+    Gera relatórios personalizados com filtros avançados e formatação profissional.
+    
+    Parâmetros:
+    - tipo: 'pedidos' ou 'atividades'
+    - periodo: 'diario', 'semanal', 'mensal' ou 'personalizado'
+    - formato: 'pdf', 'excel' ou 'csv'
+    - Filtros opcionais: status, categoria, urgencia, setor, usuario
+    """
     # Verificar se o usuário tem permissão
     if current_user.get("tipo_usuario") not in ["gestor", "admin"]:
         raise HTTPException(
@@ -1423,32 +1441,65 @@ async def gerar_relatorio(
         
         if periodo == "diario":
             data_inicial = data_final.replace(hour=0, minute=0, second=0, microsecond=0)
+            period_label = f"Hoje ({data_inicial.strftime('%d/%m/%Y')})"
         elif periodo == "semanal":
             data_inicial = data_final - timedelta(days=7)
+            period_label = f"Últimos 7 dias ({data_inicial.strftime('%d/%m/%Y')} a {data_final.strftime('%d/%m/%Y')})"
         elif periodo == "mensal":
             data_inicial = data_final.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            period_label = f"Este mês ({data_inicial.strftime('%d/%m/%Y')} a {data_final.strftime('%d/%m/%Y')})"
         elif periodo == "personalizado" and dataInicial and dataFinal:
             try:
                 data_inicial = datetime.fromisoformat(dataInicial)
                 data_final = datetime.fromisoformat(dataFinal)
                 # Ajustar final do dia
                 data_final = data_final.replace(hour=23, minute=59, second=59)
+                period_label = f"Período personalizado ({data_inicial.strftime('%d/%m/%Y')} a {data_final.strftime('%d/%m/%Y')})"
             except ValueError:
                 raise HTTPException(
                     status_code=400,
                     detail="Formato de data inválido. Use o formato ISO (YYYY-MM-DD)."
                 )
+        else:
+            period_label = "Período não definido"
+        
+        # Construir filtros personalizados
+        filtros_personalizados = {}
+        if status:
+            filtros_personalizados['status'] = status
+        if categoria:
+            filtros_personalizados['categoria'] = categoria
+        if urgencia:
+            filtros_personalizados['urgencia'] = urgencia
+        if setor:
+            filtros_personalizados['setor'] = setor
+        if usuario:
+            filtros_personalizados['usuario'] = usuario
         
         # Filtrar dados com base no tipo de relatório
         if tipo == "pedidos":
-            # Buscar pedidos no período especificado
-            filtro = {
+            # Construir filtro de data para pedidos
+            filtro_db = {
                 "deliveryDate": {
                     "$gte": data_inicial,
                     "$lte": data_final
                 }
             }
-            dados = await db["pedidos"].find(filtro).to_list(1000)
+            
+            # Adicionar filtros personalizados ao filtro do banco
+            if status:
+                filtro_db["status"] = status
+            if categoria:
+                filtro_db["categoria"] = categoria
+            if urgencia:
+                filtro_db["urgencia"] = urgencia
+            if setor:
+                filtro_db["setor"] = setor
+            if usuario:
+                filtro_db["usuario_nome"] = usuario
+            
+            # Buscar pedidos no período especificado
+            dados = await db["pedidos"].find(filtro_db).to_list(1000)
             
             # Preparar dados para o relatório
             dados_relatorio = []
@@ -1457,40 +1508,28 @@ async def gerar_relatorio(
                 if "_id" in pedido:
                     del pedido["_id"]
                 # Formatar data de entrega
-                if "deliveryDate" in pedido:
+                if "deliveryDate" in pedido and pedido["deliveryDate"]:
                     pedido["deliveryDate"] = pedido["deliveryDate"].strftime("%d/%m/%Y")
                 dados_relatorio.append(pedido)
-                
-            # Criar dataframe
-            df = pd.DataFrame(dados_relatorio)
-            if df.empty:
-                df = pd.DataFrame(columns=['id', 'descricao', 'quantidade', 'status', 'urgencia', 'categoria', 'deliveryDate'])
-            else:
-                # Reorganizar e renomear colunas
-                colunas = {
-                    'id': 'ID',
-                    'descricao': 'Descrição',
-                    'quantidade': 'Quantidade',
-                    'status': 'Status',
-                    'urgencia': 'Urgência',
-                    'categoria': 'Categoria',
-                    'deliveryDate': 'Data de Entrega'
-                }
-                df = df.reindex(columns=list(colunas.keys()))
-                df = df.rename(columns=colunas)
                 
             # Título do relatório
             titulo = f"Relatório de Pedidos - {periodo.capitalize()}"
             
         elif tipo == "atividades":
-            # Buscar atividades no período especificado
-            filtro = {
+            # Construir filtro de data para atividades
+            filtro_db = {
                 "data": {
                     "$gte": data_inicial,
                     "$lte": data_final
                 }
             }
-            dados = await db["atividades"].find(filtro).sort("data", -1).to_list(1000)
+            
+            # Adicionar filtros personalizados ao filtro do banco
+            if usuario:
+                filtro_db["usuario_nome"] = usuario
+            
+            # Buscar atividades no período especificado
+            dados = await db["atividades"].find(filtro_db).sort("data", -1).to_list(1000)
             
             # Preparar dados para o relatório
             dados_relatorio = []
@@ -1500,26 +1539,9 @@ async def gerar_relatorio(
                     atividade["id"] = str(atividade["_id"])
                     del atividade["_id"]
                 # Formatar data
-                if "data" in atividade:
+                if "data" in atividade and atividade["data"]:
                     atividade["data"] = atividade["data"].strftime("%d/%m/%Y %H:%M")
                 dados_relatorio.append(atividade)
-                
-            # Criar dataframe
-            df = pd.DataFrame(dados_relatorio)
-            if df.empty:
-                df = pd.DataFrame(columns=['id', 'tipo', 'descricao', 'usuario_nome', 'data', 'pedido_id'])
-            else:
-                # Reorganizar e renomear colunas
-                colunas = {
-                    'id': 'ID',
-                    'tipo': 'Tipo',
-                    'descricao': 'Descrição',
-                    'usuario_nome': 'Usuário',
-                    'data': 'Data',
-                    'pedido_id': 'ID do Pedido'
-                }
-                df = df.reindex(columns=list(colunas.keys()))
-                df = df.rename(columns=colunas)
                 
             # Título do relatório
             titulo = f"Relatório de Atividades - {periodo.capitalize()}"
@@ -1528,95 +1550,25 @@ async def gerar_relatorio(
                 status_code=400,
                 detail="Tipo de relatório inválido. Use 'pedidos' ou 'atividades'."
             )
-            
-        # Gerar relatório no formato solicitado
+        
+        # Configurar dados do relatório
+        report_config = {
+            'title': titulo,
+            'period_label': period_label,
+            'user_name': usuario_nome,
+            'report_type': tipo,
+            'filters': filtros_personalizados if filtros_personalizados else None
+        }
+        
+        # Gerar relatório no formato solicitado usando o novo módulo
         if formato == "pdf":
-            # Criar buffer para armazenar o PDF
-            buffer = io.BytesIO()
-            
-            # Configurar documento PDF
-            doc = SimpleDocTemplate(buffer, pagesize=letter)
-            elementos = []
-            
-            # Adicionar título
-            estilos = getSampleStyleSheet()
-            elementos.append(Paragraph(titulo, estilos['Title']))
-            elementos.append(Paragraph(f"Período: {data_inicial.strftime('%d/%m/%Y')} a {data_final.strftime('%d/%m/%Y')}", estilos['Normal']))
-            elementos.append(Paragraph(f"Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M')}", estilos['Normal']))
-            elementos.append(Paragraph(f"Gerado por: {current_user.get('nome', 'Usuário')}", estilos['Normal']))
-            
-            # Adicionar tabela com dados
-            dados_tabela = [df.columns.tolist()]
-            for _, row in df.iterrows():
-                dados_tabela.append(row.tolist())
-                
-            tabela = Table(dados_tabela)
-            tabela.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-                ('GRID', (0, 0), (-1, -1), 1, colors.black)
-            ]))
-            
-            elementos.append(tabela)
-            
-            # Construir o PDF
-            doc.build(elementos)
-            
-            # Posicionar o buffer no início para leitura
-            buffer.seek(0)
-            
-            # Retornar o PDF como resposta
-            return StreamingResponse(
-                buffer,
-                media_type="application/pdf",
-                headers={
-                    "Content-Disposition": f'attachment; filename="relatorio_{tipo}_{periodo}.pdf"'
-                }
-            )
-            
-        elif formato == "excel":
-            # Criar buffer para armazenar o Excel
-            buffer = io.BytesIO()
-            
-            # Criar arquivo Excel
-            with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
-                # Escrever o dataframe
-                df.to_excel(writer, sheet_name='Relatório', index=False)
-                
-                # Obter a planilha e o objeto de formatação
-                planilha = writer.sheets['Relatório']
-                
-                # Formatar cabeçalho
-                formato_cabecalho = writer.book.add_format({
-                    'bold': True,
-                    'bg_color': '#CCCCCC',
-                    'border': 1
-                })
-                
-                # Aplicar formato ao cabeçalho
-                for col_num, value in enumerate(df.columns.values):
-                    planilha.write(0, col_num, value, formato_cabecalho)
-                    planilha.set_column(col_num, col_num, 15)
-                
-                # Adicionar informações do relatório
-                row = len(df) + 3
-                planilha.write(row, 0, f"Relatório: {titulo}")
-                planilha.write(row + 1, 0, f"Período: {data_inicial.strftime('%d/%m/%Y')} a {data_final.strftime('%d/%m/%Y')}")
-                planilha.write(row + 2, 0, f"Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
-                planilha.write(row + 3, 0, f"Gerado por: {current_user.get('nome', 'Usuário')}")
-            
-            # Posicionar o buffer no início para leitura
-            buffer.seek(0)
+            buffer = report_generator.generate_pdf_report(dados_relatorio, report_config)
             
             # Registrar atividade de geração de relatório
             await registrar_atividade(
                 db=db,
                 tipo="consulta",
-                descricao=f"Geração de relatório de {tipo} - período: {periodo} - formato: {formato}",
+                descricao=f"Geração de relatório PDF de {tipo} - período: {periodo}",
                 usuario_nome=usuario_nome,
                 ip_address=ip_address,
                 user_agent=user_agent,
@@ -1625,7 +1577,40 @@ async def gerar_relatorio(
                     "periodo": periodo,
                     "formato": formato,
                     "data_inicial": data_inicial.isoformat(),
-                    "data_final": data_final.isoformat()
+                    "data_final": data_final.isoformat(),
+                    "filtros": filtros_personalizados,
+                    "total_registros": len(dados_relatorio)
+                }
+            )
+            
+            # Retornar o PDF como resposta
+            return StreamingResponse(
+                buffer,
+                media_type="application/pdf",
+                headers={
+                    "Content-Disposition": f'attachment; filename="relatorio_{tipo}_{periodo}_{datetime.now().strftime("%Y%m%d_%H%M")}.pdf"'
+                }
+            )
+            
+        elif formato == "excel":
+            buffer = report_generator.generate_excel_report(dados_relatorio, report_config)
+            
+            # Registrar atividade de geração de relatório
+            await registrar_atividade(
+                db=db,
+                tipo="consulta",
+                descricao=f"Geração de relatório Excel de {tipo} - período: {periodo}",
+                usuario_nome=usuario_nome,
+                ip_address=ip_address,
+                user_agent=user_agent,
+                dados_adicionais={
+                    "tipo_relatorio": tipo,
+                    "periodo": periodo,
+                    "formato": formato,
+                    "data_inicial": data_inicial.isoformat(),
+                    "data_final": data_final.isoformat(),
+                    "filtros": filtros_personalizados,
+                    "total_registros": len(dados_relatorio)
                 }
             )
             
@@ -1634,20 +1619,89 @@ async def gerar_relatorio(
                 buffer,
                 media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 headers={
-                    "Content-Disposition": f'attachment; filename="relatorio_{tipo}_{periodo}.xlsx"'
+                    "Content-Disposition": f'attachment; filename="relatorio_{tipo}_{periodo}_{datetime.now().strftime("%Y%m%d_%H%M")}.xlsx"'
+                }
+            )
+            
+        elif formato == "csv":
+            # Gerar CSV simples
+            if not dados_relatorio:
+                csv_content = "Nenhum dado encontrado para os critérios especificados"
+            else:
+                df = pd.DataFrame(dados_relatorio)
+                
+                # Remover colunas desnecessárias
+                columns_to_remove = ['_id']
+                df = df.drop(columns=[col for col in columns_to_remove if col in df.columns])
+                
+                # Renomear colunas para português
+                column_mapping = {
+                    'id': 'ID',
+                    'descricao': 'Descrição',
+                    'quantidade': 'Quantidade',
+                    'status': 'Status',
+                    'urgencia': 'Urgência',
+                    'categoria': 'Categoria',
+                    'setor': 'Setor',
+                    'deliveryDate': 'Data de Entrega',
+                    'tipo': 'Tipo',
+                    'usuario_nome': 'Usuário',
+                    'data': 'Data',
+                    'pedido_id': 'ID do Pedido'
+                }
+                
+                df = df.rename(columns={k: v for k, v in column_mapping.items() if k in df.columns})
+                csv_content = df.to_csv(index=False, encoding='utf-8-sig')
+            
+            # Registrar atividade de geração de relatório
+            await registrar_atividade(
+                db=db,
+                tipo="consulta",
+                descricao=f"Geração de relatório CSV de {tipo} - período: {periodo}",
+                usuario_nome=usuario_nome,
+                ip_address=ip_address,
+                user_agent=user_agent,
+                dados_adicionais={
+                    "tipo_relatorio": tipo,
+                    "periodo": periodo,
+                    "formato": formato,
+                    "data_inicial": data_inicial.isoformat(),
+                    "data_final": data_final.isoformat(),
+                    "filtros": filtros_personalizados,
+                    "total_registros": len(dados_relatorio)
+                }
+            )
+            
+            # Retornar o CSV como resposta
+            return StreamingResponse(
+                io.StringIO(csv_content),
+                media_type="text/csv",
+                headers={
+                    "Content-Disposition": f'attachment; filename="relatorio_{tipo}_{periodo}_{datetime.now().strftime("%Y%m%d_%H%M")}.csv"'
                 }
             )
         else:
             raise HTTPException(
                 status_code=400,
-                detail="Formato de relatório inválido. Use 'pdf' ou 'excel'."
+                detail="Formato de relatório inválido. Use 'pdf', 'excel' ou 'csv'."
             )
             
+    except HTTPException as he:
+        # Re-raise HTTPExceptions para manter o status code correto
+        raise he
     except Exception as e:
         logger.error(f"Erro ao gerar relatório: {e}")
+        logger.exception("Detalhes completos do erro:")
+        
+        # Verificar se o report_generator está disponível
+        if report_generator is None:
+            error_detail = "Módulo de relatórios não está disponível. Verifique as dependências."
+        else:
+            error_detail = f"Erro interno do servidor ao gerar relatório: {str(e)}"
+        
         raise HTTPException(
             status_code=500,
-            detail=f"Erro ao gerar relatório: {str(e)}"
+            detail=error_detail
         )
 
 @app.get("/relatorios/financeiro")
@@ -2047,3 +2101,263 @@ async def logout(request: Request, db=Depends(database.get_db), current_user=Dep
     except Exception as e:
         logger.error(f"Erro ao registrar logout: {e}")
         raise HTTPException(status_code=500, detail="Erro ao processar logout")
+
+@app.get("/relatorios/dados")
+async def obter_dados_relatorio(
+    tipo: str,
+    periodo: str = "mensal",
+    dataInicial: Optional[str] = None,
+    dataFinal: Optional[str] = None,
+    status: Optional[str] = Query(None),
+    categoria: Optional[str] = Query(None),
+    urgencia: Optional[str] = Query(None),
+    setor: Optional[str] = Query(None),
+    usuario: Optional[str] = Query(None),
+    page: int = Query(1, ge=1),
+    limit: int = Query(50, ge=1, le=1000),
+    request: Request = None,
+    db=Depends(database.get_db),
+    current_user=Depends(get_current_user)
+):
+    """
+    Endpoint para dados dinâmicos de relatórios - alimenta a página web interativa.
+    Retorna dados paginados e métricas em tempo real.
+    """
+    try:
+        # Verificar permissões
+        if current_user.get("tipo_usuario") not in ["gestor", "admin"]:
+            raise HTTPException(
+                status_code=403,
+                detail="Acesso não autorizado. Apenas gestores podem acessar relatórios."
+            )
+        
+        # Determinar intervalo de datas
+        data_final = datetime.now()
+        data_inicial = data_final
+        
+        if periodo == "diario":
+            data_inicial = data_final.replace(hour=0, minute=0, second=0, microsecond=0)
+        elif periodo == "semanal":
+            data_inicial = data_final - timedelta(days=7)
+        elif periodo == "mensal":
+            data_inicial = data_final.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        elif periodo == "personalizado" and dataInicial and dataFinal:
+            try:
+                data_inicial = datetime.fromisoformat(dataInicial)
+                data_final = datetime.fromisoformat(dataFinal)
+                data_final = data_final.replace(hour=23, minute=59, second=59)
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Formato de data inválido")
+        
+        # Construir filtros
+        filtro_db = {}
+        
+        if tipo == "pedidos":
+            filtro_db["deliveryDate"] = {"$gte": data_inicial, "$lte": data_final}
+            if status:
+                filtro_db["status"] = status
+            if categoria:
+                filtro_db["categoria"] = categoria
+            if urgencia:
+                filtro_db["urgencia"] = urgencia
+            if setor:
+                filtro_db["setor"] = setor
+            if usuario:
+                filtro_db["usuario_nome"] = usuario
+                
+            # Contar total para paginação
+            total_count = await db["pedidos"].count_documents(filtro_db)
+            
+            # Buscar dados paginados
+            skip = (page - 1) * limit
+            dados = await db["pedidos"].find(filtro_db).skip(skip).limit(limit).to_list(limit)
+            
+            # Calcular métricas
+            metricas = await calcular_metricas_pedidos(db, filtro_db)
+            
+        elif tipo == "atividades":
+            filtro_db["data"] = {"$gte": data_inicial, "$lte": data_final}
+            if usuario:
+                filtro_db["usuario_nome"] = usuario
+                
+            total_count = await db["atividades"].count_documents(filtro_db)
+            skip = (page - 1) * limit
+            dados = await db["atividades"].find(filtro_db).sort("data", -1).skip(skip).limit(limit).to_list(limit)
+            
+            # Calcular métricas
+            metricas = await calcular_metricas_atividades(db, filtro_db)
+        else:
+            raise HTTPException(status_code=400, detail="Tipo inválido")
+        
+        # Processar dados para resposta
+        dados_processados = []
+        for item in dados:
+            if "_id" in item:
+                item["id"] = str(item["_id"])
+                del item["_id"]
+            
+            # Formatar datas
+            if "deliveryDate" in item and item["deliveryDate"]:
+                item["deliveryDate"] = item["deliveryDate"].strftime("%d/%m/%Y")
+            if "data" in item and item["data"]:
+                item["data"] = item["data"].strftime("%d/%m/%Y %H:%M")
+                
+            dados_processados.append(item)
+        
+        # Registrar atividade
+        if request:
+            ip_address = utils.get_client_ip(request)
+            user_agent = request.headers.get("User-Agent", "Desconhecido")
+            usuario_nome = current_user.get("nome", current_user.get("username", "Sistema"))
+            
+            await registrar_atividade(
+                db=db,
+                tipo="consulta",
+                descricao=f"Consulta dinâmica de relatório de {tipo}",
+                usuario_nome=usuario_nome,
+                ip_address=ip_address,
+                user_agent=user_agent,
+                dados_adicionais={
+                    "tipo_relatorio": tipo,
+                    "periodo": periodo,
+                    "filtros": {k: v for k, v in locals().items() if k in ["status", "categoria", "urgencia", "setor", "usuario"] and v},
+                    "pagina": page,
+                    "limite": limit
+                }
+            )
+        
+        return {
+            "success": True,
+            "data": dados_processados,
+            "metricas": metricas,
+            "paginacao": {
+                "pagina_atual": page,
+                "total_paginas": (total_count + limit - 1) // limit,
+                "total_registros": total_count,
+                "registros_por_pagina": limit
+            },
+            "filtros_aplicados": {
+                "tipo": tipo,
+                "periodo": periodo,
+                "status": status,
+                "categoria": categoria,
+                "urgencia": urgencia,
+                "setor": setor,
+                "usuario": usuario
+            },
+            "periodo_info": {
+                "data_inicial": data_inicial.strftime("%d/%m/%Y"),
+                "data_final": data_final.strftime("%d/%m/%Y"),
+                "label": f"{data_inicial.strftime('%d/%m/%Y')} a {data_final.strftime('%d/%m/%Y')}"
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao obter dados de relatório: {e}")
+        raise HTTPException(status_code=500, detail=f"Erro interno: {str(e)}")
+
+async def calcular_metricas_pedidos(db, filtro_base):
+    """Calcula métricas específicas para pedidos"""
+    try:
+        # Métricas por status
+        pipeline_status = [
+            {"$match": filtro_base},
+            {"$group": {"_id": "$status", "count": {"$sum": 1}}},
+            {"$sort": {"count": -1}}
+        ]
+        status_counts = await db["pedidos"].aggregate(pipeline_status).to_list(None)
+        
+        # Métricas por categoria
+        pipeline_categoria = [
+            {"$match": filtro_base},
+            {"$group": {"_id": "$categoria", "count": {"$sum": 1}}},
+            {"$sort": {"count": -1}},
+            {"$limit": 10}
+        ]
+        categoria_counts = await db["pedidos"].aggregate(pipeline_categoria).to_list(None)
+        
+        # Métricas por urgência
+        pipeline_urgencia = [
+            {"$match": filtro_base},
+            {"$group": {"_id": "$urgencia", "count": {"$sum": 1}}},
+            {"$sort": {"count": -1}}
+        ]
+        urgencia_counts = await db["pedidos"].aggregate(pipeline_urgencia).to_list(None)
+        
+        # Métricas por setor
+        pipeline_setor = [
+            {"$match": filtro_base},
+            {"$group": {"_id": "$setor", "count": {"$sum": 1}}},
+            {"$sort": {"count": -1}},
+            {"$limit": 10}
+        ]
+        setor_counts = await db["pedidos"].aggregate(pipeline_setor).to_list(None)
+        
+        # Total geral
+        total = await db["pedidos"].count_documents(filtro_base)
+        
+        # Calcular percentuais
+        status_data = []
+        for item in status_counts:
+            status_data.append({
+                "label": item["_id"] or "Não definido",
+                "value": item["count"],
+                "percentage": round((item["count"] / total * 100), 1) if total > 0 else 0
+            })
+        
+        return {
+            "total_registros": total,
+            "status_distribution": status_data,
+            "categoria_top": [{"label": item["_id"] or "Não definido", "value": item["count"]} for item in categoria_counts],
+            "urgencia_distribution": [{"label": item["_id"] or "Não definido", "value": item["count"]} for item in urgencia_counts],
+            "setor_top": [{"label": item["_id"] or "Não definido", "value": item["count"]} for item in setor_counts],
+            "taxa_conclusao": round((next((item["value"] for item in status_data if item["label"] == "Concluído"), 0) / total * 100), 1) if total > 0 else 0
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao calcular métricas de pedidos: {e}")
+        return {"total_registros": 0, "erro": str(e)}
+
+async def calcular_metricas_atividades(db, filtro_base):
+    """Calcula métricas específicas para atividades"""
+    try:
+        # Métricas por tipo
+        pipeline_tipo = [
+            {"$match": filtro_base},
+            {"$group": {"_id": "$tipo", "count": {"$sum": 1}}},
+            {"$sort": {"count": -1}}
+        ]
+        tipo_counts = await db["atividades"].aggregate(pipeline_tipo).to_list(None)
+        
+        # Métricas por usuário
+        pipeline_usuario = [
+            {"$match": filtro_base},
+            {"$group": {"_id": "$usuario_nome", "count": {"$sum": 1}}},
+            {"$sort": {"count": -1}},
+            {"$limit": 10}
+        ]
+        usuario_counts = await db["atividades"].aggregate(pipeline_usuario).to_list(None)
+        
+        # Atividades por dia
+        pipeline_diario = [
+            {"$match": filtro_base},
+            {"$group": {
+                "_id": {"$dateToString": {"format": "%Y-%m-%d", "date": "$data"}},
+                "count": {"$sum": 1}
+            }},
+            {"$sort": {"_id": 1}}
+        ]
+        atividades_diarias = await db["atividades"].aggregate(pipeline_diario).to_list(None)
+        
+        total = await db["atividades"].count_documents(filtro_base)
+        
+        return {
+            "total_registros": total,
+            "tipo_distribution": [{"label": item["_id"] or "Não definido", "value": item["count"]} for item in tipo_counts],
+            "usuario_top": [{"label": item["_id"] or "Não definido", "value": item["count"]} for item in usuario_counts],
+            "atividades_por_dia": [{"data": item["_id"], "count": item["count"]} for item in atividades_diarias]
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao calcular métricas de atividades: {e}")
+        return {"total_registros": 0, "erro": str(e)}

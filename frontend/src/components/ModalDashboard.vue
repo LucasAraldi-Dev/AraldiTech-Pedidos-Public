@@ -1,246 +1,119 @@
 <template>
   <div v-if="isOpen" class="modal-overlay" @click.self="$emit('close')">
     <div class="modal-content" @click.stop>
+      <!-- Header do Modal -->
       <div class="modal-header">
-        <h2 class="dashboard-title">Dashboard de Gestão</h2>
-        <button class="close-btn" @click="$emit('close')">
-          <i class="material-icons">close</i>
-        </button>
-      </div>
-      
-      <div class="dashboard-container">
-        <!-- Indicador de cache e carregamento -->
-        <div v-if="dataFromCache" class="cache-indicator">
-          <i class="material-icons">cached</i>
-          Dados carregados do cache
+        <div class="header-content">
+          <div class="header-title">
+            <i class="material-icons">dashboard</i>
+            <h2>Dashboard de Gestão</h2>
+          </div>
+          <div class="header-actions">
+            <button class="refresh-btn" @click="refreshAllData" :disabled="isRefreshing">
+              <i class="material-icons" :class="{ 'spinning': isRefreshing }">refresh</i>
+              <span>{{ isRefreshing ? 'Atualizando...' : 'Atualizar' }}</span>
+            </button>
+            <button class="close-btn" @click="$emit('close')">
+              <i class="material-icons">close</i>
+            </button>
+          </div>
         </div>
         
+
+      </div>
+        
+      <!-- Navegação por Abas -->
+      <div class="tabs-navigation">
+        <button 
+          v-for="tab in tabs" 
+          :key="tab.id"
+          class="tab-button"
+          :class="{ 'active': activeTab === tab.id }"
+          @click="setActiveTab(tab.id)"
+        >
+          <i class="material-icons">{{ tab.icon }}</i>
+          <span>{{ tab.label }}</span>
+          <div v-if="tab.badge" class="tab-badge">{{ tab.badge }}</div>
+        </button>
+      </div>
+            
+      <!-- Conteúdo das Abas -->
+      <div class="dashboard-content">
+        <!-- Loading Global -->
         <div v-if="isLoading" class="dashboard-loading">
           <LoadingIndicator message="Carregando dados do dashboard..." size="large" />
         </div>
-        
-        <div v-else class="dashboard-sections">
-          <!-- KPIs - Cards com métricas principais -->
-          <div class="dashboard-section kpi-section">
-            <div class="section-header">
-              <h3><i class="material-icons section-icon">insights</i>Métricas Principais</h3>
-              <div class="section-actions">
-                <button class="refresh-btn" @click="fetchData(true)">
-                  <i class="material-icons">refresh</i>
-                  Atualizar
-                </button>
-              </div>
-            </div>
-            
-            <div class="dashboard-metrics">
-              <div class="metric-card">
-                <div class="metric-icon">
-                  <i class="material-icons">shopping_cart</i>
-                </div>
-                <div class="metric-content">
-                  <h4 class="metric-title">Total de Pedidos</h4>
-                  <div class="metric-value">{{ totalPedidos }}</div>
-                </div>
-              </div>
               
-              <div class="metric-card">
-                <div class="metric-icon">
-                  <i class="material-icons">pending_actions</i>
-                </div>
-                <div class="metric-content">
-                  <h4 class="metric-title">Pedidos Pendentes</h4>
-                  <div class="metric-value">{{ pedidosPendentes }}</div>
-                </div>
-              </div>
-              
-              <div class="metric-card">
-                <div class="metric-icon">
-                  <i class="material-icons">timer</i>
-                </div>
-                <div class="metric-content">
-                  <h4 class="metric-title">Tempo Médio</h4>
-                  <div class="metric-value">{{ tempoMedioConclusao }}</div>
-                </div>
-              </div>
-              
-              <div class="metric-card">
-                <div class="metric-icon">
-                  <i class="material-icons">account_balance_wallet</i>
-                </div>
-                <div class="metric-content">
-                  <h4 class="metric-title">Orçamento Total</h4>
-                  <div class="metric-value">R$ {{ formatCurrency(orcamentoTotal) }}</div>
-                </div>
-              </div>
-            </div>
+        <!-- Todas as abas ficam montadas, apenas alternamos visibilidade -->
+        <div v-else class="tabs-container">
+          <!-- Aba: Visão Geral -->
+          <div 
+            class="tab-content overview-tab" 
+            :class="{ 'tab-active': activeTab === 'overview', 'tab-hidden': activeTab !== 'overview' }"
+          >
+            <DashboardOverview 
+              :pedidos="pedidos"
+              :activities="activities"
+              :is-loading="false"
+              @refresh="refreshOverview"
+            />
           </div>
-          
-          <!-- Gráficos e visualizações -->
-          <div class="dashboard-section charts-section">
-            <div class="section-header">
-              <h3><i class="material-icons section-icon">bar_chart</i>Análise de Pedidos</h3>
-            </div>
-            
-            <div v-if="isLoadingCharts" class="charts-loading">
-              <LoadingIndicator message="Carregando gráficos..." />
-            </div>
-            
-            <div v-else class="charts-container">
-              <div class="chart-wrapper">
-                <h4 class="chart-title">Status dos Pedidos</h4>
-                <canvas id="statusChart" ref="statusChart"></canvas>
-              </div>
-              
-              <div class="chart-wrapper">
-                <h4 class="chart-title">Categorias</h4>
-                <canvas id="categoryChart" ref="categoryChart"></canvas>
-              </div>
-              
-              <div class="chart-wrapper">
-                <h4 class="chart-title">Urgência</h4>
-                <canvas id="urgencyChart" ref="urgencyChart"></canvas>
-              </div>
-              
-              <div class="chart-wrapper">
-                <h4 class="chart-title">Orçamento vs. Custo Real</h4>
-                <canvas id="budgetChart" ref="budgetChart"></canvas>
-              </div>
-            </div>
+                
+          <!-- Aba: Análise -->
+          <div 
+            class="tab-content analytics-tab" 
+            :class="{ 'tab-active': activeTab === 'analytics', 'tab-hidden': activeTab !== 'analytics' }"
+          >
+            <DashboardAnalytics 
+              :pedidos="pedidos"
+              :is-loading="false"
+              @refresh="refreshAnalytics"
+            />
           </div>
-          
-          <!-- Seção Financeira -->
-          <div class="dashboard-section financial-section">
-            <div class="section-header">
-              <h3><i class="material-icons section-icon">account_balance</i>Resumo Financeiro</h3>
-            </div>
-            
-            <div class="financial-overview">
-              <div class="financial-kpis">
-                <div class="financial-kpi">
-                  <i class="material-icons kpi-icon">monetization_on</i>
-                  <div class="kpi-content">
-                    <h4>Orçamento Total</h4>
-                    <div class="kpi-value">R$ {{ formatCurrency(orcamentoTotal) }}</div>
-                  </div>
-                </div>
                 
-                <div class="financial-kpi">
-                  <i class="material-icons kpi-icon">shopping_cart</i>
-                  <div class="kpi-content">
-                    <h4>Custo Real</h4>
-                    <div class="kpi-value">R$ {{ formatCurrency(custoRealTotal) }}</div>
-                  </div>
-                </div>
-                
-                <div class="financial-kpi" :class="saldoFinanceiro >= 0 ? 'positive-balance' : 'negative-balance'">
-                  <i class="material-icons kpi-icon">{{ saldoFinanceiro >= 0 ? 'savings' : 'money_off' }}</i>
-                  <div class="kpi-content">
-                    <h4>{{ saldoFinanceiro >= 0 ? 'Economia' : 'Déficit' }}</h4>
-                    <div class="kpi-value">R$ {{ formatCurrency(Math.abs(saldoFinanceiro)) }}</div>
-                  </div>
-                </div>
-              </div>
-              
-              <div class="financial-summary-actions">
-                <button class="btn-view-details" @click="viewFinancialDetails">
-                  <i class="material-icons">visibility</i>
-                  Ver detalhes financeiros
-                </button>
-              </div>
-            </div>
+          <!-- Aba: Financeiro -->
+          <div 
+            class="tab-content financial-tab" 
+            :class="{ 'tab-active': activeTab === 'financial', 'tab-hidden': activeTab !== 'financial' }"
+          >
+            <DashboardFinancial 
+              :pedidos="pedidos"
+              :is-loading="false"
+              @refresh="refreshFinancial"
+              @view-details="openFinancialDetails"
+            />
           </div>
-          
-          <!-- Relatórios -->
-          <div class="dashboard-section reports-section">
-            <div class="section-header">
-              <h3><i class="material-icons section-icon">description</i>Relatórios</h3>
+            
+          <!-- Aba: Relatórios -->
+          <div 
+            class="tab-content reports-tab" 
+            :class="{ 'tab-active': activeTab === 'reports', 'tab-hidden': activeTab !== 'reports' }"
+          >
+            <!-- Aviso de Fase de Testes -->
+            <div class="test-warning-banner">
+              <div class="warning-content">
+                <i class="material-icons warning-icon">science</i>
+                <div class="warning-text">
+                  <h4>🧪 Funcionalidade em Fase de Testes</h4>
+                  <p>
+                    O sistema de relatórios está em desenvolvimento e pode apresentar instabilidades. 
+                    Estamos trabalhando para melhorar a experiência. Agradecemos sua compreensão!
+                  </p>
+                </div>
+              </div>
             </div>
             
-            <div class="reports-container">
-              <div class="report-form">
-                <div class="report-form-group">
-                  <label for="reportType">Tipo de Relatório:</label>
-                  <select id="reportType" v-model="reportOptions.tipo" class="report-select">
-                    <option value="pedidos">Pedidos</option>
-                    <option value="atividades">Atividades</option>
-                  </select>
-                </div>
-                
-                <div class="report-form-group">
-                  <label for="reportPeriod">Período:</label>
-                  <select id="reportPeriod" v-model="reportOptions.periodo" class="report-select">
-                    <option value="diario">Diário</option>
-                    <option value="semanal">Semanal</option>
-                    <option value="mensal">Mensal</option>
-                    <option value="personalizado">Personalizado</option>
-                  </select>
-                </div>
-                
-                <div class="report-date-range" v-if="reportOptions.periodo === 'personalizado'">
-                  <div class="report-form-group">
-                    <label for="startDate">Data Inicial:</label>
-                    <input type="date" id="startDate" v-model="reportOptions.dataInicial" class="date-input">
-                  </div>
-                  <div class="report-form-group">
-                    <label for="endDate">Data Final:</label>
-                    <input type="date" id="endDate" v-model="reportOptions.dataFinal" class="date-input">
-                  </div>
-                </div>
-                
-                <div class="report-form-group">
-                  <label for="reportFormat">Formato:</label>
-                  <select id="reportFormat" v-model="reportOptions.formato" class="report-select">
-                    <option value="pdf">PDF</option>
-                    <option value="excel">Excel</option>
-                    <option value="csv">CSV</option>
-                  </select>
-                </div>
-                
-                <div class="report-actions">
-                  <button 
-                    class="btn-generate" 
-                    @click="generateReport" 
-                    :disabled="isDownloadingReport"
-                  >
-                    <i class="material-icons">file_download</i>
-                    {{ isDownloadingReport ? 'Gerando...' : 'Gerar Relatório' }}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Atividades Recentes -->
-          <div class="dashboard-section activities-section">
-            <div class="section-header">
-              <h3><i class="material-icons section-icon">history</i>Atividades Recentes</h3>
-            </div>
-            
-            <div class="activities-container">
-              <div v-if="activities.length === 0" class="empty-state">
-                <i class="material-icons empty-icon">info</i>
-                <p class="empty-message">Nenhuma atividade recente encontrada</p>
-              </div>
-              
-              <div v-else class="activity-list">
-                <div v-for="(activity, index) in activities.slice(0, 5)" :key="index" class="activity-item">
-                  <div class="activity-icon">
-                    <i class="material-icons">{{ getActivityIcon(activity.tipo) }}</i>
-                  </div>
-                  <div class="activity-content">
-                    <div class="activity-details">{{ activity.descricao }}</div>
-                    <div class="activity-time">{{ formatDateTime(activity.data_hora) }}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <DashboardReports 
+              :is-loading="false"
+              @generate-report="handleGenerateReport"
+            />
           </div>
         </div>
       </div>
     </div>
   </div>
-  
-  <!-- Modal para detalhes financeiros -->
+              
+  <!-- Modal de Detalhes Financeiros -->
   <ModalFinanceiro
     v-if="showFinancialDetails"
     :isOpen="showFinancialDetails"
@@ -249,1271 +122,742 @@
 </template>
 
 <script>
-// Importação modificada para evitar o erro de 'module is not defined'
-import * as axiosModule from "axios";
-const axios = axiosModule.default || axiosModule;
-import { Chart, registerables } from 'chart.js';
-import authService from '@/api/authService';
-import { cachedRequest } from '@/utils/cacheService';
-import ModalFinanceiro from '@/components/ModalFinanceiro.vue';
-import LoadingIndicator from '@/components/ui/LoadingIndicator.vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useToast } from 'vue-toastification';
-
-// Registrar todos os componentes
-Chart.register(...registerables);
+import authService from '@/api/authService';
+import LoadingIndicator from '@/components/ui/LoadingIndicator.vue';
+import ModalFinanceiro from '@/components/ModalFinanceiro.vue';
+import DashboardOverview from '@/components/dashboard/DashboardOverview.vue';
+import DashboardAnalytics from '@/components/dashboard/DashboardAnalytics.vue';
+import DashboardFinancial from '@/components/dashboard/DashboardFinancial.vue';
+import DashboardReports from '@/components/dashboard/DashboardReports.vue';
 
 export default {
   name: 'ModalDashboard',
   components: {
+    LoadingIndicator,
     ModalFinanceiro,
-    LoadingIndicator
+    DashboardOverview,
+    DashboardAnalytics,
+    DashboardFinancial,
+    DashboardReports
   },
-  emits: ['close', 'open-order'],
+  emits: ['close'],
   props: {
     isOpen: {
       type: Boolean,
       default: false
     }
   },
-  data() {
-    return {
-      isLoading: true,
-      isDownloadingReport: false,
-      isLoadingCharts: false,
-      dataFromCache: false,
-      activities: [],
-      pedidos: [],
-      charts: {
-        status: null,
-        category: null,
-        urgency: null,
-        budget: null
-      },
-      cacheOptions: {
-        dashboard: {
-          enabled: true,
-          ttl: 5 * 60 * 1000 // 5 minutos para dados do dashboard
-        },
-        activities: {
-          enabled: true,
-          ttl: 2 * 60 * 1000 // 2 minutos para atividades
-        }
-      },
-      totalPedidos: 0,
-      tempoMedioConclusao: '0 dias',
-      pedidosPendentes: 0,
-      // Dados financeiros
-      orcamentoTotal: 0,
-      custoRealTotal: 0,
-      saldoFinanceiro: 0,
-      reportOptions: {
-        tipo: 'pedidos',
-        periodo: 'mensal',
-        dataInicial: this.getDefaultStartDate(),
-        dataFinal: this.formatDateForInput(new Date()),
-        formato: 'pdf'
-      },
-      showFinancialDetails: false
-    };
-  },
-  watch: {
-    isOpen(val) {
-      if (val) {
-        this.fetchData();
-      }
-    }
-  },
-  mounted() {
-    if (this.isOpen) {
-      this.fetchData();
-    }
-  },
-  methods: {
-    // Método principal para buscar dados
-    async fetchData(forceRefresh = false) {
-      this.isLoading = true;
-      
-      try {
-        // Buscar pedidos
-        await this.fetchPedidos(forceRefresh);
-        
-        // Buscar atividades recentes
-        await this.fetchActivities(forceRefresh);
-        
-        // Inicializar gráficos depois de obter os dados
-        this.initCharts();
-      } catch (error) {
-        console.error("Erro ao carregar dados do dashboard:", error);
-        const toast = useToast();
-        toast.error("Erro ao carregar dados. Tente novamente mais tarde.");
-      } finally {
-        this.isLoading = false;
-      }
-    },
+  setup(props) {
+    const toast = useToast();
     
-    // Buscar pedidos do backend com suporte a cache
-    async fetchPedidos(forceRefresh = false) {
-      this.dataFromCache = false;
+    // Estado reativo
+    const activeTab = ref('overview');
+    const isLoading = ref(false);
+    const isRefreshing = ref(false);
+    const dataFromCache = ref(false);
+    const showFinancialDetails = ref(false);
+    
+    // Estados de loading por aba
+    const isLoadingOverview = ref(false);
+    const isLoadingAnalytics = ref(false);
+    const isLoadingFinancial = ref(false);
+    const isLoadingReports = ref(false);
+    
+    // Dados
+    const pedidos = ref([]);
+    const activities = ref([]);
+    
+    // Configuração das abas
+    const tabs = computed(() => [
+      {
+        id: 'overview',
+        label: 'Visão Geral',
+        icon: 'dashboard',
+        badge: pedidos.value.length || null
+      },
+      {
+        id: 'analytics',
+        label: 'Análise',
+        icon: 'analytics'
+      },
+      {
+        id: 'financial',
+        label: 'Financeiro',
+        icon: 'account_balance'
+      },
+      {
+        id: 'reports',
+        label: 'Relatórios',
+        icon: 'description'
+      }
+    ]);
+
+    // Cache options (configuração para futuras implementações)
+    // const cacheOptions = {
+    //   dashboard: {
+    //     enabled: true,
+    //     ttl: 5 * 60 * 1000 // 5 minutos
+    //   },
+    //   activities: {
+    //     enabled: true,
+    //     ttl: 2 * 60 * 1000 // 2 minutos
+    //   }
+    // };
+
+    // Métodos
+    const setActiveTab = (tabId) => {
+      // Simplesmente mudar a aba ativa - sem destruir componentes
+      activeTab.value = tabId;
       
+      // Carregar dados apenas se necessário
+      if (pedidos.value.length === 0) {
+        switch (tabId) {
+          case 'overview':
+            if (!isLoadingOverview.value) {
+              refreshOverview();
+            }
+            break;
+          case 'analytics':
+            if (!isLoadingAnalytics.value) {
+              refreshAnalytics();
+            }
+            break;
+          case 'financial':
+            if (!isLoadingFinancial.value) {
+              refreshFinancial();
+            }
+            break;
+        }
+      }
+    };
+
+
+
+    const fetchPedidos = async () => {
       try {
-        // Usar cachedRequest para buscar pedidos com cache
-        const cacheKey = 'dashboard_pedidos';
-        const { data, fromCache: cached } = await cachedRequest({
-          key: cacheKey,
-          ttl: this.cacheOptions.dashboard.ttl,
-          forceRefresh,
-          request: async () => {
-            const response = await axios.get(`${process.env.VUE_APP_API_URL}/pedidos`, {
-              headers: authService.getAuthHeaders()
-            });
-            return response.data;
+        const response = await fetch(`${process.env.VUE_APP_API_URL}/pedidos`, {
+          headers: {
+            ...authService.getAuthHeaders(),
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
           }
         });
         
-        this.pedidos = data || [];
-        this.dataFromCache = cached;
+        if (!response.ok) throw new Error('Erro ao buscar pedidos');
         
-        // Calcular métricas
-        this.calcularMetricas();
+        const data = await response.json();
+        pedidos.value = data || [];
+        dataFromCache.value = false;
       } catch (error) {
-        console.error("Erro ao buscar pedidos:", error);
+        console.error('Erro ao buscar pedidos:', error);
         throw error;
       }
-    },
-    
-    // Buscar atividades recentes
-    async fetchActivities(forceRefresh = false) {
+    };
+
+    const fetchActivities = async () => {
       try {
-        // Usar cachedRequest para buscar atividades com cache
-        const cacheKey = 'dashboard_activities';
-        const { data, fromCache: cached } = await cachedRequest({
-          key: cacheKey,
-          ttl: this.cacheOptions.activities.ttl,
-          forceRefresh,
-          request: async () => {
-            const response = await axios.get(`${process.env.VUE_APP_API_URL}/atividades`, {
-              headers: authService.getAuthHeaders()
-            });
-            return response.data;
+        const response = await fetch(`${process.env.VUE_APP_API_URL}/atividades`, {
+          headers: {
+            ...authService.getAuthHeaders(),
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
           }
         });
         
-        this.activities = data || [];
-        this.dataFromCache = this.dataFromCache || cached;
+        if (!response.ok) throw new Error('Erro ao buscar atividades');
+        
+        const data = await response.json();
+        activities.value = data || [];
+        dataFromCache.value = false;
       } catch (error) {
-        console.error("Erro ao buscar atividades:", error);
-        // Não lançamos o erro aqui para que o dashboard ainda funcione sem atividades
-        this.activities = [];
+        console.error('Erro ao buscar atividades:', error);
+        // Não mostrar erro para atividades, pois não é crítico
+        activities.value = [];
       }
-    },
-    
-    // Calcular métricas com base nos pedidos
-    calcularMetricas() {
-      // Calcular total de pedidos
-      this.totalPedidos = this.pedidos.length;
-      
-      // Calcular pedidos pendentes
-      this.pedidosPendentes = this.pedidos.filter(p => p.status === 'Pendente').length;
-      
-      // Calcular tempo médio de conclusão
-      const pedidosConcluidos = this.pedidos.filter(p => p.status === 'Concluído');
-      if (pedidosConcluidos.length > 0) {
-        let tempoTotal = 0;
-        
-        pedidosConcluidos.forEach(pedido => {
-          const dataInicio = new Date(pedido.data_pedido);
-          const dataFim = new Date(pedido.data_conclusao);
-          const diffTime = Math.abs(dataFim - dataInicio);
-          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-          tempoTotal += diffDays;
-        });
-        
-        const tempoMedio = tempoTotal / pedidosConcluidos.length;
-        this.tempoMedioConclusao = `${tempoMedio.toFixed(1)} dias`;
-      } else {
-        this.tempoMedioConclusao = 'N/A';
-      }
-      
-      // Calcular dados financeiros
-      let orcamento = 0;
-      let custo = 0;
-      
-      this.pedidos.forEach(pedido => {
-        orcamento += parseFloat(pedido.orcamento_previsto || 0);
-        custo += parseFloat(pedido.custo_real || 0);
-      });
-      
-      this.orcamentoTotal = orcamento;
-      this.custoRealTotal = custo;
-      this.saldoFinanceiro = orcamento - custo;
-    },
-    
-    // Inicializar gráficos
-    async initCharts() {
-      this.isLoadingCharts = true;
-      
+    };
+
+    const loadInitialData = async () => {
+      isLoading.value = true;
       try {
-        // Destruir gráficos existentes para evitar duplicação
-        this.destroyCharts();
-        
-        // Criar novos gráficos
-        await this.createStatusChart();
-        await this.createCategoryChart();
-        await this.createUrgencyChart();
-        await this.createBudgetChart();
+        await Promise.all([
+          fetchPedidos(),
+          fetchActivities()
+        ]);
       } catch (error) {
-        console.error("Erro ao inicializar gráficos:", error);
+        console.error('Erro ao carregar dados iniciais:', error);
+        toast.error('Erro ao carregar dados do dashboard');
       } finally {
-        this.isLoadingCharts = false;
+        isLoading.value = false;
       }
-    },
-    
-    // Destruir gráficos existentes
-    destroyCharts() {
-      Object.keys(this.charts).forEach(chartKey => {
-        if (this.charts[chartKey] instanceof Chart) {
-          this.charts[chartKey].destroy();
-          this.charts[chartKey] = null;
-        }
-      });
-    },
-    
-    // Criar gráfico de status
-    async createStatusChart() {
-      if (!this.$refs.statusChart) return;
-      
-      const statusCount = {
-        Pendente: 0,
-        'Em Andamento': 0,
-        Concluído: 0,
-        Cancelado: 0
-      };
-      
-      this.pedidos.forEach(pedido => {
-        if (Object.prototype.hasOwnProperty.call(statusCount, pedido.status)) {
-          statusCount[pedido.status]++;
-        }
-      });
-      
-      const ctx = this.$refs.statusChart.getContext('2d');
-      this.charts.status = new Chart(ctx, {
-        type: 'pie',
-        data: {
-          labels: Object.keys(statusCount),
-          datasets: [{
-            data: Object.values(statusCount),
-            backgroundColor: [
-              '#FF6F61', // Vermelho/Coral para Pendente
-              '#FFA726', // Laranja para Em Andamento
-              '#66BB6A', // Verde para Concluído
-              '#78909C'  // Cinza para Cancelado
-            ],
-            borderWidth: 1
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              position: 'bottom',
-              labels: {
-                color: '#f5f5f5',
-                font: {
-                  size: 12
-                }
-              }
-            },
-            tooltip: {
-              backgroundColor: 'rgba(0, 0, 0, 0.7)'
-            }
-          }
-        }
-      });
-    },
-    
-    // Criar gráfico de categorias
-    async createCategoryChart() {
-      if (!this.$refs.categoryChart) return;
-      
-      const categoryCount = {};
-      
-      this.pedidos.forEach(pedido => {
-        const categoria = pedido.categoria || 'Sem Categoria';
-        if (!categoryCount[categoria]) {
-          categoryCount[categoria] = 0;
-        }
-        categoryCount[categoria]++;
-      });
-      
-      // Ordenar por contagem
-      const sortedCategories = Object.entries(categoryCount)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 7); // Limitar a 7 categorias
-      
-      const ctx = this.$refs.categoryChart.getContext('2d');
-      this.charts.category = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: sortedCategories.map(item => item[0]),
-          datasets: [{
-            label: 'Quantidade',
-            data: sortedCategories.map(item => item[1]),
-            backgroundColor: '#FF6F61',
-            borderWidth: 0,
-            borderRadius: 4
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          indexAxis: 'y',
-          plugins: {
-            legend: {
-              display: false
-            },
-            tooltip: {
-              backgroundColor: 'rgba(0, 0, 0, 0.7)'
-            }
-          },
-          scales: {
-            x: {
-              grid: {
-                color: 'rgba(255, 255, 255, 0.1)'
-              },
-              ticks: {
-                color: '#f5f5f5'
-              }
-            },
-            y: {
-              grid: {
-                display: false
-              },
-              ticks: {
-                color: '#f5f5f5'
-              }
-            }
-          }
-        }
-      });
-    },
-    
-    // Criar gráfico de urgência
-    async createUrgencyChart() {
-      if (!this.$refs.urgencyChart) return;
-      
-      const urgencyCount = {
-        'Baixa': 0,
-        'Média': 0,
-        'Alta': 0,
-        'Crítica': 0
-      };
-      
-      this.pedidos.forEach(pedido => {
-        const urgencia = pedido.urgencia || 'Média';
-        if (Object.prototype.hasOwnProperty.call(urgencyCount, urgencia)) {
-          urgencyCount[urgencia]++;
-        }
-      });
-      
-      const ctx = this.$refs.urgencyChart.getContext('2d');
-      this.charts.urgency = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-          labels: Object.keys(urgencyCount),
-          datasets: [{
-            data: Object.values(urgencyCount),
-            backgroundColor: [
-              '#66BB6A', // Verde para Baixa
-              '#FFA726', // Laranja para Média
-              '#FF7043', // Laranja mais escuro para Alta
-              '#EF5350'  // Vermelho para Crítica
-            ],
-            borderWidth: 2,
-            borderColor: '#2a2a2a'
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          cutout: '70%',
-          plugins: {
-            legend: {
-              position: 'bottom',
-              labels: {
-                color: '#f5f5f5',
-                font: {
-                  size: 12
-                }
-              }
-            },
-            tooltip: {
-              backgroundColor: 'rgba(0, 0, 0, 0.7)'
-            }
-          }
-        }
-      });
-    },
-    
-    // Criar gráfico de orçamento vs custo real
-    async createBudgetChart() {
-      if (!this.$refs.budgetChart) return;
-      
-      // Filtrar pedidos que têm dados financeiros
-      const pedidosFinanceiros = this.pedidos
-        .filter(p => (parseFloat(p.orcamento_previsto || 0) > 0) || (parseFloat(p.custo_real || 0) > 0))
-        .sort((a, b) => parseFloat(b.orcamento_previsto || 0) - parseFloat(a.orcamento_previsto || 0))
-        .slice(0, 6); // Limitando aos 6 maiores para melhor visualização
-      
-      const ctx = this.$refs.budgetChart.getContext('2d');
-      this.charts.budget = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: pedidosFinanceiros.map(p => `#${p.id}`),
-          datasets: [
-            {
-              label: 'Orçamento',
-              data: pedidosFinanceiros.map(p => parseFloat(p.orcamento_previsto || 0)),
-              backgroundColor: '#4DB6AC',
-              borderWidth: 0,
-              borderRadius: 4
-            },
-            {
-              label: 'Custo Real',
-              data: pedidosFinanceiros.map(p => parseFloat(p.custo_real || 0)),
-              backgroundColor: '#FF6F61',
-              borderWidth: 0,
-              borderRadius: 4
-            }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              position: 'top',
-              labels: {
-                color: '#f5f5f5',
-                font: {
-                  size: 12
-                }
-              }
-            },
-            tooltip: {
-              backgroundColor: 'rgba(0, 0, 0, 0.7)',
-              callbacks: {
-                label: function(context) {
-                  return `${context.dataset.label}: R$ ${context.raw.toFixed(2)}`;
-                }
-              }
-            }
-          },
-          scales: {
-            x: {
-              grid: {
-                color: 'rgba(255, 255, 255, 0.1)'
-              },
-              ticks: {
-                color: '#f5f5f5'
-              }
-            },
-            y: {
-              grid: {
-                color: 'rgba(255, 255, 255, 0.1)'
-              },
-              ticks: {
-                color: '#f5f5f5',
-                callback: function(value) {
-                  return `R$ ${value}`;
-                }
-              }
-            }
-          }
-        }
-      });
-    },
-    
-    // Método para gerar relatório
-    async generateReport() {
-      if (this.isDownloadingReport) return;
-      this.isDownloadingReport = true;
-      
+    };
+
+    const refreshAllData = async () => {
+      isRefreshing.value = true;
       try {
-        const toast = useToast();
-        
-        // Verificar datas para período personalizado
-        if (this.reportOptions.periodo === 'personalizado') {
-          const dataInicial = new Date(this.reportOptions.dataInicial);
-          const dataFinal = new Date(this.reportOptions.dataFinal);
-          
-          if (isNaN(dataInicial.getTime()) || isNaN(dataFinal.getTime())) {
-            toast.error('Por favor, selecione datas válidas para o relatório.');
-            return;
-          }
-          
-          if (dataFinal < dataInicial) {
-            toast.error('A data final não pode ser anterior à data inicial.');
-            return;
-          }
-        }
-        
-        // Fazer solicitação para gerar o relatório
-        const response = await axios.post(
-          `${process.env.VUE_APP_API_URL}/relatorios`,
-          {
-            tipo: this.reportOptions.tipo,
-            periodo: this.reportOptions.periodo,
-            data_inicial: this.reportOptions.dataInicial,
-            data_final: this.reportOptions.dataFinal,
-            formato: this.reportOptions.formato
+        await Promise.all([
+          fetchPedidos(),
+          fetchActivities()
+        ]);
+        toast.success('Dados atualizados com sucesso!');
+      } catch (error) {
+        console.error('Erro ao atualizar dados:', error);
+        toast.error('Erro ao atualizar dados');
+      } finally {
+        isRefreshing.value = false;
+      }
+    };
+
+    const refreshOverview = async () => {
+      isLoadingOverview.value = true;
+      try {
+        await Promise.all([
+          fetchPedidos(),
+          fetchActivities()
+        ]);
+      } catch (error) {
+        console.error('Erro ao atualizar visão geral:', error);
+      } finally {
+        isLoadingOverview.value = false;
+      }
+    };
+
+    const refreshAnalytics = async () => {
+      isLoadingAnalytics.value = true;
+      try {
+        await fetchPedidos();
+      } catch (error) {
+        console.error('Erro ao atualizar análises:', error);
+      } finally {
+        isLoadingAnalytics.value = false;
+      }
+    };
+
+    const refreshFinancial = async () => {
+      isLoadingFinancial.value = true;
+      try {
+        await fetchPedidos();
+      } catch (error) {
+        console.error('Erro ao atualizar dados financeiros:', error);
+      } finally {
+        isLoadingFinancial.value = false;
+      }
+    };
+
+    const refreshReports = async () => {
+      isLoadingReports.value = true;
+      try {
+        // Simular carregamento de relatórios
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      } catch (error) {
+        console.error('Erro ao atualizar relatórios:', error);
+      } finally {
+        isLoadingReports.value = false;
+      }
+    };
+
+    const openFinancialDetails = () => {
+      showFinancialDetails.value = true;
+    };
+
+    const closeFinancialDetails = () => {
+      showFinancialDetails.value = false;
+    };
+
+    const handleGenerateReport = async (reportData) => {
+      try {
+        const response = await fetch(`${process.env.VUE_APP_API_URL}/relatorios`, {
+          method: 'POST',
+          headers: {
+            ...authService.getAuthHeaders(),
+            'Content-Type': 'application/json'
           },
-          {
-            headers: authService.getAuthHeaders(),
-            responseType: 'blob'
-          }
-        );
-        
-        // Criar URL para download
-        const blob = new Blob([response.data], { 
-          type: this.getMimeType(this.reportOptions.formato) 
+          body: JSON.stringify(reportData)
         });
+
+        if (!response.ok) throw new Error('Erro ao gerar relatório');
+
+        const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
-        
-        // Criar link para download e clicar nele automaticamente
         const link = document.createElement('a');
         link.href = url;
-        link.download = this.getReportFileName();
+        link.download = `relatorio_${Date.now()}.pdf`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
         
         toast.success('Relatório gerado com sucesso!');
       } catch (error) {
         console.error('Erro ao gerar relatório:', error);
-        const toast = useToast();
-        toast.error('Erro ao gerar relatório. Tente novamente mais tarde.');
-      } finally {
-        this.isDownloadingReport = false;
+        toast.error('Erro ao gerar relatório');
       }
-    },
-    
-    // Obter nome do arquivo para o relatório
-    getReportFileName() {
-      const date = new Date();
-      const formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-      return `relatorio-${this.reportOptions.tipo}-${formattedDate}.${this.getFileExtension(this.reportOptions.formato)}`;
-    },
-    
-    // Obter extensão de arquivo com base no formato
-    getFileExtension(formato) {
-      switch (formato) {
-        case 'excel': return 'xlsx';
-        case 'csv': return 'csv';
-        case 'pdf':
-        default: return 'pdf';
+    };
+
+    // Watchers
+    watch(() => props.isOpen, (newValue) => {
+      if (newValue) {
+        activeTab.value = 'overview';
+        loadInitialData();
       }
-    },
-    
-    // Obter MIME type com base no formato
-    getMimeType(formato) {
-      switch (formato) {
-        case 'excel': return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-        case 'csv': return 'text/csv';
-        case 'pdf':
-        default: return 'application/pdf';
+    });
+
+    // Lifecycle
+    onMounted(() => {
+      if (props.isOpen) {
+        loadInitialData();
       }
-    },
-    
-    // Formatar data para campo de input
-    formatDateForInput(date) {
-      if (!date) return '';
+    });
+
+    onUnmounted(() => {
+      // Cleanup se necessário
+    });
+
+    return {
+      // Estado
+      activeTab,
+      isLoading,
+      isRefreshing,
+      dataFromCache,
+      showFinancialDetails,
+      isLoadingOverview,
+      isLoadingAnalytics,
+      isLoadingFinancial,
+      isLoadingReports,
       
-      const d = new Date(date);
-      return d.toISOString().split('T')[0];
-    },
-    
-    // Obter data padrão para início (30 dias atrás)
-    getDefaultStartDate() {
-      const date = new Date();
-      date.setDate(date.getDate() - 30);
-      return this.formatDateForInput(date);
-    },
-    
-    // Formatar valor monetário
-    formatCurrency(value) {
-      return parseFloat(value || 0).toLocaleString('pt-BR', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      });
-    },
-    
-    // Formatar data e hora
-    formatDateTime(dateString) {
-      if (!dateString) return '';
+      // Dados
+      pedidos,
+      activities,
+      tabs,
       
-      const date = new Date(dateString);
-      
-      // Verificar se a data é válida
-      if (isNaN(date.getTime())) return dateString;
-      
-      return new Intl.DateTimeFormat('pt-BR', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit'
-      }).format(date);
-    },
-    
-    // Obter ícone para tipo de atividade
-    getActivityIcon(tipo) {
-      switch (tipo) {
-        case 'criar': return 'add_circle';
-        case 'editar': return 'edit';
-        case 'concluir': return 'check_circle';
-        case 'cancelar': return 'cancel';
-        case 'financeiro': return 'attach_money';
-        case 'comentario': return 'comment';
-        default: return 'info';
-      }
-    },
-    
-    // Abrir detalhes financeiros
-    viewFinancialDetails() {
-      this.showFinancialDetails = true;
-    },
-    
-    // Fechar detalhes financeiros
-    closeFinancialDetails() {
-      this.showFinancialDetails = false;
-    }
+      // Métodos
+      setActiveTab,
+      refreshAllData,
+      refreshOverview,
+      refreshAnalytics,
+      refreshFinancial,
+      refreshReports,
+      openFinancialDetails,
+      closeFinancialDetails,
+      handleGenerateReport
+    };
   }
 };
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Material+Icons&display=swap');
-
-/* Overlay e Modal Base */
 .modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.8);
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.85);
+  z-index: var(--z-index-modal);
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: var(--z-index-modal);
-  padding: var(--spacing-md);
+  transition: opacity 0.3s ease-in-out;
   overflow-y: auto;
+  padding: var(--spacing-md);
+  box-sizing: border-box;
 }
 
 .modal-content {
   background-color: #1f1f1f;
+  color: #f5f5f5;
   border-radius: var(--border-radius-lg);
-  box-shadow: 0 0.3125rem 1.5625rem rgba(0, 0, 0, 0.5);
-  width: var(--modal-width-md);
-  max-width: var(--modal-max-width);
-  max-height: var(--modal-max-height);
-  overflow-y: auto;
-  position: relative;
+  width: 100%;
+  max-width: 1400px;
+  height: 90vh;
+  max-height: 90vh;
   display: flex;
   flex-direction: column;
-  color: #f5f5f5;
-  scrollbar-width: thin;
-  scrollbar-color: #ff6f61 #333;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  border: 1px solid #333;
+  overflow: hidden;
 }
 
-.modal-content::-webkit-scrollbar {
-  width: 0.5rem;
-}
-
-.modal-content::-webkit-scrollbar-track {
-  background: #333;
-  border-radius: 0.625rem;
-}
-
-.modal-content::-webkit-scrollbar-thumb {
-  background-color: #ff6f61;
-  border-radius: 0.625rem;
-}
-
-/* Cabeçalho do Modal */
+/* Header */
 .modal-header {
-  padding: var(--spacing-md) var(--spacing-lg);
-  border-bottom: 0.0625rem solid #333;
+  background: linear-gradient(135deg, #2a2a2a 0%, #1f1f1f 100%);
+  border-bottom: 1px solid #333;
+  padding: var(--spacing-lg);
+  flex-shrink: 0;
+}
+
+.header-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  position: sticky;
-  top: 0;
-  background-color: #1f1f1f;
-  z-index: 10;
-  border-top-left-radius: var(--border-radius-lg);
-  border-top-right-radius: var(--border-radius-lg);
+  gap: var(--spacing-sm);
 }
 
-.dashboard-title {
-  font-size: var(--font-size-xl);
-  margin: 0;
-  color: #f5f5f5;
+.header-title {
   display: flex;
   align-items: center;
+  gap: var(--spacing-sm);
 }
 
-.dashboard-title::before {
-  content: 'dashboard';
-  font-family: 'Material Icons';
-  margin-right: var(--spacing-sm);
+.header-title i {
   color: #ff6f61;
-  font-size: var(--font-size-xxl);
+  font-size: var(--font-size-xl);
+}
+
+.header-title h2 {
+  margin: 0;
+  color: #f5f5f5;
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.refresh-btn, .close-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #f5f5f5;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--border-radius-sm);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: var(--font-size-sm);
+}
+
+.refresh-btn:hover:not(:disabled), .close-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-1px);
+}
+
+.refresh-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .close-btn {
-  background: none;
-  border: none;
-  color: #ff6f61;
-  font-size: var(--font-size-xl);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: color 0.3s;
+  padding: var(--spacing-xs);
 }
 
 .close-btn:hover {
-  color: #e74c3c;
-}
-
-/* Container principal */
-.dashboard-container {
-  padding: var(--spacing-md);
-}
-
-/* Indicador de Cache */
-.cache-indicator {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: rgba(102, 204, 255, 0.1);
-  color: #66ccff;
-  padding: var(--spacing-xs) var(--spacing-sm);
-  border-radius: var(--border-radius-sm);
-  margin-bottom: var(--spacing-sm);
-  font-size: var(--font-size-sm);
-}
-
-.cache-indicator i {
-  margin-right: var(--spacing-xs);
-  font-size: var(--font-size-md);
-}
-
-/* Loading */
-.dashboard-loading, .charts-loading {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 18.75rem;
-  width: 100%;
-}
-
-/* Seções */
-.dashboard-sections {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-lg);
-}
-
-.dashboard-section {
-  background-color: #252525;
-  border-radius: var(--border-radius-md);
-  box-shadow: 0 0.3125rem 0.9375rem rgba(0, 0, 0, 0.2);
-  padding: var(--spacing-md);
-  border: 0.0625rem solid #333;
-  transition: transform 0.3s, box-shadow 0.3s;
-}
-
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--spacing-md);
-  padding-bottom: var(--spacing-sm);
-  border-bottom: 0.0625rem solid #333;
-}
-
-.section-header h3 {
-  margin: 0;
-  font-size: var(--font-size-lg);
-  color: #f5f5f5;
-  display: flex;
-  align-items: center;
-}
-
-.section-icon {
-  color: #ff6f61;
-  margin-right: var(--spacing-xs);
-  font-size: var(--font-size-xl);
-}
-
-.section-actions {
-  display: flex;
-  gap: var(--spacing-sm);
-}
-
-.refresh-btn {
-  background-color: transparent;
-  color: #f5f5f5;
-  border: 0.0625rem solid #444;
-  border-radius: var(--border-radius-sm);
-  padding: var(--spacing-xs) var(--spacing-sm);
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-xs);
-  cursor: pointer;
-  transition: all 0.3s;
-  font-size: var(--font-size-sm);
-}
-
-.refresh-btn:hover {
-  background-color: rgba(255, 255, 255, 0.05);
-  border-color: #555;
-}
-
-.refresh-btn i {
-  font-size: var(--font-size-md);
-}
-
-/* Métricas (KPIs) */
-.dashboard-metrics {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: var(--spacing-md);
-}
-
-.metric-card {
-  background-color: #2a2a2a;
-  border-radius: var(--border-radius-sm);
-  padding: var(--spacing-md);
-  display: flex;
-  align-items: center;
-  box-shadow: 0 0.25rem 0.625rem rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s, box-shadow 0.3s;
-  border: 0.0625rem solid #333;
-}
-
-.metric-card:hover {
-  transform: translateY(-0.3125rem);
-  box-shadow: 0 0.5rem 0.9375rem rgba(0, 0, 0, 0.2);
+  background: rgba(255, 111, 97, 0.2);
   border-color: #ff6f61;
 }
 
-.metric-icon {
-  font-size: var(--font-size-xxl);
-  margin-right: var(--spacing-sm);
-  color: #ff6f61;
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+
+
+/* Tabs Navigation */
+.tabs-navigation {
   display: flex;
-  align-items: center;
+  background: #2a2a2a;
+  border-bottom: 1px solid #333;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #ff6f61 #333;
   justify-content: center;
-}
-
-.metric-content {
-  flex: 1;
-}
-
-.metric-title {
-  margin: 0 0 var(--spacing-xs) 0;
-  font-size: var(--font-size-sm);
-  color: #ddd;
-  font-weight: 500;
-}
-
-.metric-value {
-  font-size: var(--font-size-lg);
-  font-weight: bold;
-  color: #f5f5f5;
-}
-
-/* Gráficos */
-.charts-container {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: var(--spacing-md);
-}
-
-.chart-wrapper {
-  background-color: #2a2a2a;
-  border-radius: var(--border-radius-sm);
-  padding: var(--spacing-md);
-  box-shadow: 0 0.25rem 0.625rem rgba(0, 0, 0, 0.1);
-  height: 15.625rem;
-  position: relative;
-  border: 0.0625rem solid #333;
-  transition: transform 0.3s, box-shadow 0.3s;
-}
-
-.chart-wrapper:hover {
-  transform: translateY(-0.1875rem);
-  box-shadow: 0 0.5rem 0.9375rem rgba(0, 0, 0, 0.2);
-  border-color: #444;
-}
-
-.chart-title {
-  margin: 0 0 var(--spacing-sm) 0;
-  font-size: var(--font-size-sm);
-  color: #ddd;
-  text-align: center;
-  font-weight: 500;
-}
-
-canvas {
-  width: 100% !important;
-  height: calc(100% - 2.5rem) !important;
-}
-
-/* Seção Financeira */
-.financial-overview {
-  margin-bottom: var(--spacing-md);
-}
-
-.financial-kpis {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--spacing-md);
-  margin-bottom: var(--spacing-md);
-}
-
-.financial-kpi {
-  background-color: #2a2a2a;
-  border-radius: var(--border-radius-sm);
-  padding: var(--spacing-md);
-  display: flex;
+  flex-shrink: 0;
+  height: 60px;
   align-items: center;
-  box-shadow: 0 0.25rem 0.625rem rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s, box-shadow 0.3s;
-  border: 0.0625rem solid #333;
 }
 
-.financial-kpi:hover {
-  transform: translateY(-0.3125rem);
-  box-shadow: 0 0.5rem 0.9375rem rgba(0, 0, 0, 0.2);
-  border-color: #ff6f61;
+.tabs-navigation::-webkit-scrollbar {
+  height: 4px;
 }
 
-.kpi-icon {
-  font-size: var(--font-size-xxl);
-  margin-right: var(--spacing-sm);
-  color: #ff6f61;
+.tabs-navigation::-webkit-scrollbar-track {
+  background: #333;
 }
 
-.kpi-content {
-  flex: 1;
-}
-
-.financial-kpi h4 {
-  margin: 0 0 var(--spacing-xs) 0;
-  font-size: var(--font-size-sm);
-  color: #ddd;
-  font-weight: 500;
-}
-
-.kpi-value {
-  font-size: var(--font-size-lg);
-  font-weight: bold;
-  color: #f5f5f5;
-}
-
-.positive-balance .kpi-value {
-  color: #2ecc71;
-}
-
-.negative-balance .kpi-value {
-  color: #e74c3c;
-}
-
-.financial-summary-actions {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.btn-view-details {
-  background-color: #555555;
-  color: #f5f5f5;
-  border: none;
-  padding: var(--spacing-xs) var(--spacing-sm);
-  border-radius: var(--border-radius-sm);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-xs);
-  transition: all 0.3s;
-  font-size: var(--font-size-sm);
-}
-
-.btn-view-details:hover {
-  background-color: #666666;
-  transform: translateY(-0.125rem);
-}
-
-/* Relatórios */
-.reports-container {
-  display: flex;
-  flex-direction: column;
-}
-
-.report-form {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--spacing-md);
-  margin-bottom: var(--spacing-md);
-}
-
-.report-form-group {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-xs);
-}
-
-.report-form-group label {
-  font-size: var(--font-size-sm);
-  color: #ddd;
-}
-
-.report-select, .date-input {
-  padding: var(--spacing-xs);
-  background-color: #333;
-  border: 0.0625rem solid #444;
-  border-radius: var(--border-radius-sm);
-  color: #f5f5f5;
-  font-size: var(--font-size-sm);
-  height: 2.5rem;
-}
-
-.report-date-range {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--spacing-sm);
-  grid-column: span 2;
-}
-
-.report-actions {
-  display: flex;
-  justify-content: flex-end;
-  grid-column: span 3;
-}
-
-.btn-generate {
+.tabs-navigation::-webkit-scrollbar-thumb {
   background-color: #ff6f61;
-  color: #f5f5f5;
+  border-radius: 2px;
+}
+
+.tab-button {
+  background: none;
   border: none;
-  padding: var(--spacing-sm) var(--spacing-md);
-  border-radius: var(--border-radius-sm);
+  color: #ccc;
+  padding: var(--spacing-md) var(--spacing-lg);
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: var(--spacing-xs);
-  transition: all 0.3s;
+  transition: all 0.3s ease;
+  border-bottom: 3px solid transparent;
+  white-space: nowrap;
+  position: relative;
   font-size: var(--font-size-sm);
   font-weight: 500;
-  min-width: 10rem;
-  min-height: 2.5rem;
+  width: 180px;
   justify-content: center;
+  flex-shrink: 0;
 }
 
-.btn-generate:hover {
-  background-color: #e74c3c;
-  transform: translateY(-0.125rem);
-}
 
-.btn-generate:disabled {
-  background-color: #555;
-  cursor: not-allowed;
-  transform: none;
-}
 
-/* Atividades Recentes */
-.activities-container {
-  margin-top: var(--spacing-sm);
-}
-
-.activity-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-sm);
-}
-
-.activity-item {
-  display: flex;
-  align-items: flex-start;
-  padding: var(--spacing-sm);
-  background-color: #2a2a2a;
-  border-radius: var(--border-radius-sm);
-  border: 0.0625rem solid #333;
-  transition: all 0.3s;
-}
-
-.activity-item:hover {
-  background-color: #303030;
-  border-color: #444;
-  transform: translateX(0.1875rem);
-}
-
-.activity-icon {
-  color: #ff6f61;
-  margin-right: var(--spacing-sm);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.activity-content {
-  flex: 1;
-}
-
-.activity-details {
-  font-size: var(--font-size-sm);
-  margin-bottom: 0.3125rem;
+.tab-button:hover {
+  background: rgba(255, 255, 255, 0.05);
   color: #f5f5f5;
 }
 
-.activity-time {
-  font-size: var(--font-size-xs);
-  color: #aaa;
+.tab-button.active {
+  color: #fff;
+  border-bottom-color: #ff6f61;
+  background: linear-gradient(135deg, rgba(255, 111, 97, 0.15), rgba(255, 111, 97, 0.05));
+  box-shadow: 0 2px 8px rgba(255, 111, 97, 0.3);
 }
 
-/* Estado vazio */
-.empty-state {
+.tab-button i {
+  font-size: var(--font-size-md);
+  flex-shrink: 0;
+}
+
+.tab-badge {
+  background: #ff6f61;
+  color: white;
+  font-size: var(--font-size-xs);
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.75rem;
+  min-width: 1.25rem;
+  text-align: center;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+/* Dashboard Content */
+.dashboard-content {
+  flex: 1;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  min-height: 0;
+}
+
+.dashboard-loading {
+  display: flex;
   justify-content: center;
-  padding: var(--spacing-xl);
-  color: #777;
-  text-align: center;
+  align-items: center;
+  min-height: 400px;
+  flex: 1;
 }
 
-.empty-icon {
-  font-size: var(--font-size-3xl);
-  margin-bottom: var(--spacing-sm);
-  color: #555;
+.tabs-container {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
 }
 
-.empty-message {
-  font-size: var(--font-size-sm);
-  margin: 0;
+.tab-content {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow-y: auto;
+  padding: var(--spacing-lg);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.tab-content.tab-active {
+  opacity: 1;
+  visibility: visible;
+  z-index: 1;
+}
+
+.tab-content.tab-hidden {
+  opacity: 0;
+  visibility: hidden;
+  z-index: 0;
 }
 
 /* Responsividade */
-@media (max-width: 1280px) {
-  .dashboard-metrics {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  
-  .charts-container {
-    grid-template-columns: 1fr;
-  }
-  
-  .chart-wrapper {
-    height: 18.75rem;
-  }
-  
-  .report-form {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  
-  .report-actions {
-    grid-column: span 2;
-  }
-}
-
 @media (max-width: 768px) {
   .modal-overlay {
-    align-items: flex-start;
     padding: var(--spacing-sm);
   }
-  
+
   .modal-content {
-    width: 100%;
+    max-width: 100%;
+    height: 95vh;
     max-height: 95vh;
-    margin-top: var(--spacing-sm);
   }
-  
-  .dashboard-title {
-    font-size: var(--font-size-lg);
+
+  .header-content {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--spacing-sm);
   }
-  
-  .dashboard-metrics {
-    grid-template-columns: 1fr;
+
+  .header-actions {
+    justify-content: space-between;
   }
-  
-  .financial-kpis {
-    grid-template-columns: 1fr;
+
+  .tabs-navigation {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    height: 55px;
   }
-  
-  .report-form {
-    grid-template-columns: 1fr;
+
+  .tab-button {
+    padding: var(--spacing-sm) var(--spacing-md);
+    width: 140px;
   }
-  
-  .report-date-range {
-    grid-template-columns: 1fr;
-    grid-column: span 1;
-  }
-  
-  .report-actions {
-    grid-column: span 1;
-  }
-  
-  .btn-generate {
-    width: 100%;
+
+  .tab-content {
+    padding: var(--spacing-md);
   }
 }
 
 @media (max-width: 480px) {
-  .modal-header {
-    padding: var(--spacing-sm);
+  .modal-overlay {
+    padding: var(--spacing-xs);
   }
-  
-  .dashboard-container {
-    padding: var(--spacing-sm);
+
+  .modal-content {
+    height: 98vh;
+    max-height: 98vh;
   }
-  
-  .dashboard-section {
-    padding: var(--spacing-sm);
-  }
-  
-  .section-header h3 {
+
+  .header-title h2 {
     font-size: var(--font-size-md);
   }
-  
-  .chart-wrapper {
-    height: 15.625rem;
+
+  .tabs-navigation {
+    height: 50px;
   }
-  
-  .metric-card, .financial-kpi, .activity-item {
+
+  .tab-button {
     padding: var(--spacing-sm);
+    width: 120px;
+    font-size: var(--font-size-xs);
   }
-  
-  .metric-value, .kpi-value {
-    font-size: var(--font-size-md);
+
+  .tab-button span {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .tab-content {
+    padding: var(--spacing-sm);
   }
 }
 
-/* Ajustes para telas pequenas */
-@media screen and (max-height: 700px) {
-  .modal-overlay {
-    align-items: flex-start;
-    padding-top: var(--spacing-sm);
+/* Ajustes específicos para telas muito pequenas */
+@media (max-width: 360px) {
+  .tab-button {
+    width: 100px;
+    padding: var(--spacing-xs) var(--spacing-sm);
+  }
+
+  .tab-button span {
+    font-size: 0.7rem;
+  }
+}
+
+/* Banner de Aviso de Testes */
+.test-warning-banner {
+  background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+  border: 1px solid #ffc107;
+  border-radius: 8px;
+  margin-bottom: var(--spacing-lg);
+  box-shadow: 0 2px 8px rgba(255, 193, 7, 0.2);
+  animation: slideInDown 0.5s ease-out;
+}
+
+.warning-content {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md) var(--spacing-lg);
+}
+
+.warning-icon {
+  color: #856404;
+  font-size: 24px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.warning-text {
+  flex: 1;
+}
+
+.warning-text h4 {
+  margin: 0 0 var(--spacing-xs) 0;
+  color: #856404;
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.warning-text p {
+  margin: 0;
+  color: #6c5700;
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+}
+
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsividade para o banner */
+@media (max-width: 768px) {
+  .warning-content {
+    padding: var(--spacing-sm) var(--spacing-md);
+    gap: var(--spacing-sm);
   }
   
-  .modal-content {
-    max-height: 95vh;
+  .warning-icon {
+    font-size: 20px;
   }
   
-  .chart-wrapper {
-    height: 12.5rem;
+  .warning-text h4 {
+    font-size: var(--font-size-sm);
+  }
+  
+  .warning-text p {
+    font-size: var(--font-size-xs);
+  }
+}
+
+@media (max-width: 480px) {
+  .warning-content {
+    flex-direction: column;
+    text-align: center;
+    gap: var(--spacing-xs);
+  }
+  
+  .warning-icon {
+    align-self: center;
   }
 }
 </style> 
