@@ -1,5 +1,5 @@
-# AraldiTech - Pedidos (Versão 0.8.5) 
-![GitHub version](https://img.shields.io/badge/version-0.8.5-blue)
+# AraldiTech - Pedidos (Versão 0.8.8) 
+![GitHub version](https://img.shields.io/badge/version-0.8.8-blue)
 
 ## Descrição
 **AraldiTech - Pedidos** é um WebApp desenvolvido para gerenciar pedidos de produtos para setores específicos, com interface moderna, intuitiva e responsiva, proporcionando uma experiência de uso otimizada.
@@ -27,33 +27,12 @@ Principais funcionalidades:
 - **Jest**: Framework de testes unitários para garantia de qualidade do código.
 
 ## Versão  
-A versão atual do projeto é **0.8.5**.
+A versão atual do projeto é **0.8.8**.
 
-### Principais Alterações na Versão 0.8.5
+### Principais Alterações na Versão 0.8.8
 
-#### Adicionado
-- **Segurança Reforçada**: Proteção CSRF, validação avançada de dados e detecção de ataques comuns.
-- **Sistema de Cache**: Otimização de desempenho com armazenamento temporário de dados frequentes.
-- **Visualizador de Logs**: Nova interface para administradores monitorarem atividades do sistema.
-- **Testes Automatizados**: Implementação de testes unitários para garantia de qualidade.
-- **Componentes Reutilizáveis**: Novos elementos de UI para feedback visual aprimorado.
-
-#### Melhorado
-- **Performance**: Redução no tempo de carregamento e otimização de requisições.
-- **Feedback ao Usuário**: Indicações visuais claras durante processos e operações.
-- **Responsividade**: Melhor adaptação a diferentes tamanhos de tela e dispositivos.
-- **Organização do Código**: Estrutura modular para facilitar manutenção futura.
-- **Validação de Dados**: Sistema unificado para garantir consistência em formulários.
-
-#### Corrigido
-- **Inconsistências de Interface**: Padronização visual entre diferentes seções do aplicativo.
-- **Problemas em Dispositivos Móveis**: Ajustes para melhor experiência em telas pequenas.
-- **Tratamento de Erros**: Sistema robusto para lidar com falhas inesperadas.
-- **Manipulação de Datas**: Formato consistente em todo o sistema.
-
-#### Removido
-- **Tutorial Interativo**: O tutorial passo a passo para novos usuários foi removido e suas informações transferidas para a documentação.
-- **Verificações de Primeiro Acesso**: Simplificação da experiência de usuário com remoção de estados de controle de primeiro login.
+**EM DESENVOLVIMENTO**
+Aguarde por novidades.
 
 ## Funcionalidades
 - **Autenticação JWT**: Somente usuários autenticados têm permissão para criar, listar e editar pedidos.
