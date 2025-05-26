@@ -62,6 +62,8 @@ class Pedido(BaseModel):
     data_orcamento: Optional[datetime] = None  # Data de registro do orçamento
     data_custo_real: Optional[datetime] = None  # Data de registro do custo real
     fornecedor: Optional[str] = None  # Fornecedor escolhido
+    # Dados de conclusão detalhados
+    conclusao_dados: Optional[dict] = None  # Dados completos da conclusão do pedido
 
     class Config:
         json_encoders = {

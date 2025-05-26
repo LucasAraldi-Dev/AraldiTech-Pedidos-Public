@@ -60,6 +60,8 @@ class PedidoCreate(BaseModel):
     custo_real: Optional[float] = 0.0
     observacao_orcamento: Optional[str] = None
     fornecedor: Optional[str] = None
+    # Dados de conclusão detalhados
+    conclusao_dados: Optional[dict] = None
 
     # Validando e convertendo a data corretamente
     @validator("deliveryDate", pre=True)

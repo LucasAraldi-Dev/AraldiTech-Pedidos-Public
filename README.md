@@ -1,5 +1,5 @@
-# AraldiTech - Pedidos (Versão 0.8.8) 
-![GitHub version](https://img.shields.io/badge/version-0.8.8-blue)
+# AraldiTech - Pedidos (Versão 0.8.9) 
+![GitHub version](https://img.shields.io/badge/version-0.8.9-blue)
 
 ## Descrição
 **AraldiTech - Pedidos** é um WebApp desenvolvido para gerenciar pedidos de produtos para setores específicos, com interface moderna, intuitiva e responsiva, proporcionando uma experiência de uso otimizada.
@@ -27,9 +27,9 @@ Principais funcionalidades:
 - **Jest**: Framework de testes unitários para garantia de qualidade do código.
 
 ## Versão  
-A versão atual do projeto é **0.8.8**.
+A versão atual do projeto é **0.8.9**.
 
-### Principais Alterações na Versão 0.8.8
+### Principais Alterações na Versão 0.8.9
 
 **EM DESENVOLVIMENTO**
 Aguarde por novidades.

@@ -1042,6 +1042,34 @@ async def atualizar_pedido_com_historico(
             # Remover o campo completionDate original
             del update_data["completionDate"]
         
+        # Processar dados de conclusão detalhados
+        if "conclusao_dados" in update_data and update_data["conclusao_dados"]:
+            logger.info(f"Processando dados de conclusão detalhados para pedido {pedido_id}")
+            conclusao_dados = update_data["conclusao_dados"]
+            
+            # Validar e processar dados financeiros
+            if "preco_unitario" in conclusao_dados:
+                try:
+                    conclusao_dados["preco_unitario"] = float(conclusao_dados["preco_unitario"])
+                except (ValueError, TypeError):
+                    conclusao_dados["preco_unitario"] = 0.0
+            
+            if "valor_total" in conclusao_dados:
+                try:
+                    conclusao_dados["valor_total"] = float(conclusao_dados["valor_total"])
+                except (ValueError, TypeError):
+                    conclusao_dados["valor_total"] = 0.0
+            
+            # Adicionar timestamp de conclusão se não existir
+            if "data_conclusao" not in conclusao_dados:
+                conclusao_dados["data_conclusao"] = datetime.now().isoformat()
+            
+            # Adicionar usuário que concluiu se não existir
+            if "usuario_conclusao" not in conclusao_dados:
+                conclusao_dados["usuario_conclusao"] = usuario_nome
+            
+            logger.info(f"Dados de conclusão processados: {conclusao_dados}")
+        
         # Corrigir o nome do usuário em cada entrada do histórico
         if historico and isinstance(historico, list):
             for item in historico:
@@ -2361,3 +2389,457 @@ async def calcular_metricas_atividades(db, filtro_base):
     except Exception as e:
         logger.error(f"Erro ao calcular métricas de atividades: {e}")
         return {"total_registros": 0, "erro": str(e)}
+
+# Endpoint para upload de anexos
+@app.post("/upload-anexo")
+async def upload_anexo(
+    file: UploadFile,
+    pedido_id: int,
+    tipo: str = "comprovante_conclusao",
+    request: Request = None,
+    db=Depends(database.get_db),
+    current_user=Depends(get_current_user)
+):
+    """
+    Upload de anexos para pedidos (notas fiscais, comprovantes, etc.)
+    """
+    try:
+        # Validar tipo de arquivo
+        allowed_types = ["application/pdf", "image/jpeg", "image/jpg", "image/png"]
+        allowed_extensions = [".pdf", ".jpg", ".jpeg", ".png"]
+        
+        # Verificar tanto o content-type quanto a extensão
+        file_extension = os.path.splitext(file.filename)[1].lower()
+        
+        if file.content_type not in allowed_types or file_extension not in allowed_extensions:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Tipo de arquivo não suportado. Use PDF, JPG ou PNG. Arquivo enviado: {file.content_type} ({file_extension})"
+            )
+        
+        # Validar tamanho do arquivo (5MB)
+        max_size = 5 * 1024 * 1024  # 5MB
+        file_content = await file.read()
+        if len(file_content) > max_size:
+            raise HTTPException(
+                status_code=400,
+                detail="Arquivo muito grande. Tamanho máximo: 5MB."
+            )
+        
+        # Verificar se o pedido existe
+        pedido = await db["pedidos"].find_one({"id": pedido_id})
+        if not pedido:
+            raise HTTPException(status_code=404, detail="Pedido não encontrado")
+        
+        # Verificar permissões
+        usuario_nome = current_user.get("nome", current_user.get("username", ""))
+        user_type = current_user.get("tipo_usuario", "comum")
+        is_admin_or_gestor = user_type in ["admin", "gestor"]
+        is_creator = (
+            pedido.get("usuario_id") == current_user.get("id") or 
+            pedido.get("usuario_nome") == usuario_nome
+        )
+        
+        if not is_admin_or_gestor and not is_creator:
+            raise HTTPException(
+                status_code=403, 
+                detail="Você não tem permissão para fazer upload de anexos para este pedido"
+            )
+        
+        # Criar diretório de uploads se não existir
+        upload_dir = os.path.join("backend", "app", "assets", "uploads")
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        # Gerar nome único para o arquivo
+        import uuid
+        file_extension = os.path.splitext(file.filename)[1]
+        unique_filename = f"{pedido_id}_{tipo}_{uuid.uuid4().hex}{file_extension}"
+        file_path = os.path.join(upload_dir, unique_filename)
+        
+        # Salvar arquivo
+        with open(file_path, "wb") as buffer:
+            buffer.write(file_content)
+        
+        # URL relativa para acesso ao arquivo
+        file_url = f"/assets/uploads/{unique_filename}"
+        
+        # Registrar atividade
+        if request:
+            ip_address = utils.get_client_ip(request)
+            user_agent = request.headers.get("User-Agent", "Desconhecido")
+            
+            await registrar_atividade(
+                db=db,
+                tipo="upload",
+                descricao=f"Upload de anexo para pedido #{pedido_id}",
+                usuario_nome=usuario_nome,
+                pedido_id=pedido_id,
+                ip_address=ip_address,
+                user_agent=user_agent,
+                dados_adicionais={
+                    "tipo_anexo": tipo,
+                    "nome_arquivo": file.filename,
+                    "tamanho_arquivo": len(file_content),
+                    "tipo_conteudo": file.content_type
+                }
+            )
+        
+        logger.info(f"Anexo enviado com sucesso para pedido {pedido_id}: {unique_filename}")
+        
+        return {
+            "success": True,
+            "message": "Anexo enviado com sucesso",
+            "file_url": file_url,
+            "filename": unique_filename,
+            "original_filename": file.filename,
+            "size": len(file_content),
+            "content_type": file.content_type
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro no upload de anexo: {e}")
+        raise HTTPException(status_code=500, detail=f"Erro interno no upload: {str(e)}")
+
+# Endpoint para servir arquivos de upload
+@app.get("/assets/uploads/{filename}")
+async def get_uploaded_file(
+    filename: str,
+    request: Request = None,
+    current_user=Depends(get_current_user)
+):
+    """
+    Serve arquivos de upload com controle de acesso
+    """
+    try:
+        file_path = os.path.join("backend", "app", "assets", "uploads", filename)
+        
+        if not os.path.exists(file_path):
+            raise HTTPException(status_code=404, detail="Arquivo não encontrado")
+        
+        # Extrair pedido_id do nome do arquivo para verificar permissões
+        try:
+            pedido_id = int(filename.split("_")[0])
+        except (ValueError, IndexError):
+            raise HTTPException(status_code=400, detail="Nome de arquivo inválido")
+        
+        # Verificar se o usuário tem permissão para acessar o arquivo
+        db = database.get_db().__next__()
+        pedido = await db["pedidos"].find_one({"id": pedido_id})
+        
+        if not pedido:
+            raise HTTPException(status_code=404, detail="Pedido não encontrado")
+        
+        usuario_nome = current_user.get("nome", current_user.get("username", ""))
+        user_type = current_user.get("tipo_usuario", "comum")
+        is_admin_or_gestor = user_type in ["admin", "gestor"]
+        is_creator = (
+            pedido.get("usuario_id") == current_user.get("id") or 
+            pedido.get("usuario_nome") == usuario_nome
+        )
+        
+        if not is_admin_or_gestor and not is_creator:
+            raise HTTPException(
+                status_code=403, 
+                detail="Você não tem permissão para acessar este arquivo"
+            )
+        
+        # Determinar tipo de conteúdo
+        import mimetypes
+        content_type, _ = mimetypes.guess_type(file_path)
+        if not content_type:
+            content_type = "application/octet-stream"
+        
+        # Retornar arquivo
+        def iterfile():
+            with open(file_path, mode="rb") as file_like:
+                yield from file_like
+        
+        return StreamingResponse(
+            iterfile(), 
+            media_type=content_type,
+            headers={"Content-Disposition": f"inline; filename={filename}"}
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao servir arquivo: {e}")
+        raise HTTPException(status_code=500, detail=f"Erro interno: {str(e)}")
+
+# Endpoints para configurações de orçamento
+@app.post("/configuracoes/orcamento")
+async def salvar_configuracao_orcamento(
+    dados: dict,
+    request: Request,
+    db=Depends(database.get_db),
+    current_user=Depends(get_current_user)
+):
+    """
+    Salva as configurações de orçamento por setor
+    """
+    try:
+        # Verificar se o usuário tem permissão (apenas gestores e admins)
+        user_type = current_user.get("tipo_usuario", "comum")
+        if user_type not in ["admin", "gestor"]:
+            raise HTTPException(
+                status_code=403, 
+                detail="Apenas administradores e gestores podem alterar configurações de orçamento"
+            )
+        
+        # Validar dados recebidos
+        if "setores" not in dados:
+            raise HTTPException(status_code=400, detail="Dados de setores são obrigatórios")
+        
+        setores = dados["setores"]
+        if not isinstance(setores, list):
+            raise HTTPException(status_code=400, detail="Setores deve ser uma lista")
+        
+        # Validar cada setor
+        for setor in setores:
+            if not isinstance(setor, dict):
+                raise HTTPException(status_code=400, detail="Cada setor deve ser um objeto")
+            
+            required_fields = ["id", "nome", "orcamento_mensal", "limite_alerta"]
+            for field in required_fields:
+                if field not in setor:
+                    raise HTTPException(status_code=400, detail=f"Campo '{field}' é obrigatório")
+            
+            # Validar tipos
+            if not isinstance(setor["id"], int):
+                raise HTTPException(status_code=400, detail="ID do setor deve ser um número inteiro")
+            
+            if not isinstance(setor["orcamento_mensal"], (int, float)):
+                raise HTTPException(status_code=400, detail="Orçamento mensal deve ser um número")
+            
+            if not isinstance(setor["limite_alerta"], (int, float)):
+                raise HTTPException(status_code=400, detail="Limite de alerta deve ser um número")
+            
+            if setor["orcamento_mensal"] < 0:
+                raise HTTPException(status_code=400, detail="Orçamento mensal não pode ser negativo")
+            
+            if setor["limite_alerta"] < 0 or setor["limite_alerta"] > 100:
+                raise HTTPException(status_code=400, detail="Limite de alerta deve estar entre 0 e 100")
+        
+        # Preparar dados para salvar
+        usuario_nome = current_user.get("nome", current_user.get("username", ""))
+        config_data = {
+            "tipo": "orcamento_setores",
+            "setores": setores,
+            "usuario_criacao": usuario_nome,
+            "usuario_id": current_user.get("id"),
+            "data_criacao": datetime.now(),
+            "data_atualizacao": datetime.now()
+        }
+        
+        # Verificar se já existe uma configuração
+        existing_config = await db["configuracoes"].find_one({"tipo": "orcamento_setores"})
+        
+        if existing_config:
+            # Atualizar configuração existente
+            config_data["data_atualizacao"] = datetime.now()
+            config_data["usuario_atualizacao"] = usuario_nome
+            
+            await db["configuracoes"].update_one(
+                {"tipo": "orcamento_setores"},
+                {"$set": config_data}
+            )
+            action = "atualizada"
+        else:
+            # Criar nova configuração
+            await db["configuracoes"].insert_one(config_data)
+            action = "criada"
+        
+        # Registrar atividade
+        if request:
+            ip_address = utils.get_client_ip(request)
+            user_agent = request.headers.get("User-Agent", "Desconhecido")
+            
+            await registrar_atividade(
+                db=db,
+                tipo="configuracao",
+                descricao=f"Configuração de orçamento {action}",
+                usuario_nome=usuario_nome,
+                ip_address=ip_address,
+                user_agent=user_agent,
+                dados_adicionais={
+                    "tipo_configuracao": "orcamento_setores",
+                    "total_setores": len(setores),
+                    "acao": action
+                }
+            )
+        
+        logger.info(f"Configuração de orçamento {action} por {usuario_nome}")
+        
+        return {
+            "success": True,
+            "message": f"Configuração de orçamento {action} com sucesso",
+            "data": {
+                "setores": setores,
+                "data_atualizacao": config_data["data_atualizacao"].isoformat()
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao salvar configuração de orçamento: {e}")
+        raise HTTPException(status_code=500, detail=f"Erro interno: {str(e)}")
+
+@app.get("/configuracoes/orcamento")
+async def obter_configuracao_orcamento(
+    request: Request,
+    db=Depends(database.get_db),
+    current_user=Depends(get_current_user)
+):
+    """
+    Obtém as configurações de orçamento por setor
+    """
+    try:
+        # Verificar se o usuário tem permissão (apenas gestores e admins)
+        user_type = current_user.get("tipo_usuario", "comum")
+        if user_type not in ["admin", "gestor"]:
+            raise HTTPException(
+                status_code=403, 
+                detail="Apenas administradores e gestores podem acessar configurações de orçamento"
+            )
+        
+        # Buscar configuração no banco
+        config = await db["configuracoes"].find_one({"tipo": "orcamento_setores"})
+        
+        if not config:
+            # Retornar configuração padrão se não existir
+            setores_padrao = [
+                {
+                    "id": 1,
+                    "nome": "Produção",
+                    "descricao": "Matérias-primas e insumos de produção",
+                    "icon": "precision_manufacturing",
+                    "orcamento_mensal": 50000,
+                    "limite_alerta": 80,
+                    "gasto_atual": 0
+                },
+                {
+                    "id": 2,
+                    "nome": "Manutenção",
+                    "descricao": "Peças de reposição e serviços de manutenção",
+                    "icon": "build",
+                    "orcamento_mensal": 25000,
+                    "limite_alerta": 75,
+                    "gasto_atual": 0
+                },
+                {
+                    "id": 3,
+                    "nome": "Equipamentos",
+                    "descricao": "Máquinas e equipamentos industriais",
+                    "icon": "engineering",
+                    "orcamento_mensal": 100000,
+                    "limite_alerta": 85,
+                    "gasto_atual": 0
+                },
+                {
+                    "id": 4,
+                    "nome": "Serviços",
+                    "descricao": "Serviços terceirizados e consultorias",
+                    "icon": "handyman",
+                    "orcamento_mensal": 30000,
+                    "limite_alerta": 70,
+                    "gasto_atual": 0
+                },
+                {
+                    "id": 5,
+                    "nome": "Diversos",
+                    "descricao": "Mercadorias e materiais diversos",
+                    "icon": "inventory_2",
+                    "orcamento_mensal": 15000,
+                    "limite_alerta": 90,
+                    "gasto_atual": 0
+                }
+            ]
+            
+            return {
+                "success": True,
+                "setores": setores_padrao,
+                "is_default": True,
+                "message": "Configuração padrão retornada"
+            }
+        
+        # Converter ObjectId para string se necessário
+        if "_id" in config:
+            del config["_id"]
+        
+        # Converter datas para ISO string
+        if "data_criacao" in config:
+            config["data_criacao"] = config["data_criacao"].isoformat()
+        if "data_atualizacao" in config:
+            config["data_atualizacao"] = config["data_atualizacao"].isoformat()
+        
+        return {
+            "success": True,
+            "setores": config.get("setores", []),
+            "is_default": False,
+            "data_atualizacao": config.get("data_atualizacao"),
+            "usuario_atualizacao": config.get("usuario_atualizacao")
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao obter configuração de orçamento: {e}")
+        raise HTTPException(status_code=500, detail=f"Erro interno: {str(e)}")
+
+@app.delete("/configuracoes/orcamento")
+async def resetar_configuracao_orcamento(
+    request: Request,
+    db=Depends(database.get_db),
+    current_user=Depends(get_current_user)
+):
+    """
+    Reseta as configurações de orçamento para os valores padrão
+    """
+    try:
+        # Verificar se o usuário tem permissão (apenas admins)
+        user_type = current_user.get("tipo_usuario", "comum")
+        if user_type != "admin":
+            raise HTTPException(
+                status_code=403, 
+                detail="Apenas administradores podem resetar configurações de orçamento"
+            )
+        
+        # Deletar configuração existente
+        result = await db["configuracoes"].delete_one({"tipo": "orcamento_setores"})
+        
+        usuario_nome = current_user.get("nome", current_user.get("username", ""))
+        
+        # Registrar atividade
+        if request:
+            ip_address = utils.get_client_ip(request)
+            user_agent = request.headers.get("User-Agent", "Desconhecido")
+            
+            await registrar_atividade(
+                db=db,
+                tipo="configuracao",
+                descricao="Configuração de orçamento resetada para padrão",
+                usuario_nome=usuario_nome,
+                ip_address=ip_address,
+                user_agent=user_agent,
+                dados_adicionais={
+                    "tipo_configuracao": "orcamento_setores",
+                    "acao": "reset"
+                }
+            )
+        
+        logger.info(f"Configuração de orçamento resetada por {usuario_nome}")
+        
+        return {
+            "success": True,
+            "message": "Configuração de orçamento resetada para valores padrão",
+            "deleted_count": result.deleted_count
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao resetar configuração de orçamento: {e}")
+        raise HTTPException(status_code=500, detail=f"Erro interno: {str(e)}")

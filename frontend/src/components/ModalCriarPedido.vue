@@ -1,9 +1,6 @@
 <template>
   <div v-if="isOpen" class="modal-overlay" @click.self="handleOverlayClick">
     <div class="order-form" @click.stop>
-      <button type="button" class="close-modal-btn" @click="closeForm">
-        <i class="material-icons">close</i>
-      </button>
       <div class="form-header">
         <h2>{{ createMultiple ? 'MÚLTIPLOS PEDIDOS' : 'ADICIONAR PEDIDO' }}</h2>
         <div class="user-info" v-if="userName">
@@ -886,6 +883,7 @@ export default {
           
           const payload = {
             ...order,
+            file: order.fileBase64 || null, // Renomear fileBase64 para file
             usuario_nome: this.userName || "Usuário do Sistema",
             status: "Pendente",
             // Informações de auditoria
@@ -897,6 +895,15 @@ export default {
               created_by_id: localStorage.getItem("user_id") || null
             }
           };
+          
+          // Remover o campo fileBase64 do payload para evitar duplicação
+          delete payload.fileBase64;
+          
+          // Log para debug do arquivo
+          console.log(`[DEBUG] Pedido ${i+1} - Tem arquivo:`, !!payload.file);
+          if (payload.file) {
+            console.log(`[DEBUG] Pedido ${i+1} - Tamanho do arquivo base64:`, payload.file.length);
+          }
           
           try {
             const response = await axiosService.post('/pedidos/', payload);
@@ -1041,6 +1048,10 @@ export default {
         
         // Log para debug do valor do responsável pela compra
         console.log("[DEBUG] Enviando pedido com sender:", this.orderSender);
+        console.log("[DEBUG] Enviando pedido com arquivo:", !!payload.file);
+        if (payload.file) {
+          console.log("[DEBUG] Tamanho do arquivo base64:", payload.file.length);
+        }
 
       console.log("Enviando pedido com nome de usuário:", this.userName);
 
@@ -1111,6 +1122,9 @@ export default {
 
       console.log("Arquivo selecionado:", file);
 
+      // Armazenar o arquivo selecionado
+      this.orderFile = file;
+
       const reader = new FileReader();
 
       reader.onloadend = () => {
@@ -1124,6 +1138,7 @@ export default {
         }
 
         console.log("Base64 gerado:", this.orderFileBase64);
+        console.log("Arquivo armazenado:", this.orderFile);
       };
 
       reader.onerror = (error) => {

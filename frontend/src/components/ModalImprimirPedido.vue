@@ -88,7 +88,19 @@
       <!-- Anexo (se houver) -->
       <div v-if="pedido.anexo" class="attachment-section">
         <strong>ANEXO:</strong>
-        <img :src="'data:image/png;base64,' + pedido.anexo" alt="ANEXO" class="order-attachment" />
+        <div class="attachment-container">
+          <img 
+            :src="getAttachmentSrc(pedido.anexo)" 
+            alt="ANEXO" 
+            class="order-attachment"
+            @error="handleImageError"
+            @load="handleImageLoad"
+          />
+          <div v-if="imageLoadError" class="attachment-error">
+            <i class="material-icons">broken_image</i>
+            <span>Erro ao carregar anexo</span>
+          </div>
+        </div>
       </div>
 
       <!-- Informações de Auditoria -->
@@ -146,6 +158,7 @@
 import html2canvas from "html2canvas";
 import { useToast } from 'vue-toastification';
 import LoadingIndicator from '@/components/ui/LoadingIndicator.vue';
+import { createDataUrl, isValidBase64 } from '@/utils/fileTestUtils';
 
 export default {
   name: 'ModalImprimirPedido',
@@ -172,7 +185,8 @@ export default {
       isGeneratingImage: false,
       showAuditInfo: true, // Controla se as informações de auditoria devem ser exibidas
       auditInfoExpanded: false, // Controla se as informações de auditoria estão expandidas
-      currentUser: null // Armazenará os dados do usuário atual
+      currentUser: null, // Armazenará os dados do usuário atual
+      imageLoadError: false // Controla se houve erro ao carregar a imagem
     };
   },
   computed: {
@@ -210,6 +224,9 @@ export default {
     // Adicionar log detalhado do pedido recebido
     console.log('[DEBUG] Pedido completo recebido:', this.pedido);
     console.log('[DEBUG] Campo sender do pedido:', this.pedido?.sender);
+    console.log('[DEBUG] Campo anexo do pedido:', this.pedido?.anexo);
+    console.log('[DEBUG] Tipo do anexo:', typeof this.pedido?.anexo);
+    console.log('[DEBUG] Tamanho do anexo:', this.pedido?.anexo?.length);
     
     // Carregar dados do usuário atual do localStorage
     this.loadCurrentUser();
@@ -372,6 +389,45 @@ export default {
     },
     toggleAuditInfo() {
       this.auditInfoExpanded = !this.auditInfoExpanded;
+    },
+    getAttachmentSrc(anexo) {
+      if (!anexo) {
+        console.warn('[DEBUG] Anexo vazio ou nulo');
+        return '';
+      }
+      
+      console.log('[DEBUG] Processando anexo:', {
+        tipo: typeof anexo,
+        tamanho: anexo.length,
+        primeiros10chars: anexo.substring(0, 10),
+        temPrefixoData: anexo.startsWith('data:')
+      });
+      
+      // Se já contém o prefixo data:, retorna como está
+      if (anexo.startsWith('data:')) {
+        console.log('[DEBUG] Anexo já tem prefixo data:');
+        return anexo;
+      }
+      
+      // Validar se é base64 válido
+      if (!isValidBase64(anexo)) {
+        console.error('[DEBUG] Anexo não é um base64 válido');
+        return '';
+      }
+      
+      // Detectar tipo MIME e criar URL de dados
+      const dataUrl = createDataUrl(anexo);
+      console.log('[DEBUG] URL de dados criada:', dataUrl.substring(0, 50) + '...');
+      
+      return dataUrl;
+    },
+    handleImageError() {
+      console.error('Erro ao carregar anexo do pedido');
+      this.imageLoadError = true;
+    },
+    handleImageLoad() {
+      console.log('Anexo carregado com sucesso');
+      this.imageLoadError = false;
     },
     async generateImage() {
       if (this.isGeneratingImage) return;
@@ -1097,6 +1153,53 @@ export default {
   grid-column: 1 / -1 !important;
 }
 
+/* Estilos específicos para anexo na captura de imagem */
+[data-capture-clone="true"] .attachment-section {
+  background-color: #2a2a2a !important;
+  padding: 15px !important;
+  border-radius: 8px !important;
+  margin-top: 15px !important;
+  border: 1px solid #424242 !important;
+}
+
+[data-capture-clone="true"] .attachment-section strong {
+  color: #ff6f61 !important;
+  font-size: 0.9rem !important;
+  margin-bottom: 10px !important;
+  display: block !important;
+}
+
+[data-capture-clone="true"] .attachment-container {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+[data-capture-clone="true"] .order-attachment {
+  max-width: 100% !important;
+  max-height: 300px !important;
+  height: auto !important;
+  border-radius: 6px !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
+  object-fit: contain !important;
+  background-color: #1a1a1a !important;
+  border: 1px solid #424242 !important;
+}
+
+[data-capture-clone="true"] .attachment-error {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 15px !important;
+  background-color: rgba(220, 53, 69, 0.1) !important;
+  border: 1px solid rgba(220, 53, 69, 0.3) !important;
+  border-radius: 6px !important;
+  color: #dc3545 !important;
+  font-size: 0.8rem !important;
+}
+
 .modal-header {
   text-align: center;
   margin-bottom: 10px;
@@ -1260,12 +1363,46 @@ export default {
   margin-bottom: 5px;
 }
 
+.attachment-container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
 .order-attachment {
   max-width: 100%;
+  max-height: 400px;
   height: auto;
   border-radius: 8px;
   margin-top: 5px;
   box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+  object-fit: contain;
+  background-color: #1a1a1a;
+  border: 2px solid #424242;
+}
+
+.attachment-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 20px;
+  background-color: rgba(220, 53, 69, 0.1);
+  border: 1px solid rgba(220, 53, 69, 0.3);
+  border-radius: 8px;
+  color: #dc3545;
+}
+
+.attachment-error i {
+  font-size: 2rem;
+  opacity: 0.7;
+}
+
+.attachment-error span {
+  font-size: 0.9rem;
+  text-align: center;
 }
 
 /* Seção de auditoria */

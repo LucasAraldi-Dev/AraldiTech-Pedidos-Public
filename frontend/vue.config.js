@@ -4,6 +4,7 @@ const webpack = require('webpack');
 module.exports = defineConfig({
   transpileDependencies: true,
   devServer: {
+    host: '0.0.0.0', // 👈 Adicionado para aceitar conexões externas
     proxy: {
       '/api': {
         target: 'http://localhost:8000',
@@ -27,7 +28,6 @@ module.exports = defineConfig({
       }
     },
     plugins: [
-      // Polyfills básicos
       new webpack.ProvidePlugin({
         process: 'process/browser',
         Buffer: ['buffer', 'Buffer']
@@ -37,7 +37,6 @@ module.exports = defineConfig({
       })
     ],
     optimization: {
-      // Desativar otimizações que possam causar problemas com ES modules
       minimize: false,
       splitChunks: false,
     }

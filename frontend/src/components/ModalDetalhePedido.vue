@@ -75,6 +75,85 @@
             </div>
           </div>
         </div>
+
+        <!-- Dados de Conclusão (se o pedido estiver concluído) -->
+        <div v-if="pedido.status === 'Concluído' && pedido.conclusao_dados" class="conclusion-section">
+          <h3><i class="material-icons">check_circle</i> Dados da Conclusão</h3>
+          
+          <div class="conclusion-grid">
+            <!-- Informações Financeiras -->
+            <div class="conclusion-item" v-if="pedido.conclusao_dados.valor_total || pedido.conclusao_dados.preco_unitario">
+              <h4><i class="material-icons">attach_money</i> Informações Financeiras</h4>
+              <div class="financial-details">
+                <p v-if="pedido.conclusao_dados.preco_unitario">
+                  <strong>Preço Unitário:</strong> R$ {{ formatCurrency(pedido.conclusao_dados.preco_unitario) }}
+                </p>
+                <p v-if="pedido.conclusao_dados.valor_total">
+                  <strong>Valor Total:</strong> R$ {{ formatCurrency(pedido.conclusao_dados.valor_total) }}
+                </p>
+                <p v-if="pedido.conclusao_dados.fornecedor">
+                  <strong>Fornecedor:</strong> {{ pedido.conclusao_dados.fornecedor }}
+                </p>
+              </div>
+            </div>
+
+            <!-- Tipo de Atendimento -->
+            <div class="conclusion-item" v-if="pedido.conclusao_dados.tem_mao_de_obra || pedido.conclusao_dados.tem_material">
+              <h4><i class="material-icons">build</i> Tipo de Atendimento</h4>
+              <div class="service-types">
+                <span v-if="pedido.conclusao_dados.tem_mao_de_obra" class="service-badge">
+                  <i class="material-icons">build</i> Mão de Obra
+                </span>
+                <span v-if="pedido.conclusao_dados.tem_material" class="service-badge">
+                  <i class="material-icons">inventory</i> Material
+                </span>
+              </div>
+            </div>
+
+            <!-- Avaliação -->
+            <div class="conclusion-item" v-if="pedido.conclusao_dados.avaliacao">
+              <h4><i class="material-icons">star</i> Avaliação</h4>
+              <div class="rating-display">
+                <span class="rating-value" :class="getRatingClass(pedido.conclusao_dados.avaliacao)">
+                  <i class="material-icons">{{ getRatingIcon(pedido.conclusao_dados.avaliacao) }}</i>
+                  {{ capitalizeFirst(pedido.conclusao_dados.avaliacao) }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Feedback -->
+            <div class="conclusion-item" v-if="pedido.conclusao_dados.feedback">
+              <h4><i class="material-icons">feedback</i> Feedback</h4>
+              <div class="feedback-content">
+                <p>{{ pedido.conclusao_dados.feedback }}</p>
+              </div>
+            </div>
+
+            <!-- Anexo -->
+            <div class="conclusion-item" v-if="pedido.conclusao_dados.anexo_url">
+              <h4><i class="material-icons">attach_file</i> Comprovante</h4>
+              <div class="attachment-link">
+                <a :href="getAttachmentUrl(pedido.conclusao_dados.anexo_url)" target="_blank" class="download-btn">
+                  <i class="material-icons">download</i>
+                  Visualizar Comprovante
+                </a>
+              </div>
+            </div>
+
+            <!-- Dados da Conclusão -->
+            <div class="conclusion-item">
+              <h4><i class="material-icons">event_available</i> Dados da Conclusão</h4>
+              <div class="conclusion-meta">
+                <p v-if="pedido.conclusao_dados.data_conclusao">
+                  <strong>Concluído em:</strong> {{ formatDateTime(pedido.conclusao_dados.data_conclusao) }}
+                </p>
+                <p v-if="pedido.conclusao_dados.usuario_conclusao">
+                  <strong>Concluído por:</strong> {{ pedido.conclusao_dados.usuario_conclusao }}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
       
       <div class="modal-footer">
@@ -197,6 +276,61 @@ export default {
         console.error('Erro ao carregar histórico do pedido:', error);
         this.historico = [];
       }
+    },
+    
+    formatCurrency(value) {
+      if (!value) return '0,00';
+      return parseFloat(value).toLocaleString('pt-BR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
+    },
+    
+    formatDateTime(dateString) {
+      if (!dateString) return 'Data não informada';
+      try {
+        const date = new Date(dateString);
+        return date.toLocaleString('pt-BR', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      } catch (error) {
+        return 'Data inválida';
+      }
+    },
+    
+    getRatingClass(rating) {
+      switch(rating) {
+        case 'excelente': return 'rating-excellent';
+        case 'bom': return 'rating-good';
+        case 'regular': return 'rating-regular';
+        case 'ruim': return 'rating-bad';
+        default: return '';
+      }
+    },
+    
+    getRatingIcon(rating) {
+      switch(rating) {
+        case 'excelente': return 'sentiment_very_satisfied';
+        case 'bom': return 'sentiment_satisfied';
+        case 'regular': return 'sentiment_neutral';
+        case 'ruim': return 'sentiment_dissatisfied';
+        default: return 'help';
+      }
+    },
+    
+    capitalizeFirst(str) {
+      if (!str) return '';
+      return str.charAt(0).toUpperCase() + str.slice(1);
+    },
+    
+    getAttachmentUrl(url) {
+      if (!url) return '#';
+      if (url.startsWith('http')) return url;
+      return `${process.env.VUE_APP_API_URL}${url}`;
     }
   }
 };
@@ -319,8 +453,6 @@ export default {
   font-weight: bold;
 }
 
-
-
 .status-concluido {
   color: #28a745;
   font-weight: bold;
@@ -387,5 +519,85 @@ export default {
 
 .valor-novo {
   color: #28a745;
+}
+
+.conclusion-section {
+  margin-top: 24px;
+  border-top: 1px solid #e0e0e0;
+  padding-top: 16px;
+}
+
+.conclusion-section h3 {
+  margin-top: 0;
+  margin-bottom: 16px;
+  font-size: 1.2rem;
+  color: #333;
+}
+
+.conclusion-grid {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.conclusion-item {
+  width: 50%;
+  margin-bottom: 16px;
+}
+
+.financial-details {
+  margin-bottom: 12px;
+}
+
+.service-types {
+  margin-top: 8px;
+}
+
+.service-badge {
+  background-color: #f8f9fa;
+  padding: 4px 8px;
+  border-radius: 4px;
+  margin-right: 8px;
+}
+
+.rating-display {
+  margin-top: 8px;
+}
+
+.rating-value {
+  font-weight: bold;
+  color: #28a745;
+}
+
+.feedback-content {
+  margin-top: 8px;
+}
+
+.attachment-link {
+  margin-top: 8px;
+}
+
+.download-btn {
+  text-decoration: none;
+  color: #007bff;
+}
+
+.conclusion-meta {
+  margin-top: 8px;
+}
+
+.rating-excellent {
+  color: #28a745;
+}
+
+.rating-good {
+  color: #17a2b8;
+}
+
+.rating-regular {
+  color: #ffc107;
+}
+
+.rating-bad {
+  color: #dc3545;
 }
 </style> 

@@ -137,10 +137,12 @@
     />
 
     <!-- Modal de Relatório Financeiro -->
-    <ModalRelatorioFinanceiro
+    <ModalFinanceiro
       v-if="isFinancialReportOpen"
       :isOpen="isFinancialReportOpen"
       @close="closeFinancialReport"
+      @edit-pedido="openEditOrderSection"
+      @view-pedido="handlePrintModal"
     />
 
     <!-- Modal de Dashboard de Gestão -->
@@ -169,7 +171,39 @@
         @new-order="handleNewOrderFromPrintModal"
       />
     </div>
-            <!-- Modal de Confirmação de Logout Moderno -->    <div v-if="showLogoutConfirmation" class="logout-modal-overlay" @click="cancelLogout">      <div class="logout-modal-content" @click.stop>        <div class="logout-modal-header">          <div class="logout-icon">            <i class="material-icons">logout</i>          </div>          <h3>Confirmar Saída</h3>          <button class="close-modal-btn" @click="cancelLogout">            <i class="material-icons">close</i>          </button>        </div>                <div class="logout-modal-body">          <p>Tem certeza de que deseja sair do sistema?</p>          <div class="logout-warning">            <i class="material-icons">info</i>            <span>Você precisará fazer login novamente para acessar o sistema.</span>          </div>        </div>                <div class="logout-modal-footer">          <button class="logout-cancel-btn" @click="cancelLogout">            <i class="material-icons">close</i>            Cancelar          </button>          <button class="logout-confirm-btn" @click="proceedWithLogout">            <i class="material-icons">logout</i>            Sair do Sistema          </button>        </div>      </div>    </div>
+    <!-- Modal de Confirmação de Logout -->
+    <div v-if="showLogoutConfirmation" class="logout-modal-overlay" @click="cancelLogout">
+      <div class="logout-modal-content" @click.stop>
+        <div class="logout-modal-header">
+          <div class="logout-icon">
+            <i class="material-icons">logout</i>
+          </div>
+          <h3>Confirmar Saída</h3>
+          <button class="close-modal-btn" @click="cancelLogout">
+            <i class="material-icons">close</i>
+          </button>
+        </div>
+        
+        <div class="logout-modal-body">
+          <p>Tem certeza de que deseja sair do sistema?</p>
+          <div class="logout-warning">
+            <i class="material-icons">info</i>
+            <span>Você precisará fazer login novamente para acessar o sistema.</span>
+          </div>
+        </div>
+        
+        <div class="logout-modal-footer">
+          <button class="logout-cancel-btn" @click="cancelLogout">
+            <i class="material-icons">close</i>
+            Cancelar
+          </button>
+          <button class="logout-confirm-btn" @click="proceedWithLogout">
+            <i class="material-icons">logout</i>
+            Sair do Sistema
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -179,7 +213,7 @@ import ModalConsultaPedidos from '@/components/ModalConsultaPedidos.vue';
 import ModalEditarPedido from '@/components/ModalEditarPedido.vue';
 import ModalImprimirPedido from '@/components/ModalImprimirPedido.vue';
 import ModalGerenciarUsuarios from '@/components/ModalGerenciarUsuarios.vue';
-import ModalRelatorioFinanceiro from '@/components/ModalRelatorioFinanceiro.vue';
+import ModalFinanceiro from '@/components/ModalFinanceiro.vue';
 import ModalDashboard from '@/components/ModalDashboard.vue';
 import ModalLogViewer from '@/components/ModalLogViewer.vue';
 import html2canvas from "html2canvas";
@@ -200,7 +234,7 @@ export default {
     ModalEditarPedido,
     ModalImprimirPedido,
     ModalGerenciarUsuarios,
-    ModalRelatorioFinanceiro,
+    ModalFinanceiro,
     ModalDashboard,
     ModalLogViewer,
   },
@@ -1094,7 +1128,222 @@ export default {
   background: linear-gradient(145deg, #c54040, #aa3636);
 }
 
-/* Modal de Confirmação de Logout Moderno */.logout-modal-overlay {  position: fixed;  top: 0;  left: 0;  width: 100%;  height: 100%;  display: flex;  align-items: center;  justify-content: center;  background-color: rgba(0, 0, 0, 0.85);  z-index: 10000;  backdrop-filter: blur(5px);  animation: fadeIn 0.3s ease-out;  padding: var(--spacing-md);  box-sizing: border-box;}.logout-modal-content {  background: linear-gradient(145deg, #3b3b3b, #2c2c2c);  border-radius: var(--border-radius-lg);  max-width: 90%;  width: 28rem;  box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.6);  animation: slideUp 0.3s ease-out;  overflow: hidden;  border: 1px solid #444;}.logout-modal-header {  padding: var(--spacing-lg);  border-bottom: 1px solid #444;  display: flex;  align-items: center;  justify-content: space-between;  background-color: rgba(255, 111, 97, 0.1);  position: relative;}.logout-icon {  display: flex;  align-items: center;  justify-content: center;  width: 3rem;  height: 3rem;  background: linear-gradient(145deg, #ff6f61, #e74c3c);  border-radius: 50%;  margin-right: var(--spacing-md);  box-shadow: 0 0.25rem 0.5rem rgba(255, 111, 97, 0.3);}.logout-icon i {  color: white;  font-size: 1.5rem;}.logout-modal-header h3 {  margin: 0;  font-size: var(--font-size-xl);  color: #f5f5f5;  font-weight: 600;  flex: 1;}.close-modal-btn {  background: none;  border: none;  color: #999;  font-size: var(--font-size-lg);  cursor: pointer;  display: flex;  align-items: center;  justify-content: center;  width: 2.5rem;  height: 2.5rem;  border-radius: 50%;  transition: all 0.3s ease;}.close-modal-btn:hover {  background-color: rgba(255, 255, 255, 0.1);  color: #ff6f61;  transform: rotate(90deg);}.logout-modal-body {  padding: var(--spacing-lg);  text-align: center;}.logout-modal-body p {  margin: 0 0 var(--spacing-md) 0;  color: #f5f5f5;  font-size: var(--font-size-lg);  font-weight: 500;}.logout-warning {  display: flex;  align-items: center;  justify-content: center;  background-color: rgba(255, 193, 7, 0.1);  border: 1px solid rgba(255, 193, 7, 0.3);  border-radius: var(--border-radius-md);  padding: var(--spacing-sm) var(--spacing-md);  margin-top: var(--spacing-md);}.logout-warning i {  color: #ffc107;  margin-right: var(--spacing-sm);  font-size: var(--font-size-lg);}.logout-warning span {  color: #ddd;  font-size: var(--font-size-sm);}.logout-modal-footer {  padding: var(--spacing-lg);  border-top: 1px solid #444;  display: flex;  justify-content: flex-end;  gap: var(--spacing-md);  background-color: rgba(0, 0, 0, 0.2);}.logout-cancel-btn, .logout-confirm-btn {  display: flex;  align-items: center;  padding: var(--spacing-sm) var(--spacing-lg);  border: none;  border-radius: var(--border-radius-md);  font-size: var(--font-size-md);  font-weight: 600;  cursor: pointer;  transition: all 0.3s ease;  gap: var(--spacing-xs);  min-width: 8rem;  justify-content: center;}.logout-cancel-btn {  background: linear-gradient(145deg, #555, #444);  color: #f5f5f5;  border: 1px solid #666;}.logout-cancel-btn:hover {  background: linear-gradient(145deg, #666, #555);  transform: translateY(-0.125rem);  box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.3);}.logout-confirm-btn {  background: linear-gradient(145deg, #ff6f61, #e74c3c);  color: white;  border: 1px solid #ff6f61;  position: relative;  overflow: hidden;}.logout-confirm-btn::before {  content: '';  position: absolute;  top: 0;  left: -100%;  width: 100%;  height: 100%;  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);  transition: left 0.5s;}.logout-confirm-btn:hover::before {  left: 100%;}.logout-confirm-btn:hover {  background: linear-gradient(145deg, #e74c3c, #c0392b);  transform: translateY(-0.125rem);  box-shadow: 0 0.25rem 0.5rem rgba(231, 76, 60, 0.4);}.logout-confirm-btn:active {  transform: translateY(0);}/* Animações */@keyframes fadeIn {  from {    opacity: 0;  }  to {    opacity: 1;  }}@keyframes slideUp {  from {    opacity: 0;    transform: translateY(2rem) scale(0.9);  }  to {    opacity: 1;    transform: translateY(0) scale(1);  }}
+/* Modal de Confirmação de Logout */
+.logout-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.85);
+  z-index: var(--z-index-modal);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: opacity 0.3s ease-in-out;
+  overflow-y: auto;
+  padding: var(--spacing-md);
+  box-sizing: border-box;
+  backdrop-filter: blur(5px);
+  animation: fadeIn 0.3s ease-out;
+}
+
+.logout-modal-content {
+  background-color: #1f1f1f;
+  color: #f5f5f5;
+  border-radius: var(--border-radius-lg);
+  width: 100%;
+  max-width: 500px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  border: 1px solid #333;
+  overflow: hidden;
+  animation: modalSlideIn 0.3s ease-out;
+}
+
+.logout-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-lg);
+  border-bottom: 1px solid #333;
+  background: linear-gradient(135deg, #2a2a2a 0%, #1f1f1f 100%);
+}
+
+.logout-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  background: linear-gradient(135deg, #ff6f61, #ff8a80);
+  border-radius: 50%;
+  margin-right: var(--spacing-md);
+  box-shadow: 0 4px 15px rgba(255, 111, 97, 0.3);
+  flex-shrink: 0;
+}
+
+.logout-icon i {
+  color: white;
+  font-size: 1.5rem;
+}
+
+.logout-modal-header h3 {
+  margin: 0;
+  font-size: var(--font-size-xl);
+  color: #f5f5f5;
+  font-weight: 600;
+  flex: 1;
+}
+
+.close-modal-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #f5f5f5;
+  padding: var(--spacing-xs);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: var(--font-size-lg);
+  width: 2.5rem;
+  height: 2.5rem;
+  flex-shrink: 0;
+}
+
+.close-modal-btn:hover {
+  background: rgba(255, 111, 97, 0.2);
+  border-color: #ff6f61;
+  transform: rotate(90deg);
+}
+
+.logout-modal-body {
+  padding: var(--spacing-lg);
+  text-align: center;
+}
+
+.logout-modal-body p {
+  margin: 0 0 var(--spacing-md) 0;
+  color: #f5f5f5;
+  font-size: var(--font-size-lg);
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.logout-warning {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 193, 7, 0.1);
+  border: 1px solid rgba(255, 193, 7, 0.3);
+  border-radius: var(--border-radius-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  margin-top: var(--spacing-md);
+  gap: var(--spacing-sm);
+}
+
+.logout-warning i {
+  color: #ffc107;
+  font-size: var(--font-size-lg);
+  flex-shrink: 0;
+}
+
+.logout-warning span {
+  color: #ddd;
+  font-size: var(--font-size-sm);
+  line-height: 1.4;
+}
+
+.logout-modal-footer {
+  padding: var(--spacing-lg);
+  border-top: 1px solid #333;
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-md);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.logout-cancel-btn, .logout-confirm-btn {
+  display: flex;
+  align-items: center;
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border: none;
+  border-radius: var(--border-radius-md);
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  gap: var(--spacing-xs);
+  min-width: 8rem;
+  justify-content: center;
+}
+
+.logout-cancel-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #f5f5f5;
+}
+
+.logout-cancel-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.logout-confirm-btn {
+  background: linear-gradient(135deg, #ff6f61, #ff8a80);
+  color: white;
+  border: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.logout-confirm-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.logout-confirm-btn:hover::before {
+  left: 100%;
+}
+
+.logout-confirm-btn:hover {
+  background: linear-gradient(135deg, #e74c3c, #ff6f61);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 25px rgba(255, 111, 97, 0.4);
+}
+
+.logout-confirm-btn:active {
+  transform: translateY(0);
+}
+
+/* Animações */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-30px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
 
 /* Ajustes específicos para botão Sair no sidebar */
 .sidebar .logout-btn {
@@ -1102,7 +1351,111 @@ export default {
   margin: 0 auto;
 }
 
-/* Responsividade para o Modal de Logout */@media (max-width: 768px) {  .logout-modal-content {    width: 95%;    max-width: 95%;  }    .logout-modal-header {    padding: var(--spacing-md);  }    .logout-modal-header h3 {    font-size: var(--font-size-lg);  }    .logout-icon {    width: 2.5rem;    height: 2.5rem;    margin-right: var(--spacing-sm);  }    .logout-icon i {    font-size: 1.25rem;  }    .logout-modal-body {    padding: var(--spacing-md);  }    .logout-modal-body p {    font-size: var(--font-size-md);  }    .logout-warning {    flex-direction: column;    text-align: center;    gap: var(--spacing-xs);  }    .logout-warning i {    margin-right: 0;    margin-bottom: var(--spacing-xs);  }    .logout-modal-footer {    padding: var(--spacing-md);    flex-direction: column;    gap: var(--spacing-sm);  }    .logout-cancel-btn, .logout-confirm-btn {    width: 100%;    padding: var(--spacing-md);    font-size: var(--font-size-md);  }}@media (max-width: 480px) {  .logout-modal-overlay {    padding: var(--spacing-sm);  }    .logout-modal-content {    width: 98%;  }    .logout-modal-header {    padding: var(--spacing-sm);  }    .logout-modal-header h3 {    font-size: var(--font-size-md);  }    .logout-icon {    width: 2rem;    height: 2rem;  }    .logout-icon i {    font-size: 1rem;  }    .logout-modal-body {    padding: var(--spacing-sm);  }    .logout-modal-body p {    font-size: var(--font-size-sm);  }    .logout-warning span {    font-size: var(--font-size-xs);  }    .logout-modal-footer {    padding: var(--spacing-sm);  }    .logout-cancel-btn, .logout-confirm-btn {    padding: var(--spacing-sm);    font-size: var(--font-size-sm);    min-width: auto;  }}
+/* Responsividade para o Modal de Logout */
+@media (max-width: 768px) {
+  .logout-modal-overlay {
+    padding: var(--spacing-sm);
+  }
+
+  .logout-modal-content {
+    max-width: 95%;
+  }
+
+  .logout-modal-header {
+    padding: var(--spacing-md);
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+  }
+
+  .logout-modal-header h3 {
+    font-size: var(--font-size-lg);
+  }
+
+  .logout-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    margin-right: var(--spacing-sm);
+  }
+
+  .logout-icon i {
+    font-size: 1.25rem;
+  }
+
+  .logout-modal-body {
+    padding: var(--spacing-md);
+  }
+
+  .logout-modal-body p {
+    font-size: var(--font-size-md);
+  }
+
+  .logout-warning {
+    flex-direction: column;
+    text-align: center;
+    gap: var(--spacing-xs);
+  }
+
+  .logout-modal-footer {
+    padding: var(--spacing-md);
+    flex-direction: column;
+    gap: var(--spacing-sm);
+  }
+
+  .logout-cancel-btn, .logout-confirm-btn {
+    width: 100%;
+    padding: var(--spacing-md);
+    font-size: var(--font-size-md);
+  }
+}
+
+@media (max-width: 480px) {
+  .logout-modal-overlay {
+    padding: var(--spacing-xs);
+  }
+
+  .logout-modal-content {
+    max-width: 98%;
+  }
+
+  .logout-modal-header {
+    padding: var(--spacing-sm);
+  }
+
+  .logout-modal-header h3 {
+    font-size: var(--font-size-md);
+  }
+
+  .logout-icon {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .logout-icon i {
+    font-size: 1rem;
+  }
+
+  .logout-modal-body {
+    padding: var(--spacing-sm);
+  }
+
+  .logout-modal-body p {
+    font-size: var(--font-size-sm);
+  }
+
+  .logout-warning span {
+    font-size: var(--font-size-xs);
+  }
+
+  .logout-modal-footer {
+    padding: var(--spacing-sm);
+  }
+
+  .logout-cancel-btn, .logout-confirm-btn {
+    padding: var(--spacing-sm);
+    font-size: var(--font-size-sm);
+    min-width: auto;
+  }
+}
 
 /* Botão sair flutuante para mobile */
 .floating-logout-btn {
