@@ -70,11 +70,18 @@ axiosInstance.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
 
-    // Adicionar token CSRF para métodos que modificam dados
-    if (['post', 'put', 'delete'].includes(config.method.toLowerCase())) {
+    // Lista de endpoints isentos de CSRF
+    const csrfExemptPaths = ['/token', '/security/csrf-token', '/usuarios/'];
+    const isExemptPath = csrfExemptPaths.some(path => config.url.includes(path));
+    
+    console.log(`Requisição ${config.method.toUpperCase()} para ${config.url} - Isento de CSRF: ${isExemptPath}`);
+    
+    // Adicionar token CSRF para métodos que modificam dados (exceto endpoints isentos)
+    if (['post', 'put', 'delete'].includes(config.method.toLowerCase()) && !isExemptPath) {
       const csrfToken = getCsrfToken();
       if (csrfToken) {
         config.headers['X-CSRF-Token'] = csrfToken;
+        console.log('Token CSRF adicionado à requisição:', csrfToken.substring(0, 20) + '...');
       } else {
         console.warn('Token CSRF não encontrado. Renovando token...');
         
@@ -90,6 +97,7 @@ axiosInstance.interceptors.request.use(
           const newToken = await ensureCsrfToken();
           if (newToken) {
             config.headers['X-CSRF-Token'] = newToken;
+            console.log('Novo token CSRF obtido e adicionado:', newToken.substring(0, 20) + '...');
           } else {
             console.error('Não foi possível obter um token CSRF válido.');
           }

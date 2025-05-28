@@ -61,7 +61,8 @@ const authService = {
       
       console.log('Enviando requisição de login...');
       const response = await axiosService.post('/token', { username, senha });
-      console.log('Resposta recebida do servidor');
+      console.log('Resposta recebida do servidor:', response.status);
+      console.log('Dados da resposta:', response.data);
       
       // Armazenar token e informações do usuário
       if (response.data && response.data.access_token) {

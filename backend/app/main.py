@@ -29,11 +29,17 @@ from .user_routes import router as user_router
 # Importar o novo módulo de relatórios
 from .reports import report_generator
 
+# Importar WebSocket
+from .websocket import socket_app, send_notification_to_sector, send_notification_to_admins_gestores, send_smart_notification
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 app = FastAPI()
 app.include_router(user_router)
+
+# Montar o WebSocket
+app.mount("/socket.io", socket_app)
 
 # Configuração de CORS
 origins = [
@@ -85,7 +91,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
                     "script-src 'self' 'unsafe-inline'; "
                     "style-src 'self' 'unsafe-inline'; "
                     "img-src 'self' data:; "
-                    "connect-src 'self'; "
+                    "connect-src 'self' ws: wss:; "  # Permitir WebSockets
                     "font-src 'self'; "
                     "object-src 'none'; "
                     "media-src 'self'; "
@@ -99,7 +105,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
                     "script-src 'self'; "
                     "style-src 'self'; "
                     "img-src 'self'; "
-                    "connect-src 'self'; "
+                    "connect-src 'self' wss:; "  # Permitir WebSockets seguros em produção
                     "font-src 'self'; "
                     "object-src 'none'; "
                     "media-src 'self'; "
@@ -135,10 +141,12 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 class CSRFMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         # Caminhos que estão isentos de verificação CSRF
-        exempt_paths = ["/token", "/security/csrf-token"]
+        exempt_paths = ["/token", "/security/csrf-token", "/usuarios/"]
         
-        # Ignorar verificação CSRF para o endpoint de login, token CSRF e OPTIONS
-        if request.url.path in exempt_paths or request.method == "OPTIONS":
+        # Ignorar verificação CSRF para WebSocket, login, token CSRF, criação de usuários e OPTIONS
+        if (request.url.path in exempt_paths or 
+            request.url.path.startswith("/socket.io") or 
+            request.method == "OPTIONS"):
             logger.info(f"CSRF ignorado para caminho isento: {request.url.path}")
             return await call_next(request)
             
@@ -232,40 +240,32 @@ app.add_middleware(CSRFMiddleware)
 # Endpoint para gerar e retornar o token CSRF
 @app.get("/security/csrf-token")
 async def get_csrf_token():
-    token = csrf.generate_csrf_token()
-    response = JSONResponse(content={"csrf_token": token})
-    
-    # Logs para depuração
-    logger.info(f"Gerando novo token CSRF: {token[:10] if len(token) >= 10 else token}...")
-    
-    # Configurações de cookie baseadas no ambiente
-    cookie_config = {
-        "key": CSRF_COOKIE_NAME,
-        "value": token,
-        "max_age": 3600  # Expira em 1 hora
-    }
-    
-    if ENVIRONMENT == "development":
-        # Configurações mais permissivas para desenvolvimento
-        cookie_config.update({
-            "httponly": False,  # Permite acesso via JavaScript para testes
-            "samesite": "lax",  # Menos restritivo
-            "secure": False     # Não requer HTTPS
-        })
-    else:
-        # Configurações seguras para produção
-        cookie_config.update({
-            "httponly": True,   # Previne acesso via JavaScript
-            "samesite": "strict",  # Mais restritivo
-            "secure": True      # Requer HTTPS
-        })
-    
-    response.set_cookie(**cookie_config)
-    
-    # Adicionar o token também como um cabeçalho para facilitar testes
-    response.headers["X-CSRF-Token"] = token
-    
-    return response
+    """
+    Gera e retorna um token CSRF válido.
+    O token é definido tanto no cookie quanto retornado no corpo da resposta.
+    """
+    try:
+        # Gerar um novo token CSRF
+        token = csrf.generate_csrf_token()
+        
+        # Criar a resposta
+        response = JSONResponse(content={"csrf_token": token})
+        
+        # Definir o cookie CSRF
+        response.set_cookie(
+            key=CSRF_COOKIE_NAME,
+            value=token,
+            max_age=3600,  # 1 hora
+            httponly=False,  # Permitir acesso via JavaScript
+            secure=False,  # Definir como True em produção com HTTPS
+            samesite="lax"  # Usar lax para melhor compatibilidade
+        )
+        
+        logger.info(f"Token CSRF gerado: {token[:10]}...")
+        return response
+    except Exception as e:
+        logger.error(f"Erro ao gerar token CSRF: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao gerar token CSRF")
 
 @app.middleware("http")
 async def log_auth_middleware(request: Request, call_next):
@@ -474,6 +474,38 @@ async def criar_pedido(pedido: schemas.PedidoCreate, request: Request, db=Depend
                 "titulo": pedido.descricao
             }
         )
+
+        # Enviar notificações WebSocket
+        try:
+            setor_pedido = pedido_dict.get("setor", setor_usuario)
+            
+            # Dados da notificação
+            notification_data = {
+                'title': 'Novo Pedido Criado',
+                'message': f'Pedido #{next_id}: {pedido.descricao[:50]}{"..." if len(pedido.descricao) > 50 else ""}',
+                'pedido': {
+                    'id': next_id,
+                    'descricao': pedido.descricao,
+                    'setor': setor_pedido,
+                    'usuario_nome': usuario_nome,
+                    'urgencia': pedido_dict.get('urgencia', 'Padrão')
+                }
+            }
+            
+            logger.info(f"[WEBSOCKET DEBUG] Preparando notificação para pedido #{next_id}")
+            logger.info(f"[WEBSOCKET DEBUG] Setor do pedido: {setor_pedido}")
+            logger.info(f"[WEBSOCKET DEBUG] Dados da notificação: {notification_data}")
+            
+            # Enviar notificação de forma inteligente para evitar duplicatas
+            logger.info(f"[WEBSOCKET DEBUG] Enviando notificação inteligente para pedido #{next_id}")
+            await send_smart_notification(setor_pedido, 'novo_pedido', notification_data)
+            
+            logger.info(f"[WEBSOCKET DEBUG] Notificações WebSocket enviadas para o pedido #{next_id}")
+            
+        except Exception as e:
+            logger.error(f"[WEBSOCKET ERROR] Erro ao enviar notificações WebSocket para o pedido #{next_id}: {e}")
+            logger.exception("Detalhes do erro WebSocket:")
+            # Não falhar a criação do pedido por causa das notificações
 
         logger.info(f"Pedido criado com sucesso: {pedido_dict}")
         return pedido_dict
@@ -895,6 +927,32 @@ async def atualizar_pedido(pedido_id: int, pedido: schemas.PedidoCreate, request
                         "status_anterior": status_original
                     }
                 )
+                
+                # Enviar notificações WebSocket para conclusão
+                try:
+                    setor_pedido = pedido_atual.get("setor", "Escritório")
+                    
+                    # Dados da notificação
+                    notification_data = {
+                        'title': 'Pedido Concluído',
+                        'message': f'Pedido #{pedido_id}: {pedido_atual.get("descricao", "")[:50]}{"..." if len(pedido_atual.get("descricao", "")) > 50 else ""} foi concluído',
+                        'pedido': {
+                            'id': pedido_id,
+                            'descricao': pedido_atual.get("descricao", ""),
+                            'setor': setor_pedido,
+                            'usuario_nome': usuario_nome,
+                            'status': 'Concluído'
+                        }
+                    }
+                    
+                    # Enviar notificação inteligente
+                    await send_smart_notification(setor_pedido, 'pedido_concluido', notification_data)
+                    
+                    logger.info(f"Notificações WebSocket de conclusão enviadas para o pedido #{pedido_id}")
+                    
+                except Exception as e:
+                    logger.error(f"Erro ao enviar notificações WebSocket de conclusão para o pedido #{pedido_id}: {e}")
+                    # Não falhar a atualização do pedido por causa das notificações
             # Ou registrar atividade de edição para outros casos
             else:
                 await registrar_atividade(
@@ -1149,6 +1207,33 @@ async def atualizar_pedido_com_historico(
                     "com_historico": True
                 }
             )
+            
+            # Enviar notificações WebSocket se o pedido foi concluído
+            if tipo_atividade == "conclusao":
+                try:
+                    setor_pedido = pedido_atual.get("setor", "Escritório")
+                    
+                    # Dados da notificação
+                    notification_data = {
+                        'title': 'Pedido Concluído',
+                        'message': f'Pedido #{pedido_id}: {pedido_atual.get("descricao", "")[:50]}{"..." if len(pedido_atual.get("descricao", "")) > 50 else ""} foi concluído',
+                        'pedido': {
+                            'id': pedido_id,
+                            'descricao': pedido_atual.get("descricao", ""),
+                            'setor': setor_pedido,
+                            'usuario_nome': usuario_nome,
+                            'status': 'Concluído'
+                        }
+                    }
+                    
+                    # Enviar notificação inteligente
+                    await send_smart_notification(setor_pedido, 'pedido_concluido', notification_data)
+                    
+                    logger.info(f"Notificações WebSocket de conclusão enviadas para o pedido #{pedido_id} (com histórico)")
+                    
+                except Exception as e:
+                    logger.error(f"Erro ao enviar notificações WebSocket de conclusão para o pedido #{pedido_id}: {e}")
+                    # Não falhar a atualização do pedido por causa das notificações
         else:
             # Registra atividade de edição genérica
             await registrar_atividade(
@@ -2843,3 +2928,66 @@ async def resetar_configuracao_orcamento(
     except Exception as e:
         logger.error(f"Erro ao resetar configuração de orçamento: {e}")
         raise HTTPException(status_code=500, detail=f"Erro interno: {str(e)}")
+
+# Endpoint de teste para WebSocket
+@app.post("/test/websocket-notification")
+async def test_websocket_notification(
+    request: Request,
+    db=Depends(database.get_db),
+    current_user=Depends(get_current_user)
+):
+    """Endpoint de teste para verificar se as notificações WebSocket estão funcionando"""
+    try:
+        # Dados de teste
+        test_data = {
+            'title': 'Teste de Notificação',
+            'message': 'Esta é uma notificação de teste do WebSocket',
+            'pedido': {
+                'id': 999,
+                'descricao': 'Pedido de teste',
+                'setor': current_user.get('setor', 'Escritório')
+            }
+        }
+        
+        # Enviar notificação inteligente
+        setor_usuario = current_user.get('setor', 'Escritório')
+        await send_smart_notification(setor_usuario, 'teste', test_data)
+        
+        logger.info(f"Notificação de teste enviada para o setor {setor_usuario}")
+        
+        return {
+            "status": "success",
+            "message": "Notificação de teste enviada",
+            "setor": setor_usuario,
+            "user_type": current_user.get('tipo_usuario')
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao enviar notificação de teste: {e}")
+        raise HTTPException(status_code=500, detail=f"Erro ao enviar notificação de teste: {str(e)}")
+
+# Endpoint para verificar status do WebSocket
+@app.get("/websocket/status")
+async def websocket_status(
+    request: Request,
+    current_user=Depends(get_current_user)
+):
+    """Endpoint para verificar o status do WebSocket e usuários conectados"""
+    try:
+        from .websocket import connected_users, session_users
+        
+        # Verificar se o usuário é admin ou gestor
+        if current_user.get('tipo_usuario') not in ['admin', 'gestor']:
+            raise HTTPException(status_code=403, detail="Acesso negado")
+        
+        return {
+            "status": "active",
+            "connected_users_count": len(connected_users),
+            "connected_users": list(connected_users.keys()),
+            "active_sessions": len(session_users),
+            "sessions": dict(session_users)
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao obter status do WebSocket: {e}")
+        raise HTTPException(status_code=500, detail=f"Erro ao obter status: {str(e)}")

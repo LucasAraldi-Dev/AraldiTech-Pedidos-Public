@@ -451,9 +451,16 @@ export default {
 
     const handleSignup = async (userData, callback) => {
       try {
+        console.log("Iniciando cadastro de usuário...");
+
         const response = await axios.post(
           `${process.env.VUE_APP_API_URL}/usuarios/`,
-          userData
+          userData,
+          {
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          }
         );
         
         console.log("Usuário cadastrado com sucesso:", response.data);
@@ -468,16 +475,46 @@ export default {
         // O modal permanecerá aberto até que o usuário escolha fechá-lo
         // ou clicar em "Fazer Login"
       } catch (error) {
-        console.error("Erro ao cadastrar usuário:", error);
+        console.error("Erro no cadastro:", error.response?.data?.detail || error.message);
         
         // Chamar o callback com erro se existir
         if (typeof callback === 'function') {
-          const errorMessage = error.response?.data?.detail || "Erro na conexão com o servidor";
+          let errorMessage = "Erro na conexão com o servidor";
+          
+          if (error.response?.status === 422) {
+            // Erro de validação - mostrar detalhes específicos
+            const validationErrors = error.response?.data?.detail;
+            if (Array.isArray(validationErrors)) {
+              errorMessage = "Erro de validação: " + validationErrors.map(err => 
+                `${err.loc?.join('.')} - ${err.msg}`
+              ).join('; ');
+            } else {
+              errorMessage = error.response?.data?.detail || "Erro de validação dos dados";
+            }
+          } else {
+            errorMessage = error.response?.data?.detail || "Erro na conexão com o servidor";
+          }
+          
           callback(false, new Error(errorMessage));
         }
         
         // Exibir mensagem de erro usando toast
-        toast.error(error.response?.data?.detail || "Erro ao cadastrar usuário. Por favor, tente novamente.");
+        let toastMessage = "Erro ao cadastrar usuário. Por favor, tente novamente.";
+        
+        if (error.response?.status === 422) {
+          const validationErrors = error.response?.data?.detail;
+          if (Array.isArray(validationErrors)) {
+            toastMessage = "Erro de validação: " + validationErrors.map(err => 
+              `${err.loc?.join('.')} - ${err.msg}`
+            ).join('; ');
+          } else {
+            toastMessage = error.response?.data?.detail || "Erro de validação dos dados";
+          }
+        } else {
+          toastMessage = error.response?.data?.detail || "Erro ao cadastrar usuário. Por favor, tente novamente.";
+        }
+        
+        toast.error(toastMessage);
         // Não fechar o modal em caso de erro para permitir nova tentativa
       }
     };

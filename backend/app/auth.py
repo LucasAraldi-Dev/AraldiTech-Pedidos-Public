@@ -124,3 +124,23 @@ async def get_user_type(token: str = Depends(oauth2_scheme), db=Depends(get_db))
     """Retorna o tipo de usuário ('comum' ou 'gestor')."""
     user = await get_current_user(token, db)
     return user.get('tipo_usuario', 'comum')  # Padrão é 'comum' se o campo não existir
+
+def decode_token(token: str):
+    """
+    Decodifica um token JWT e retorna o payload.
+    
+    Args:
+        token: Token JWT a ser decodificado
+        
+    Returns:
+        dict: Payload do token decodificado
+        
+    Raises:
+        JWTError: Se o token for inválido ou expirado
+    """
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        return payload
+    except JWTError as e:
+        logging.error(f"Erro ao decodificar token: {str(e)}")
+        raise e

@@ -24,6 +24,8 @@ def parse_obj_id(doc):
 @router.post("/usuarios/", response_model=dict)
 async def create_user(user: schemas.UsuarioCreate, db=Depends(database.get_db)):
     try:
+        logging.info(f"Criando novo usuário: {user.username}")
+        
         # Criptografar a senha
         user_dict = user.dict()
         user_dict["senha"] = pwd_context.hash(user_dict["senha"])
@@ -82,7 +84,7 @@ async def create_user(user: schemas.UsuarioCreate, db=Depends(database.get_db)):
         new_user = await db["users"].find_one({"_id": result.inserted_id})
         
         # Log de criação de usuário
-        logging.info(f"Usuário criado com sucesso: {user_dict['username']} - Termos aceitos em: {user_dict.get('termsAcceptanceDate')}")
+        logging.info(f"Usuário criado com sucesso: {user_dict['username']} - Setor: {user_dict['setor']}")
         
         # Registrar atividade de criação de usuário
         try:
@@ -98,9 +100,10 @@ async def create_user(user: schemas.UsuarioCreate, db=Depends(database.get_db)):
         return parse_obj_id(new_user)
     except HTTPException as e:
         # Repassar exceções HTTP
+        logging.error(f"HTTPException na criação de usuário: {e.detail}")
         raise e
     except Exception as e:
-        logging.error(f"Erro ao criar usuário: {str(e)}")
+        logging.error(f"Erro geral ao criar usuário: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Erro ao criar usuário: {str(e)}"

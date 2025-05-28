@@ -22,7 +22,9 @@ export async function initCsrfProtection() {
     const response = await axiosService.get('/security/csrf-token');
     const token = response.data.csrf_token;
     if (token) {
+      csrfToken = token;
       localStorage.setItem(CSRF_TOKEN_KEY, token);
+      console.log('Proteção CSRF inicializada com sucesso');
       return token;
     } else {
       throw new Error('Token CSRF não recebido');
@@ -34,11 +36,12 @@ export async function initCsrfProtection() {
 }
 
 /**
- * Obtém o token CSRF atual do armazenamento em memória
+ * Obtém o token CSRF atual do armazenamento local ou memória
  * @returns {string|null} Token CSRF ou null se não existir
  */
 export function getCsrfToken() {
-  return csrfToken;
+  // Primeiro tenta obter da memória, depois do localStorage
+  return csrfToken || localStorage.getItem(CSRF_TOKEN_KEY);
 }
 
 /**
@@ -61,6 +64,8 @@ export async function ensureCsrfToken(forceRefresh = false) {
     
     if (response && response.data && response.data.csrf_token) {
       csrfToken = response.data.csrf_token;
+      // Também salvar no localStorage para persistência
+      localStorage.setItem(CSRF_TOKEN_KEY, csrfToken);
       console.log('Token CSRF atualizado com sucesso');
       return csrfToken;
     } else {

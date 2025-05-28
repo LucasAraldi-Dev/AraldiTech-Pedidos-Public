@@ -1,5 +1,24 @@
 <template>
   <div class="app-container">
+    <!-- Header do Menu com Notificações -->
+    <div class="menu-header-bar">
+      <div class="menu-header-content">
+        <div class="menu-title">
+          <h2>Sistema de Pedidos</h2>
+          <span class="user-info">{{ userName }} - {{ userSetor }}</span>
+        </div>
+        <div class="menu-actions">
+          <!-- Indicador de Notificações -->
+          <NotificationIndicator />
+          <!-- Informações do usuário -->
+          <div class="user-badge" :class="userTypeClass">
+            <i :class="userTypeIcon"></i>
+            <span>{{ userTypeLabel }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Fundo com logo -->
     <div class="background-logo"></div>
     
@@ -216,12 +235,14 @@ import ModalGerenciarUsuarios from '@/components/ModalGerenciarUsuarios.vue';
 import ModalFinanceiro from '@/components/ModalFinanceiro.vue';
 import ModalDashboard from '@/components/ModalDashboard.vue';
 import ModalLogViewer from '@/components/ModalLogViewer.vue';
+import NotificationIndicator from '@/components/NotificationIndicator.vue';
 import html2canvas from "html2canvas";
 // Importação modificada para evitar o erro de 'module is not defined'
 import * as axiosModule from "axios";
 const axios = axiosModule.default || axiosModule;
 import { Chart, registerables } from 'chart.js';
 import authService from '@/api/authService';
+import websocketService from '@/utils/websocket';
 
 // Registrar todos os componentes do Chart.js
 Chart.register(...registerables);
@@ -237,6 +258,7 @@ export default {
     ModalFinanceiro,
     ModalDashboard,
     ModalLogViewer,
+    NotificationIndicator,
   },
   data() {
     return {
@@ -252,8 +274,10 @@ export default {
       pedidoCriado: null,
       selectedOrder: null,
       orders: [],
-      // Remover variáveis específicas do dashboard que não são mais necessárias
+      // Dados do usuário para o header
       userName: '',
+      userSetor: '',
+      userType: '',
       // Verificar permissões de usuário
       isAdmin: false,
       isGestor: false,
@@ -265,6 +289,35 @@ export default {
       // Modal de confirmação de logout
       showLogoutConfirmation: false
     };
+  },
+  computed: {
+    userTypeClass() {
+      return {
+        'admin-badge': this.userType === 'admin',
+        'gestor-badge': this.userType === 'gestor',
+        'comum-badge': this.userType === 'comum'
+      };
+    },
+    userTypeIcon() {
+      switch (this.userType) {
+        case 'admin':
+          return 'fas fa-crown';
+        case 'gestor':
+          return 'fas fa-user-tie';
+        default:
+          return 'fas fa-user';
+      }
+    },
+    userTypeLabel() {
+      switch (this.userType) {
+        case 'admin':
+          return 'Administrador';
+        case 'gestor':
+          return 'Gestor';
+        default:
+          return 'Usuário';
+      }
+    }
   },
   created() {
     console.log("AppMenu criado, verificando autenticação...");
@@ -283,12 +336,42 @@ export default {
       console.warn("Usuário não autenticado, redirecionando para login");
       this.$router.push({ name: "Login" });
     } else {
+      // Inicializar dados do usuário para o header
+      this.userName = user.nome || user.username || 'Usuário';
+      this.userSetor = user.setor || 'Escritório';
+      this.userType = user.tipo_usuario || 'comum';
+      
       this.isAdmin = user.tipo_usuario === "admin";
       this.isGestor = user.tipo_usuario === "gestor" || user.tipo_usuario === "admin";
     }
+
+    // Conectar ao WebSocket
+    console.log("Tentando conectar ao WebSocket...");
+    websocketService.connect();
+    
+    // Verificar se a conexão foi estabelecida
+    setTimeout(() => {
+      if (websocketService.checkConnection()) {
+        console.log("✅ WebSocket conectado com sucesso!");
+        
+        // Emitir evento para que outros componentes possam se conectar
+        window.dispatchEvent(new CustomEvent('websocket-ready', {
+          detail: { websocketService }
+        }));
+      } else {
+        console.warn("❌ WebSocket não conectou. Tentando reconectar...");
+        websocketService.connect();
+      }
+    }, 2000);
+
+    // Listener para abrir modal de impressão via notificações
+    window.addEventListener('open-print-modal', this.handleOpenPrintModalFromNotification);
   },
   unmounted() {
     window.removeEventListener("resize", this.checkIfMobile);
+    window.removeEventListener('open-print-modal', this.handleOpenPrintModalFromNotification);
+    // Desconectar do WebSocket
+    websocketService.disconnect();
   },
   methods: {
     openCreateOrderSection() {
@@ -429,6 +512,15 @@ export default {
         console.error('[CRÍTICO] Erro ao abrir modal de impressão:', err);
         alert(`Erro ao abrir modal: ${err.message}`);
       }
+    },
+    
+    // Método para lidar com abertura de modal via notificação
+    handleOpenPrintModalFromNotification(event) {
+      const pedidoId = event.detail.pedidoId;
+      console.log('[NOTIFICAÇÃO] Abrindo modal de impressão para pedido:', pedidoId);
+      
+      // Buscar os detalhes do pedido e abrir o modal
+      this.fetchPedidoById(pedidoId);
     },
     
     // Método auxiliar para fechar todos os modais
@@ -763,12 +855,90 @@ export default {
   pointer-events: none; /* Permite clicar através da imagem */
 }
 
+/* Header do Menu */
+.menu-header-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4rem;
+  background: linear-gradient(135deg, #1a1a1a 0%, #2c2c2c 100%);
+  border-bottom: 1px solid #444;
+  z-index: var(--z-index-header, 200);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.menu-header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 100%;
+  padding: 0 var(--spacing-lg);
+  max-width: 100%;
+}
+
+.menu-title h2 {
+  margin: 0;
+  color: #fff;
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+  background: linear-gradient(90deg, #fff, #ccc);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.user-info {
+  display: block;
+  color: #aaa;
+  font-size: var(--font-size-sm);
+  margin-top: 0.25rem;
+}
+
+.menu-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.user-badge {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--border-radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.user-badge.admin-badge {
+  background: linear-gradient(135deg, #b73c3c, #9a3232);
+  color: white;
+  box-shadow: 0 2px 8px rgba(183, 60, 60, 0.3);
+}
+
+.user-badge.gestor-badge {
+  background: linear-gradient(135deg, #3c7bb7, #32689a);
+  color: white;
+  box-shadow: 0 2px 8px rgba(60, 123, 183, 0.3);
+}
+
+.user-badge.comum-badge {
+  background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+  border: 1px solid #357abd;
+}
+
+.user-badge i {
+  font-size: var(--font-size-md);
+}
+
 /* Sidebar */
 .sidebar {
   width: 16rem; /* Convertido de fixo para rem */
   height: 100vh;
   position: fixed;
-  top: 0;
+  top: 4rem; /* Ajustado para ficar abaixo do header */
   left: 0;
   background-color: #262626;
   padding: var(--spacing-lg) 0;
@@ -778,14 +948,16 @@ export default {
   overflow-y: auto;
   z-index: var(--z-index-sidebar, 100);
   box-shadow: 0.25rem 0 1.25rem rgba(0, 0, 0, 0.2);
+  height: calc(100vh - 4rem); /* Ajustado para considerar o header */
 }
 
 /* Conteúdo principal */
 .main-content {
   flex: 1;
   margin-left: 16rem; /* Alinhado com a largura da sidebar */
+  margin-top: 4rem; /* Ajustado para ficar abaixo do header */
   width: calc(100% - 16rem); /* Largura - sidebar */
-  min-height: 100vh;
+  min-height: calc(100vh - 4rem); /* Ajustado para considerar o header */
   padding: var(--spacing-lg);
   background-color: transparent; /* Alterado de #2c2c2c para transparente para mostrar o background */
   overflow-y: auto;
@@ -969,6 +1141,27 @@ export default {
 
 /* Responsividade */
 @media (max-width: 768px) {
+  .menu-header-content {
+    padding: 0 var(--spacing-md);
+  }
+  
+  .menu-title h2 {
+    font-size: var(--font-size-lg);
+  }
+  
+  .user-info {
+    font-size: var(--font-size-xs);
+  }
+  
+  .user-badge {
+    padding: var(--spacing-xs);
+    font-size: var(--font-size-xs);
+  }
+  
+  .user-badge span {
+    display: none; /* Ocultar texto no mobile, manter apenas ícone */
+  }
+  
   .sidebar {
     display: none;
   }
@@ -976,11 +1169,13 @@ export default {
   .main-content {
     width: 100%;
     margin-left: 0;
+    margin-top: 4rem; /* Manter margem do header */
     padding: var(--spacing-md);
   }
   
   .open-menu-btn {
     display: block;
+    top: 4.5rem; /* Ajustado para ficar abaixo do header */
   }
   
   /* Ajustes específicos para mobile */
@@ -990,31 +1185,8 @@ export default {
     justify-content: flex-start;
     padding: 0;
     padding-bottom: 6rem; /* Espaço adicional para garantir que conteúdo não fique sob o botão flutuante */
-  }
-  
-  .menu-header {
-    padding: 1rem;
-    background-color: rgba(0, 0, 0, 0.8);
-  }
-  
-  .menu-content {
-    padding: 0.5rem 0 5rem 0; /* Padding inferior maior para evitar que o conteúdo fique sob o botão flutuante */
-    flex: 1;
-    max-height: none; /* Deixar o conteúdo fluir normalmente */
-  }
-  
-  /* Garantir espaçamento adequado entre botões no mobile */
-  .menu-content .menu-btn {
-    margin-bottom: 0.8rem;
-  }
-  
-  /* Ajustar botão flutuante em diferentes orientações de tela */
-  @media (orientation: landscape) {
-    .floating-logout-btn {
-      bottom: 3rem;
-      padding: 0.8rem;
-      font-size: 1.1rem;
-    }
+    top: 4rem; /* Começar abaixo do header */
+    height: calc(100vh - 4rem); /* Ajustar altura */
   }
 }
 
@@ -1144,7 +1316,6 @@ export default {
   overflow-y: auto;
   padding: var(--spacing-md);
   box-sizing: border-box;
-  backdrop-filter: blur(5px);
   animation: fadeIn 0.3s ease-out;
 }
 
@@ -1154,7 +1325,6 @@ export default {
   border-radius: var(--border-radius-lg);
   width: 100%;
   max-width: 500px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
   border: 1px solid #333;
   overflow: hidden;
   animation: modalSlideIn 0.3s ease-out;
@@ -1166,7 +1336,7 @@ export default {
   align-items: center;
   padding: var(--spacing-lg);
   border-bottom: 1px solid #333;
-  background: linear-gradient(135deg, #2a2a2a 0%, #1f1f1f 100%);
+  background-color: #2a2a2a;
 }
 
 .logout-icon {
@@ -1175,10 +1345,9 @@ export default {
   justify-content: center;
   width: 3rem;
   height: 3rem;
-  background: linear-gradient(135deg, #ff6f61, #ff8a80);
+  background-color: #b73c3c;
   border-radius: 50%;
   margin-right: var(--spacing-md);
-  box-shadow: 0 4px 15px rgba(255, 111, 97, 0.3);
   flex-shrink: 0;
 }
 
@@ -1196,8 +1365,8 @@ export default {
 }
 
 .close-modal-btn {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background-color: #444;
+  border: 1px solid #555;
   color: #f5f5f5;
   padding: var(--spacing-xs);
   border-radius: 50%;
@@ -1213,8 +1382,8 @@ export default {
 }
 
 .close-modal-btn:hover {
-  background: rgba(255, 111, 97, 0.2);
-  border-color: #ff6f61;
+  background-color: #555;
+  border-color: #666;
   transform: rotate(90deg);
 }
 
@@ -1235,8 +1404,8 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 193, 7, 0.1);
-  border: 1px solid rgba(255, 193, 7, 0.3);
+  background-color: #444;
+  border: 1px solid #555;
   border-radius: var(--border-radius-md);
   padding: var(--spacing-sm) var(--spacing-md);
   margin-top: var(--spacing-md);
@@ -1261,7 +1430,7 @@ export default {
   display: flex;
   justify-content: flex-end;
   gap: var(--spacing-md);
-  background: rgba(0, 0, 0, 0.2);
+  background-color: #262626;
 }
 
 .logout-cancel-btn, .logout-confirm-btn {
@@ -1280,44 +1449,25 @@ export default {
 }
 
 .logout-cancel-btn {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background-color: #444;
+  border: 1px solid #555;
   color: #f5f5f5;
 }
 
 .logout-cancel-btn:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background-color: #555;
   transform: translateY(-1px);
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
 }
 
 .logout-confirm-btn {
-  background: linear-gradient(135deg, #ff6f61, #ff8a80);
+  background-color: #b73c3c;
   color: white;
   border: none;
-  position: relative;
-  overflow: hidden;
-}
-
-.logout-confirm-btn::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-  transition: left 0.5s;
-}
-
-.logout-confirm-btn:hover::before {
-  left: 100%;
 }
 
 .logout-confirm-btn:hover {
-  background: linear-gradient(135deg, #e74c3c, #ff6f61);
+  background-color: #9a3232;
   transform: translateY(-1px);
-  box-shadow: 0 8px 25px rgba(255, 111, 97, 0.4);
 }
 
 .logout-confirm-btn:active {
@@ -1466,35 +1616,19 @@ export default {
   width: 80%;
   max-width: 20rem;
   padding: 1.25rem;
-  background: linear-gradient(145deg, #b73c3c, #9a3232);
+  background-color: #b73c3c;
   color: white;
   font-weight: bold;
   font-size: 1.2rem;
   border: none;
   border-radius: 0.5rem;
-  box-shadow: 0 0.25rem 1rem rgba(0, 0, 0, 0.4);
   z-index: 1010; /* Garantir que esteja acima de tudo */
   cursor: pointer;
-  animation: pulse 2s infinite; /* Adicionar animação para chamar atenção */
 }
 
 .floating-logout-btn:active {
-  background: linear-gradient(145deg, #c54040, #aa3636);
+  background-color: #9a3232;
   transform: translateX(-50%) scale(0.98);
-  animation: none; /* Parar animação ao clicar */
-}
-
-/* Animação de pulse para chamar atenção */
-@keyframes pulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba(183, 60, 60, 0.7);
-  }
-  70% {
-    box-shadow: 0 0 0 10px rgba(183, 60, 60, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(183, 60, 60, 0);
-  }
 }
 
 @media (max-height: 600px) {
