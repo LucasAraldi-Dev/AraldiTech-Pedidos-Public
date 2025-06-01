@@ -1,6 +1,7 @@
 from pydantic import BaseModel, EmailStr, Field, validator
 from typing import Optional, List
 from datetime import date, datetime
+import logging
 
 # Esquema para criação de usuário
 class UsuarioCreate(BaseModel):
@@ -11,6 +12,43 @@ class UsuarioCreate(BaseModel):
     setor: str
     tipo_usuario: Optional[str] = "comum"  # tipo de usuário fixo como "comum" por padrão
     termsAcceptance: Optional[dict] = None  # dados de aceitação dos termos de serviço
+
+    @validator('nome')
+    def validate_nome(cls, v):
+        if not v or not v.strip():
+            raise ValueError('Nome é obrigatório')
+        return v.strip()
+    
+    @validator('username')
+    def validate_username(cls, v):
+        if not v or not v.strip():
+            raise ValueError('Nome de usuário é obrigatório')
+        # Converter para minúsculo e remover espaços
+        v = v.strip().lower()
+        # Verificar se contém apenas letras e números
+        if not v.replace('_', '').replace('-', '').isalnum():
+            raise ValueError('Nome de usuário deve conter apenas letras, números, _ e -')
+        return v
+    
+    @validator('email')
+    def validate_email_custom(cls, v):
+        if not v or not v.strip():
+            raise ValueError('Email é obrigatório')
+        # O EmailStr já faz a validação básica, mas vamos adicionar logs
+        logging.info(f"Validando email: {v}")
+        return v.strip().lower()
+    
+    @validator('senha')
+    def validate_senha(cls, v):
+        if not v or len(v) < 6:
+            raise ValueError('Senha deve ter pelo menos 6 caracteres')
+        return v
+    
+    @validator('setor')
+    def validate_setor(cls, v):
+        if not v or not v.strip():
+            raise ValueError('Setor é obrigatório')
+        return v.strip()
 
     class Config:
         arbitrary_types_allowed = True  
@@ -60,6 +98,8 @@ class PedidoCreate(BaseModel):
     custo_real: Optional[float] = 0.0
     observacao_orcamento: Optional[str] = None
     fornecedor: Optional[str] = None
+    # Dados de conclusão detalhados
+    conclusao_dados: Optional[dict] = None
 
     # Validando e convertendo a data corretamente
     @validator("deliveryDate", pre=True)

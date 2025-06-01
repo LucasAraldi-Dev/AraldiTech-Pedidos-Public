@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Body
 from typing import List, Optional
 from bson import ObjectId
 from datetime import datetime
@@ -6,6 +6,10 @@ from . import schemas, database, auth
 from .auth import get_current_user
 from passlib.context import CryptContext
 import logging
+from pydantic import BaseModel
+from fastapi.responses import JSONResponse
+import re
+from .utils import registrar_atividade
 
 router = APIRouter()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -20,6 +24,8 @@ def parse_obj_id(doc):
 @router.post("/usuarios/", response_model=dict)
 async def create_user(user: schemas.UsuarioCreate, db=Depends(database.get_db)):
     try:
+        logging.info(f"Criando novo usuário: {user.username}")
+        
         # Criptografar a senha
         user_dict = user.dict()
         user_dict["senha"] = pwd_context.hash(user_dict["senha"])
@@ -44,9 +50,6 @@ async def create_user(user: schemas.UsuarioCreate, db=Depends(database.get_db)):
         
         # Definir tipo de usuário como comum por padrão
         user_dict["tipo_usuario"] = "comum"
-        
-        # Definir primeiro_login como true
-        user_dict["primeiro_login"] = True
         
         # Processar informações do aceite dos termos
         if "termsAcceptance" in user_dict and user_dict["termsAcceptance"]:
@@ -81,14 +84,26 @@ async def create_user(user: schemas.UsuarioCreate, db=Depends(database.get_db)):
         new_user = await db["users"].find_one({"_id": result.inserted_id})
         
         # Log de criação de usuário
-        logging.info(f"Usuário criado com sucesso: {user_dict['username']} - Termos aceitos em: {user_dict.get('termsAcceptanceDate')}")
+        logging.info(f"Usuário criado com sucesso: {user_dict['username']} - Setor: {user_dict['setor']}")
+        
+        # Registrar atividade de criação de usuário
+        try:
+            await registrar_atividade(
+                db=db,
+                tipo="registro",
+                descricao=f"Novo usuário registrado: {user_dict['nome']} ({user_dict['username']}) - Setor: {user_dict['setor']}",
+                usuario_nome=user_dict['nome']
+            )
+        except Exception as e:
+            logging.error(f"Erro ao registrar atividade de criação de usuário: {e}")
         
         return parse_obj_id(new_user)
     except HTTPException as e:
         # Repassar exceções HTTP
+        logging.error(f"HTTPException na criação de usuário: {e.detail}")
         raise e
     except Exception as e:
-        logging.error(f"Erro ao criar usuário: {str(e)}")
+        logging.error(f"Erro geral ao criar usuário: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Erro ao criar usuário: {str(e)}"
@@ -119,37 +134,101 @@ async def update_user(user_id: str, user_data: dict, db=Depends(database.get_db)
         )
     
     # Verificar se o usuário existe
-    existing_user = await db["users"].find_one({"_id": ObjectId(user_id)})
-    if not existing_user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Usuário não encontrado"
-        )
-    
-    # Preparar dados para atualização
-    update_data = {k: v for k, v in user_data.items() if k not in ["_id", "log"]}
-    
-    # Se houver nova senha, criptografá-la
-    if "senha" in update_data:
-        update_data["senha"] = pwd_context.hash(update_data["senha"])
-    
-    # Registrar log de alterações
-    if "log" in user_data:
-        # Se já existir um histórico de logs, adicionar o novo log
-        if "logs" in existing_user:
-            update_data["logs"] = existing_user["logs"] + [user_data["log"]]
+    try:
+        existing_user = await db["users"].find_one({"_id": ObjectId(user_id)})
+        if not existing_user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Usuário não encontrado"
+            )
+        
+        # Preparar dados para atualização
+        update_data = {k: v for k, v in user_data.items() if k not in ["_id", "log"]}
+        
+        # Verificar se há uma nova senha e criptografá-la
+        senha_alterada = False
+        if "senha" in update_data and update_data["senha"]:
+            # Criptografar a nova senha
+            update_data["senha"] = pwd_context.hash(update_data["senha"])
+            senha_alterada = True
+            logging.info(f"Senha do usuário {existing_user['username']} foi alterada")
+            
+            # Adicionar campo para indicar que o usuário precisa fazer login novamente
+            update_data["sessao_expirada"] = True
         else:
-            update_data["logs"] = [user_data["log"]]
-    
-    # Atualizar o usuário
-    await db["users"].update_one(
-        {"_id": ObjectId(user_id)},
-        {"$set": update_data}
-    )
-    
-    # Retornar o usuário atualizado
-    updated_user = await db["users"].find_one({"_id": ObjectId(user_id)})
-    return parse_obj_id(updated_user)
+            # Se não há senha ou senha está vazia, remover o campo
+            if "senha" in update_data:
+                del update_data["senha"]
+            
+        # Verificar se o tipo de usuário foi alterado
+        tipo_usuario_alterado = False
+        if "tipo_usuario" in update_data and existing_user.get("tipo_usuario") != update_data["tipo_usuario"]:
+            tipo_usuario_alterado = True
+            logging.info(f"Tipo de usuário de {existing_user['username']} alterado de {existing_user.get('tipo_usuario')} para {update_data['tipo_usuario']}")
+        
+        # Adicionar campo para indicar que o usuário precisa fazer login novamente 
+        # se o tipo de usuário foi alterado
+        if tipo_usuario_alterado:
+            update_data["sessao_expirada"] = True
+            
+        # Registrar log de alterações
+        if "log" in user_data:
+            # Se já existir um histórico de logs, adicionar o novo log
+            if "logs" in existing_user:
+                update_data["logs"] = existing_user["logs"] + [user_data["log"]]
+            else:
+                update_data["logs"] = [user_data["log"]]
+        
+        # Adicionar informações sobre a alteração
+        if tipo_usuario_alterado or senha_alterada:
+            if "logs" not in update_data:
+                update_data["logs"] = existing_user.get("logs", [])
+            
+            changes = {}
+            
+            if tipo_usuario_alterado:
+                changes["tipo_usuario"] = {
+                    "from": existing_user.get("tipo_usuario"),
+                    "to": update_data["tipo_usuario"]
+                }
+                
+            if senha_alterada:
+                changes["senha"] = {
+                    "from": "[protegido]",
+                    "to": "[nova senha protegida]"
+                }
+            
+            update_data["logs"].append({
+                "changedBy": current_user.get("nome", "Admin"),
+                "changedAt": datetime.now().isoformat(),
+                "changes": changes
+            })
+        
+        # Atualizar o usuário
+        await db["users"].update_one(
+            {"_id": ObjectId(user_id)},
+            {"$set": update_data}
+        )
+        
+        # Retornar o usuário atualizado
+        updated_user = await db["users"].find_one({"_id": ObjectId(user_id)})
+        result = parse_obj_id(updated_user)
+        
+        # Adicionar informações para o frontend
+        result["info"] = {
+            "tipo_usuario_alterado": tipo_usuario_alterado,
+            "senha_alterada": senha_alterada
+        }
+        
+        return result
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        logging.error(f"Erro ao atualizar usuário: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erro ao atualizar usuário: {str(e)}"
+        )
 
 # Rota para obter logs de alterações de um usuário (apenas para admins)
 @router.get("/usuarios/{user_id}/logs", response_model=List[dict])
@@ -171,44 +250,3 @@ async def get_user_logs(user_id: str, db=Depends(database.get_db), current_user=
     
     # Retornar logs se existirem
     return user.get("logs", [])
-
-# Rota para atualizar o campo primeiro_login
-@router.put("/usuarios/primeiro-login", response_model=dict)
-async def update_primeiro_login(db=Depends(database.get_db), current_user=Depends(auth.get_current_user)):
-    try:
-        # Obter o username do usuário atual
-        username = current_user.get("username")
-        if not username:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Usuário não identificado"
-            )
-        
-        # Atualizar o campo primeiro_login para false
-        result = await db["users"].update_one(
-            {"username": username},
-            {"$set": {"primeiro_login": False}}
-        )
-        
-        if result.modified_count == 0:
-            # Se nenhum documento foi atualizado
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Usuário não encontrado ou campo já atualizado"
-            )
-        
-        # Obter o usuário atualizado
-        updated_user = await db["users"].find_one({"username": username})
-        
-        logging.info(f"Campo primeiro_login atualizado para o usuário: {username}")
-        return {"success": True, "username": username, "primeiro_login": False}
-    
-    except HTTPException as e:
-        # Repassar exceções HTTP
-        raise e
-    except Exception as e:
-        logging.error(f"Erro ao atualizar campo primeiro_login: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Erro ao atualizar status de primeiro login: {str(e)}"
-        )

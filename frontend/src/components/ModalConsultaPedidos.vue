@@ -1,6 +1,11 @@
 <template>
   <div v-if="isOpen" class="modal-overlay" @click.self="closeForm">
     <div class="order-form" @click.stop>
+      <!-- Botão Fechar no canto superior direito -->
+      <button class="close-btn-header" @click="closeForm">
+        <i class="material-icons">close</i>
+      </button>
+
       <div class="form-header">
         <h2>CONSULTAR PEDIDOS</h2>
         <div class="filters-container">
@@ -78,15 +83,40 @@
             </p>
           </div>
           <div class="order-actions">
-            <button class="open-button" @click="openOrder(order)">
+            <!-- Botão Abrir para pedidos não concluídos -->
+            <button 
+              v-if="order.status.toUpperCase() !== 'CONCLUÍDO'" 
+              class="open-button" 
+              @click="openOrder(order)"
+            >
               <i class="material-icons">visibility</i>
               ABRIR
             </button>
-            <button class="edit-button" @click="editOrder(order)">
+            
+            <!-- Botão Detalhes para pedidos concluídos -->
+            <button 
+              v-if="order.status.toUpperCase() === 'CONCLUÍDO'" 
+              class="details-button" 
+              @click="openCompletedDetailsModal(order)"
+            >
+              <i class="material-icons">assignment_turned_in</i>
+              DETALHES
+            </button>
+            
+            <!-- Botão Editar - apenas para admin ou criador do pedido -->
+            <button 
+              v-if="isAdmin || canEditOrder(order)" 
+              class="edit-button" 
+              @click="editOrder(order)"
+            >
               <i class="material-icons">edit</i>
               EDITAR
             </button>
-            <button v-if="order.status.toUpperCase() === 'PENDENTE'" class="complete-button" @click="showConfirmModal(order)">
+            <button 
+              v-if="order.status.toUpperCase() === 'PENDENTE' && (isAdminOrGestor || canCompleteOrder(order))" 
+              class="complete-button" 
+              @click="openCompletionModal(order)"
+            >
               <i class="material-icons">check_circle</i>
               CONCLUIR
             </button>
@@ -94,100 +124,50 @@
         </div>
       </div>
 
-      <!-- Paginação -->
-      <div class="pagination">
-        <button :disabled="currentPage === 1" @click="previousPage">
-          <i class="material-icons">navigate_before</i>
-          Anterior
-        </button>
-        <span>Página {{ currentPage }} de {{ totalPages }}</span>
-        <button :disabled="currentPage === totalPages" @click="nextPage">
-          Próximo
-          <i class="material-icons">navigate_next</i>
-        </button>
+      <!-- Barra de paginação fixa -->
+      <div class="fixed-pagination">
+        <div class="pagination">
+          <button :disabled="currentPage === 1" @click="previousPage">
+            <i class="material-icons">navigate_before</i>
+            Anterior
+          </button>
+          <span>Página {{ currentPage }} de {{ totalPages }}</span>
+          <button :disabled="currentPage === totalPages" @click="nextPage">
+            Próximo
+            <i class="material-icons">navigate_next</i>
+          </button>
+        </div>
       </div>
-
-      <!-- Botão Fechar -->
-      <button class="close-btn" @click="closeForm">
-        <i class="material-icons">close</i>
-        FECHAR
-      </button>
     </div>
   </div>
   
-  <!-- Modal de Confirmação para Concluir Pedido -->
-  <div v-if="showConfirmation" class="confirm-modal-overlay" @click.self="cancelConfirmation">
-    <div class="confirm-modal">
-      <h3>Confirmar Conclusão do Pedido</h3>
-      <div class="confirm-order-details" v-if="selectedOrder">
-        <div class="confirm-order-header">
-          <span class="confirm-order-id">#{{ selectedOrder.id }}</span>
-        </div>
-        <h4 class="confirm-order-title">{{ selectedOrder.descricao }}</h4>
-        <div class="confirm-order-info">
-          <p>
-            <i class="material-icons">format_list_numbered</i>
-            <strong>Quantidade:</strong> {{ selectedOrder.quantidade }}
-          </p>
-          <p>
-            <i class="material-icons">category</i>
-            <strong>Categoria:</strong> {{ selectedOrder.categoria }}
-          </p>
-          <p>
-            <i class="material-icons">priority_high</i>
-            <strong>Urgência:</strong> {{ selectedOrder.urgencia }}
-          </p>
-          <p>
-            <i class="material-icons">event</i>
-            <strong>Data do Pedido:</strong> {{ formatDate(selectedOrder.deliveryDate) }}
-          </p>
-          <p>
-            <i class="material-icons">event_available</i>
-            <strong>Data de Conclusão:</strong> {{ formatDate(completionDate) }}
-          </p>
-          <p>
-            <i class="material-icons">person</i>
-            <strong>Usuário:</strong> {{ selectedOrder.usuario_nome }}
-          </p>
-        </div>
-      </div>
-      
-      <!-- Campo de data de conclusão -->
-      <div class="completion-date-container">
-        <label for="completionDate">
-          <i class="material-icons">event_available</i>
-          Data de Conclusão:
-        </label>
-        <input 
-          id="completionDate" 
-          type="date" 
-          v-model="completionDate" 
-          :min="minDate"
-          required 
-          class="date-picker"
-        />
-      </div>
-      
-      <p class="confirm-message">Tem certeza que deseja concluir este pedido?</p>
-      <div class="confirm-buttons">
-        <button class="confirm-yes" @click="confirmComplete">
-          <i class="material-icons">check</i>
-          CONFIRMAR
-        </button>
-        <button class="confirm-no" @click="cancelConfirmation">
-          <i class="material-icons">cancel</i>
-          CANCELAR
-        </button>
-      </div>
-    </div>
-  </div>
+  <!-- Modal de Conclusão de Pedido -->
+  <ModalConclusaoPedido
+    :isOpen="showCompletionModal"
+    :pedido="selectedOrder"
+    @close="closeCompletionModal"
+    @completed="onOrderCompleted"
+  />
+
+  <!-- Modal de Detalhes do Pedido Concluído -->
+  <ModalPedidoConcluido
+    :isOpen="showCompletedDetailsModal"
+    :pedido="selectedOrder"
+    @close="closeCompletedDetailsModal"
+  />
 </template>
 
 <script>
 import axios from "axios";
 import { useToast } from "vue-toastification";
+import ModalConclusaoPedido from "./ModalConclusaoPedido.vue";
+import ModalPedidoConcluido from "./ModalPedidoConcluido.vue";
 
 export default {
+  components: {
+    ModalConclusaoPedido,
+    ModalPedidoConcluido
+  },
   props: {
     isOpen: Boolean,
     onClose: Function,
@@ -199,12 +179,12 @@ export default {
       currentPage: 1,
       orders: [],
       toast: useToast(),
-      showConfirmation: false,
+      showCompletionModal: false,
+      showCompletedDetailsModal: false,
       selectedOrder: null,
-      completionDate: null,
-      minDate: new Date().toISOString().split('T')[0],
       userType: null,
       userSector: null,
+      userName: null,
     };
   },
   computed: {
@@ -235,6 +215,15 @@ export default {
     },
   },
   methods: {
+    sanitizeHtml(text) {
+      if (!text) return '';
+      return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    },
     fetchOrders() {
       // Garantir que os dados do usuário foram carregados antes de buscar pedidos
       this.loadUserData();
@@ -308,7 +297,8 @@ export default {
       }
     },
     openOrder(order) {
-      this.$emit("open-order", order);
+      console.log(`ModalConsultaPedidos: Emitindo evento open-order com pedidoId: ${order.id}`);
+      this.$emit("open-order", order.id);
     },
     editOrder(order) {
       this.$emit("edit-order", order);
@@ -347,68 +337,43 @@ export default {
         return 'Erro de formato';
       }
     },
-    // Exibe o modal de confirmação com os detalhes do pedido
-    showConfirmModal(order) {
+    // Abre o modal de conclusão de pedido
+    openCompletionModal(order) {
       this.selectedOrder = order;
-      // Inicializar a data de conclusão com a data atual
-      this.completionDate = new Date().toISOString().split('T')[0];
-      this.showConfirmation = true;
+      this.showCompletionModal = true;
+      
+      console.log(`Abrindo modal de conclusão para o pedido #${order.id}`);
     },
     
-    // Cancela a confirmação e fecha o modal
-    cancelConfirmation() {
-      this.showConfirmation = false;
+    // Fecha o modal de conclusão
+    closeCompletionModal() {
+      this.showCompletionModal = false;
       this.selectedOrder = null;
-      this.completionDate = null;
     },
     
-    // Confirma a conclusão do pedido após confirmação no modal
-    confirmComplete() {
-      if (!this.selectedOrder) return;
-      
-      // Preparar os dados para atualização
-      const updateData = {
-        ...this.selectedOrder,
-        status: "Concluído",
-        completionDate: this.completionDate
-      };
-      
-      console.log("Dados enviados para atualização:", updateData);
-      
-      // Enviar requisição para atualizar o status do pedido usando o endpoint com-historico
-      axios
-        .put(`${process.env.VUE_APP_API_URL}/pedidos/${this.selectedOrder.id}/com-historico`, updateData, {
-          headers: { Authorization: `Bearer ${localStorage.getItem("access_token")}` },
-        })
-        .then((response) => {
-          console.log("Resposta do servidor:", response.data);
-          // Atualizar a lista de pedidos após concluir
-          this.fetchOrders();
-          // Fechar o modal de confirmação
-          this.showConfirmation = false;
-          this.selectedOrder = null;
-          this.completionDate = null;
-          // Notificação estilizada com as cores do sistema
-          this.toast.success("Pedido concluído com sucesso!", {
-            toastClassName: "custom-toast-success",
-            bodyClassName: "custom-toast-body",
-            closeButtonClassName: "custom-toast-close"
-          });
-        })
-        .catch(error => {
-          console.error("Erro ao concluir pedido:", error);
-          const errorMessage = error.response && error.response.data && error.response.data.detail
-            ? error.response.data.detail
-            : "Erro ao concluir pedido. Por favor, tente novamente.";
-            
-          // Notificação de erro estilizada
-          this.toast.error(errorMessage, {
-            toastClassName: "custom-toast-error",
-            bodyClassName: "custom-toast-body",
-            closeButtonClassName: "custom-toast-close"
-          });
-        });
+    // Callback quando o pedido é concluído com sucesso
+    onOrderCompleted(updatedOrder) {
+      console.log("Pedido concluído:", updatedOrder);
+      // Atualizar a lista de pedidos
+      this.fetchOrders();
+      // Fechar o modal
+      this.closeCompletionModal();
     },
+
+    // Abre o modal de detalhes do pedido concluído
+    openCompletedDetailsModal(order) {
+      this.selectedOrder = order;
+      this.showCompletedDetailsModal = true;
+      
+      console.log(`Abrindo modal de detalhes para o pedido concluído #${order.id}`);
+    },
+    
+    // Fecha o modal de detalhes do pedido concluído
+    closeCompletedDetailsModal() {
+      this.showCompletedDetailsModal = false;
+      this.selectedOrder = null;
+    },
+
     loadUserData() {
       // Carregar dados do usuário do localStorage
       const userStr = localStorage.getItem("user");
@@ -417,8 +382,9 @@ export default {
           const userObj = JSON.parse(userStr);
           this.userType = userObj.tipo_usuario;
           this.userSector = userObj.setor;
+          this.userName = userObj.nome || userObj.username;
           
-          console.log(`Dados do usuário carregados - Tipo: ${this.userType}, Setor: ${this.userSector}`);
+          console.log(`Dados do usuário carregados - Tipo: ${this.userType}, Setor: ${this.userSector}, Nome: ${this.userName}`);
           
           // Para usuário comum, o filtro de setor deve mostrar apenas o seu setor
           if (this.userType !== "admin" && this.userType !== "gestor") {
@@ -436,6 +402,64 @@ export default {
       } else {
         console.warn("Nenhum dado de usuário encontrado no localStorage");
       }
+    },
+    canCompleteOrder(order) {
+      // Verifica se o usuário atual é o criador do pedido
+      // Obtém dados do usuário atual
+      const userStr = localStorage.getItem("user");
+      if (!userStr) return false;
+      
+      try {
+        const userObj = JSON.parse(userStr);
+        const userId = userObj.id;
+        const userName = userObj.nome || userObj.username;
+        
+        // Caso o pedido não tenha ID de usuário, compare pelo nome
+        if (!order.usuario_id) {
+          console.log(`Pedido ${order.id} não tem ID de usuário, comparando pelo nome: ${userName} vs ${order.usuario_nome}`);
+          return order.usuario_nome === userName;
+        }
+        
+        console.log(`Verificando permissão - Usuário atual: ${userId}/${userName}, Criador do pedido: ${order.usuario_id}/${order.usuario_nome}`);
+        
+        // Compara o ID do usuário ou o nome do usuário com o do pedido
+        return (
+          order.usuario_id === userId || 
+          order.usuario_nome === userName
+        );
+      } catch (e) {
+        console.error("Erro ao verificar permissão para concluir pedido:", e);
+        return false;
+      }
+    },
+    canEditOrder(order) {
+      // Verifica se o usuário atual é o criador do pedido
+      // Obtém dados do usuário atual
+      const userStr = localStorage.getItem("user");
+      if (!userStr) return false;
+      
+      try {
+        const userObj = JSON.parse(userStr);
+        const userId = userObj.id;
+        const userName = userObj.nome || userObj.username;
+        
+        // Caso o pedido não tenha ID de usuário, compare pelo nome
+        if (!order.usuario_id) {
+          console.log(`Pedido ${order.id} - Verificando edição sem ID de usuário: ${userName} vs ${order.usuario_nome}`);
+          return order.usuario_nome === userName;
+        }
+        
+        console.log(`Verificando permissão de edição - Usuário atual: ${userId}/${userName}, Criador do pedido: ${order.usuario_id}/${order.usuario_nome}`);
+        
+        // Compara o ID do usuário ou o nome do usuário com o do pedido
+        return (
+          order.usuario_id === userId || 
+          order.usuario_nome === userName
+        );
+      } catch (e) {
+        console.error("Erro ao verificar permissão para editar pedido:", e);
+        return false;
+      }
     }
   },
   watch: {
@@ -445,6 +469,14 @@ export default {
         this.loadUserData();
         this.fetchOrders();
       }
+    },
+    // Resetar para a primeira página quando o filtro for alterado
+    statusFilter() {
+      this.currentPage = 1;
+    },
+    // Resetar para a primeira página quando o filtro de setor for alterado
+    sectorFilter() {
+      this.currentPage = 1;
     }
   },
   created() {
@@ -472,6 +504,7 @@ export default {
   transition: opacity 0.3s ease-in-out;
   overflow-y: auto;
   padding: 15px;
+  padding-bottom: 50px; /* Espaço para a barra de paginação fixa */
   box-sizing: border-box;
 }
 
@@ -503,17 +536,46 @@ export default {
 .order-form {
   background-color: #1f1f1f; 
   color: #f5f5f5;
-  padding: 30px; 
+  padding: 25px;
+  width: 95%;
+  max-width: 1200px;
+  padding-bottom: 60px; /* Espaço reduzido para a barra de paginação */
   border-radius: 10px;
-  width: 100%;
-  max-width: 900px; 
-  box-sizing: border-box;
   position: relative;
   text-transform: none;
   font-size: 1.1rem;
   overflow-y: auto;
   max-height: 90vh;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+/* Botão Fechar no Cabeçalho */
+.close-btn-header {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: transparent;
+  border: 2px solid #ff6f61;
+  color: #ff6f61;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  z-index: 10;
+}
+
+.close-btn-header:hover {
+  background-color: #ff6f61;
+  color: #1f1f1f;
+  transform: scale(1.1);
+}
+
+.close-btn-header i {
+  font-size: 20px;
 }
 
 /* Cabeçalho do formulário */
@@ -580,9 +642,10 @@ export default {
 /* Cards dos Pedidos */
 .orders-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 20px;
   margin-top: 20px;
+  margin-bottom: 30px; /* Espaço suficiente para não ser coberto pela barra fixa */
 }
 
 .order-card {
@@ -690,7 +753,8 @@ export default {
 
 .open-button,
 .edit-button,
-.complete-button {
+.complete-button,
+.details-button {
   color: white;
   border: none;
   padding: 8px 12px;
@@ -706,7 +770,8 @@ export default {
 
 .open-button i,
 .edit-button i,
-.complete-button i {
+.complete-button i,
+.details-button i {
   margin-right: 5px;
   font-size: 16px;
 }
@@ -723,6 +788,10 @@ export default {
   background-color: #4CAF50;
 }
 
+.details-button {
+  background-color: #27ae60;
+}
+
 .open-button:hover {
   background-color: #2980b9;
 }
@@ -735,26 +804,46 @@ export default {
   background-color: #45a049;
 }
 
+.details-button:hover {
+  background-color: #229954;
+}
+
+/* Barra de paginação fixa */
+.fixed-pagination {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: #1f1f1f;
+  border-top: 1px solid #333;
+  z-index: 1001;
+  padding: 6px 15px;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
 /* Paginação */
 .pagination {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 15px;
-  margin-top: 25px;
+  gap: 8px;
 }
 
 .pagination button {
   background-color: #444;
   color: white;
   border: none;
-  padding: 8px 15px;
-  border-radius: 5px;
+  padding: 4px 8px;
+  border-radius: 3px;
   cursor: pointer;
   display: flex;
   align-items: center;
-  font-size: 0.9rem;
-  transition: background-color 0.3s ease;
+  font-size: 0.8rem;
+  transition: all 0.3s ease;
+  min-height: 30px;
 }
 
 .pagination button i {
@@ -769,38 +858,17 @@ export default {
 
 .pagination button:not(:disabled):hover {
   background-color: #555;
+  transform: translateY(-1px);
 }
 
 .pagination span {
   color: #ddd;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  padding: 0 6px;
 }
 
-/* Botão de fechar */
-.close-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 25px auto 0; 
-  background: transparent;
-  border: 2px solid #ff6f61;
-  color: #ff6f61;
-  font-size: 1rem;
-  padding: 10px 20px;
-  border-radius: 5px;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-}
 
-.close-btn i {
-  margin-right: 8px;
-  font-size: 18px;
-}
-
-.close-btn:hover {
-  background-color: #ff6f61;
-  color: #1f1f1f;
-}
 
 /* Modal de Confirmação */
 .confirm-modal-overlay {
@@ -817,6 +885,7 @@ export default {
   transition: opacity 0.3s ease-in-out;
   padding: 15px;
   box-sizing: border-box;
+  overflow-y: auto; /* Permitir rolagem caso o conteúdo seja grande */
 }
 
 .confirm-modal {
@@ -831,6 +900,9 @@ export default {
   text-transform: none;
   font-size: 1.1rem;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  max-height: 90vh; /* Altura máxima para não estourar a tela */
+  overflow-y: auto; /* Adicionar rolagem se necessário */
+  margin: auto; /* Centralizar horizontalmente */
 }
 
 .confirm-modal h3 {
@@ -848,6 +920,7 @@ export default {
   border-radius: 8px;
   margin-bottom: 20px;
   border: 1px solid #333;
+  word-break: break-word;
 }
 
 .confirm-order-header {
@@ -871,6 +944,7 @@ export default {
   margin-bottom: 15px;
   border-bottom: 1px solid #444;
   padding-bottom: 8px;
+  word-wrap: break-word;
 }
 
 .confirm-order-info p {
@@ -878,13 +952,15 @@ export default {
   font-size: 0.9rem;
   color: #dfe6e9;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+  flex-wrap: wrap;
 }
 
 .confirm-order-info p i {
   margin-right: 8px;
   color: #ff6f61;
   font-size: 16px;
+  min-width: 18px;
 }
 
 .completion-date-container {
@@ -924,12 +1000,63 @@ export default {
   flex: 1;
   min-width: 200px;
   transition: all 0.3s ease;
+  width: 100%;
+  max-width: 100%;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .completion-date-container input:focus {
   border-color: #ff6f61;
   outline: none;
   box-shadow: 0 0 0 2px rgba(255, 111, 97, 0.2);
+}
+
+/* Estilização específica para calendários em dispositivos móveis */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  opacity: 0.8;
+  cursor: pointer;
+  width: 20px;
+  height: 20px;
+  margin-left: 10px;
+  padding: 4px;
+  background-color: rgba(255, 111, 97, 0.1);
+  border-radius: 3px;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+  background-color: rgba(255, 111, 97, 0.2);
+}
+
+@media (max-width: 480px) {
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    width: 24px;
+    height: 24px;
+    padding: 5px;
+  }
+}
+
+.date-helper-text {
+  font-size: 0.85rem;
+  color: #aaa;
+  margin-top: 8px;
+  width: 100%;
+  padding: 5px 10px;
+  background-color: #2a2a2a;
+  border-radius: 5px;
+  display: flex;
+  align-items: flex-start;
+}
+
+.date-helper-text .info-icon {
+  color: #ff6f61;
+  font-size: 16px;
+  margin-right: 8px;
+  margin-top: 2px;
+  flex-shrink: 0;
 }
 
 .confirm-message {
@@ -961,6 +1088,8 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
+  -webkit-tap-highlight-color: transparent; /* Remover highlight em dispositivos touch */
+  touch-action: manipulation; /* Melhorar resposta ao toque */
 }
 
 .confirm-yes i,
@@ -987,17 +1116,78 @@ export default {
   background-color: #e55b55;
 }
 
+/* Adicionar estados ativos para melhor feedback em dispositivos touch */
+.confirm-yes:active {
+  background-color: #3d8b40;
+  transform: translateY(1px);
+}
+
+.confirm-no:active {
+  background-color: #cc5a4e;
+  transform: translateY(1px);
+}
+
+/* Aumentar área clicável para dispositivos touch */
+@media (pointer: coarse) {
+  .confirm-yes,
+  .confirm-no {
+    padding: 14px 0;
+    min-height: 50px;
+  }
+  
+  .completion-date-container input {
+    min-height: 44px; /* Altura mínima para facilitar toque */
+  }
+  
+  /* Aumentar espaçamento vertical entre elementos para evitar toques acidentais */
+  .confirm-order-info p {
+    padding: 4px 0;
+  }
+}
+
 /* Responsividade para diferentes dispositivos */
-/* Tablets e telas menores (1024x768) */
-@media (max-width: 1024px) {
+
+/* Telas de 13-14 polegadas (1366x768, 1440x900) */
+@media (max-width: 1440px) and (max-height: 900px) {
   .order-form {
-    max-width: 90%;
-    padding: 25px;
+    width: 92%;
+    max-width: 1100px;
+    padding: 20px;
+    max-height: 85vh;
   }
   
   .orders-list {
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 15px;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 18px;
+  }
+  
+  .order-card {
+    padding: 18px;
+  }
+  
+  .fixed-pagination {
+    padding: 5px 15px;
+  }
+  
+  .pagination button {
+    padding: 4px 8px;
+    font-size: 0.8rem;
+    min-height: 28px;
+  }
+}
+
+/* Tablets e telas menores (1024x768) */
+@media (max-width: 1024px) {
+  .order-form {
+    width: 90%;
+    max-width: 950px;
+    padding: 18px;
+    max-height: 82vh;
+  }
+  
+  .orders-list {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 16px;
   }
   
   .form-header h2 {
@@ -1005,7 +1195,7 @@ export default {
   }
   
   .order-card {
-    padding: 15px;
+    padding: 16px;
   }
   
   .filters-container {
@@ -1017,18 +1207,34 @@ export default {
     flex-direction: column;
     align-items: flex-start;
   }
+  
+  .fixed-pagination {
+    padding: 5px 15px;
+  }
+  
+  .pagination {
+    gap: 12px;
+  }
 }
 
 /* Tablets e dispositivos médios */
 @media (max-width: 768px) {
+  .order-form {
+    width: 95%;
+    max-width: 100%;
+    padding: 15px;
+    max-height: 85vh;
+  }
+  
   .orders-list {
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 15px;
   }
   
   .confirm-modal {
-    max-width: 90%;
-    padding: 20px;
+    width: 95%;
+    max-width: 100%;
+    padding: 18px;
   }
   
   .filter-item {
@@ -1049,16 +1255,21 @@ export default {
   }
   
   .order-card p {
-    font-size: 0.85rem;
+    font-size: 0.9rem;
+  }
+  
+  .fixed-pagination {
+    padding: 5px 15px;
   }
   
   .pagination {
-    gap: 10px;
+    gap: 8px;
   }
   
   .pagination button {
-    padding: 8px 12px;
-    font-size: 0.9rem;
+    padding: 4px 8px;
+    font-size: 0.8rem;
+    min-height: 28px;
   }
 }
 
@@ -1066,62 +1277,335 @@ export default {
 @media (max-width: 480px) {
   .modal-overlay,
   .confirm-modal-overlay {
-    padding: 10px;
+    padding: 8px;
+    align-items: flex-start;
+    overflow-y: auto;
+    padding-bottom: 45px; /* Espaço para a barra fixa */
+  }
+  
+  .close-btn-header {
+    top: 10px;
+    right: 10px;
+    width: 35px;
+    height: 35px;
+  }
+  
+  .close-btn-header i {
+    font-size: 18px;
   }
   
   .order-form {
-    padding: 15px;
+    padding: 12px;
+    width: 100%;
     max-width: 100%;
+    max-height: calc(100vh - 45px); /* Altura ajustada para a barra fixa */
+    margin-top: 10px;
   }
   
   .orders-list {
     grid-template-columns: 1fr;
+    gap: 12px;
   }
 
   .order-card {
-    padding: 15px;
+    padding: 12px;
   }
   
   .form-header h2 {
-    font-size: 1.1rem;
+    font-size: 1.05rem;
   }
   
   .order-actions {
     flex-direction: column;
     width: 100%;
+    gap: 8px;
   }
   
   .open-button,
   .edit-button,
-  .complete-button {
+  .complete-button,
+  .details-button {
     width: 100%;
-    margin-bottom: 5px;
-    font-size: 0.9rem;
-    padding: 8px 12px;
+    font-size: 0.85rem;
+    padding: 10px 12px;
+    min-height: 42px;
+  }
+  
+  .fixed-pagination {
+    padding: 4px 10px;
+  }
+  
+  .pagination {
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  
+  .pagination button {
+    padding: 6px 8px;
+    font-size: 0.75rem;
+    min-height: 32px;
+  }
+  
+  .pagination span {
+    font-size: 0.75rem;
+    order: -1;
+    width: 100%;
+    text-align: center;
+    margin-bottom: 4px;
   }
   
   .confirm-modal {
     padding: 15px;
+    margin: 10px;
+    max-height: 85vh; /* Reduzir altura máxima para deixar espaço para rolagem */
+    width: calc(100% - 20px); /* Garantir que o modal não ultrapasse a tela */
   }
   
   .confirm-modal h3 {
     font-size: 1.4rem;
+    padding-bottom: 8px;
+    margin-bottom: 15px;
+  }
+  
+  .confirm-order-details {
+    padding: 12px;
+    margin-bottom: 15px;
+  }
+  
+  .confirm-order-id {
+    font-size: 1.3em;
+  }
+  
+  .confirm-order-title {
+    font-size: 1.1em;
+    padding-bottom: 6px;
+    margin-bottom: 10px;
+  }
+  
+  .confirm-order-info p {
+    font-size: 0.85rem;
+    margin: 6px 0;
+  }
+  
+  .completion-date-container {
+    padding: 12px;
+    margin: 12px 0;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .completion-date-container label {
+    margin-bottom: 8px;
+    width: 100%;
+  }
+  
+  .completion-date-container input {
+    width: 100%;
+    min-width: 100%;
+    padding: 10px;
+    font-size: 16px; /* Tamanho mínimo para evitar zoom em dispositivos iOS */
+  }
+  
+  .date-helper-text {
+    font-size: 0.8rem;
+    padding: 8px;
+  }
+  
+  .confirm-message {
+    font-size: 1.1rem;
+    margin: 15px 0;
+    padding: 8px;
   }
   
   .confirm-buttons {
     flex-direction: column;
+    gap: 10px;
   }
   
   .confirm-yes,
   .confirm-no {
     width: 100%;
-    margin-bottom: 8px;
+    padding: 12px 0;
+    margin: 0;
+    font-size: 1rem;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+  }
+  
+  .confirm-yes i,
+  .confirm-no i {
+    font-size: 20px; /* Ícones ligeiramente maiores em mobile */
   }
   
   .close-btn {
     font-size: 0.9rem;
     padding: 10px 15px;
     margin-top: 15px;
+  }
+  
+  /* Ajuste para telas com teclado virtual ativo */
+  @media (max-height: 450px) {
+    .confirm-modal {
+      max-height: 100vh;
+      overflow-y: auto;
+    }
+    
+    .confirm-modal-overlay {
+      align-items: flex-start;
+      padding-top: 5px;
+    }
+  }
+  
+
+}
+
+/* Dispositivos móveis muito pequenos */
+@media (max-width: 360px) {
+  .order-form {
+    padding: 10px;
+    margin-top: 5px;
+  }
+  
+  .form-header h2 {
+    font-size: 1rem;
+  }
+  
+  .order-card {
+    padding: 10px;
+  }
+  
+  .order-title {
+    font-size: 1rem;
+  }
+  
+  .order-details p {
+    font-size: 0.8rem;
+  }
+  
+  .fixed-pagination {
+    padding: 4px 8px;
+  }
+  
+  .pagination button {
+    padding: 4px 6px;
+    font-size: 0.7rem;
+    min-height: 28px;
+  }
+  
+  .confirm-modal {
+    padding: 12px;
+    margin: 8px;
+  }
+  
+  .confirm-modal h3 {
+    font-size: 1.3rem;
+  }
+  
+  .confirm-order-details {
+    padding: 10px;
+  }
+  
+  .confirm-order-info p {
+    font-size: 0.8rem;
+  }
+  
+  .completion-date-container {
+    padding: 10px;
+  }
+  
+  .date-helper-text {
+    font-size: 0.75rem;
+  }
+  
+  .confirm-message {
+    font-size: 1rem;
+  }
+}
+
+/* Ajustes específicos para notebooks de 13 polegadas (1280x800) */
+@media screen and (max-width: 1280px) and (max-height: 800px) {
+  .order-form {
+    width: 90%;
+    max-width: 1000px;
+    padding: 16px;
+    max-height: 80vh;
+  }
+  
+  .orders-list {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 14px;
+  }
+  
+  .order-card {
+    padding: 14px;
+  }
+  
+  .fixed-pagination {
+    padding: 5px 15px;
+  }
+}
+
+/* Ajustes para notebooks de 14 polegadas (1366x768) */
+@media screen and (max-width: 1366px) and (max-height: 768px) {
+  .order-form {
+    width: 88%;
+    max-width: 1050px;
+    padding: 18px;
+    max-height: 78vh;
+  }
+  
+  .orders-list {
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 16px;
+  }
+  
+  .order-card {
+    padding: 16px;
+  }
+  
+  .fixed-pagination {
+    padding: 5px 15px;
+  }
+}
+
+/* Ajustes para telas 720p */
+@media (min-height: 720px) and (max-height: 768px) {
+  .modal-overlay {
+    align-items: flex-start;
+    padding-top: 2vh;
+  }
+  
+  .order-form {
+    max-height: 82vh;
+  }
+}
+
+/* Ajustes específicos para notebooks com zoom */
+@media screen and (min-resolution: 1.25dppx) {
+  .order-form {
+    max-height: 85vh;
+  }
+  
+  .orders-list {
+    gap: 16px;
+  }
+  
+  .fixed-navigation {
+    padding: 10px 16px;
+  }
+}
+
+/* Ajuste para telas muito pequenas onde a rolagem pode ser necessária */
+@media (max-height: 640px) {
+  .confirm-modal-overlay {
+    align-items: flex-start; /* Alinhar ao topo para permitir rolagem */
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+  
+  .confirm-modal {
+    margin-top: 10px;
+    margin-bottom: 10px;
   }
 }
 </style>

@@ -1,16 +1,22 @@
 <template>
   <div id="app">
-    <!-- Exibe o AppHeader apenas se não estiver na página do menu -->
-    <AppHeader v-if="!isInMenuPage" />
-    
-    <!-- Container principal para o conteúdo -->
-    <div class="main-content" :class="{ 'menu-page': isInMenuPage }">
-      <!-- Aqui vai o conteúdo dinâmico baseado nas rotas -->
-      <router-view />
-    </div>
-    
-    <!-- Exibe o AppFooter apenas se não estiver na página do menu -->
-    <AppFooter v-if="!isInMenuPage" />
+    <!-- Envolvendo todo o conteúdo em uma única transição -->
+    <router-view v-slot="{ Component }">
+      <transition name="router-view-transition" mode="out-in" appear>
+        <div class="page-wrapper" :key="$route.fullPath">
+          <!-- Exibe o AppHeader apenas se não estiver na página do menu -->
+          <AppHeader v-if="!isInMenuPage && !isLoadingSplash" />
+          
+          <!-- Container principal para o conteúdo -->
+          <div class="main-content" :class="{ 'menu-page': isInMenuPage }">
+            <component :is="Component" @splash-loading="updateSplashStatus" />
+          </div>
+          
+          <!-- Exibe o AppFooter apenas se não estiver na página do menu -->
+          <AppFooter v-if="!isInMenuPage && !isLoadingSplash" />
+        </div>
+      </transition>
+    </router-view>
   </div>
 </template>
 
@@ -24,10 +30,20 @@ export default {
     AppHeader,
     AppFooter
   },
+  data() {
+    return {
+      isLoadingSplash: false
+    }
+  },
   computed: {
     isInMenuPage() {
       // Verifica se a página atual é a do menu, usando $route
       return this.$route.name === 'Menu';
+    }
+  },
+  methods: {
+    updateSplashStatus(isLoading) {
+      this.isLoadingSplash = isLoading;
     }
   },
   created() {
@@ -56,6 +72,9 @@ html, body {
   color: #fff;
 }
 
+/* Importar arquivo de responsividade para garantir acesso global às variáveis */
+@import url('./assets/responsive.css');
+
 #app {
   display: flex;
   flex-direction: column;
@@ -64,15 +83,24 @@ html, body {
   overflow-x: hidden; /* Prevenir scrollbars horizontais */
 }
 
+/* Wrapper para a página inteira */
+.page-wrapper {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  width: 100%;
+}
+
 /* Container principal para conteúdo */
 .main-content {
   flex: 1;
-  padding-top: 80px;  /* Altura do header fixo */
-  padding-bottom: 70px; /* Altura do footer fixo */
+  padding-top: var(--spacing-xxl); /* Usa variável em vez de 80px */
+  padding-bottom: var(--spacing-xl); /* Usa variável em vez de 70px */
   display: flex;
   flex-direction: column;
-  min-height: calc(100vh - 150px); /* Altura da viewport menos header e footer */
+  min-height: calc(100vh - 9.375rem); /* Convertido de 150px para rem */
   overflow-y: auto;
+  transition: opacity 0.3s ease;
 }
 
 .main-content.menu-page {
@@ -95,8 +123,8 @@ html, body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 40px 20px;
-  max-width: 1200px;
+  padding: var(--spacing-xl) var(--spacing-md); /* Usa variáveis em vez de 40px 20px */
+  max-width: 75rem; /* Convertido de 1200px para rem */
   margin: 0 auto;
   width: 100%;
 }
@@ -106,7 +134,7 @@ html, body {
   width: 100%;
   background-color: #2c2c2c;
   color: #fff;
-  z-index: 100;
+  z-index: var(--z-index-footer);
   position: fixed;
   bottom: 0;
   left: 0;
@@ -117,7 +145,7 @@ header {
   width: 100%;
   background-color: #2c2c2c;
   color: #fff;
-  z-index: 100;
+  z-index: var(--z-index-header);
   position: fixed;
   top: 0;
   left: 0;
@@ -127,11 +155,11 @@ header {
 /* Estilos globais para botões - semelhantes ao AppLogin */
 .btn-primary, .btn-secondary {
   display: inline-block;
-  padding: 14px 30px;
-  font-size: 17px;
+  padding: 0.875rem 1.875rem; /* Convertido de 14px 30px para rem */
+  font-size: var(--font-size-md); /* Usa variável em vez de 17px */
   font-weight: 600;
   text-decoration: none;
-  border-radius: 8px;
+  border-radius: var(--border-radius-md); /* Usa variável em vez de 8px */
   transition: all 0.3s ease;
   text-align: center;
 }
@@ -163,8 +191,8 @@ header {
 
 /* Estilos para cabeçalhos e textos comuns */
 h1 {
-  font-size: 36px;
-  margin-bottom: 16px;
+  font-size: var(--font-size-3xl); /* Usa variável em vez de 36px */
+  margin-bottom: 1rem; /* Convertido de 16px para rem */
   font-weight: 700;
   background: linear-gradient(90deg, #fff, #aaa);
   -webkit-background-clip: text;
@@ -174,23 +202,23 @@ h1 {
 }
 
 p {
-  font-size: 18px;
-  margin-bottom: 30px;
+  font-size: var(--font-size-lg); /* Usa variável em vez de 18px */
+  margin-bottom: 1.875rem; /* Convertido de 30px para rem */
   color: #ccc;
 }
 
 /* Estilos comuns de contêiner */
 .container {
   width: 100%;
-  max-width: 1200px;
+  max-width: 75rem; /* Convertido de 1200px para rem */
   margin: 0 auto;
-  padding: 0 20px;
+  padding: 0 var(--spacing-md); /* Usa variável em vez de 20px */
 }
 
 /* Cores e elementos comuns com o AppLogin */
 .card, .modal, .form-container {
   background: linear-gradient(145deg, #3b3b3b, #2c2c2c);
-  border-radius: 12px;
+  border-radius: var(--border-radius-lg); /* Usa variável em vez de 12px */
   box-shadow: 0px 10px 20px rgba(0, 0, 0, 0.4);
 }
 
@@ -198,74 +226,203 @@ input, select, textarea {
   background: #444;
   border: 1px solid #555;
   color: white;
-  border-radius: 8px;
+  border-radius: var(--border-radius-md); /* Usa variável em vez de 8px */
 }
 
 input:focus, select:focus, textarea:focus {
   border-color: #66ccff;
-  box-shadow: 0 0 8px rgba(102, 204, 255, 0.3);
+  box-shadow: 0 0 0.5rem rgba(102, 204, 255, 0.3); /* Convertido de 8px para rem */
 }
 
 /* Responsividade consistente */
 @media (max-width: 1024px) {
   .welcome-section, .contact-section, .help-section {
-    padding: 30px 20px;
+    padding: var(--spacing-lg) var(--spacing-md);
   }
   
   .main-content {
-    padding-top: 70px; /* Header menor para tablets */
-    padding-bottom: 60px;
+    padding-top: 4.375rem; /* Convertido de 70px para rem */
+    padding-bottom: 3.75rem; /* Convertido de 60px para rem */
   }
 }
 
 @media (max-width: 768px) {
   .welcome-section, .contact-section, .help-section {
-    padding: 25px 15px;
+    padding: var(--spacing-md) var(--spacing-sm);
   }
   
   h1 {
-    font-size: 30px;
+    font-size: var(--font-size-xl);
   }
   
   p {
-    font-size: 16px;
+    font-size: var(--font-size-md);
   }
   
   .btn-primary, .btn-secondary {
-    padding: 12px 24px;
-    font-size: 16px;
+    padding: 0.75rem 1.5rem; /* Convertido de 12px 24px para rem */
+    font-size: var(--font-size-md);
   }
   
   .container {
-    padding: 0 15px;
+    padding: 0 var(--spacing-sm);
   }
   
   .main-content {
-    padding-top: 60px; /* Header menor para mobile */
-    padding-bottom: 50px;
+    padding-top: 3.75rem; /* Convertido de 60px para rem */
+    padding-bottom: 3.125rem; /* Convertido de 50px para rem */
   }
 }
 
 @media (max-width: 480px) {
   .welcome-section, .contact-section, .help-section {
-    padding: 20px 10px;
+    padding: var(--spacing-sm) var(--spacing-xs);
   }
   
   h1 {
-    font-size: 26px;
+    font-size: var(--font-size-lg);
   }
   
   p {
-    font-size: 14px;
+    font-size: var(--font-size-sm);
   }
   
   .btn-primary, .btn-secondary {
-    padding: 10px 20px;
-    font-size: 14px;
+    padding: 0.625rem 1.25rem; /* Convertido de 10px 20px para rem */
+    font-size: var(--font-size-sm);
   }
   
   .container {
-    padding: 0 10px;
+    padding: 0 var(--spacing-xs);
   }
+}
+
+/* Regras globais para modais */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.85); 
+  z-index: var(--z-index-modal);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: opacity 0.3s ease-in-out;
+  overflow-y: auto;
+  padding: var(--spacing-md);
+  box-sizing: border-box;
+}
+
+.order-form,
+.print-modal,
+.dashboard-container,
+.modal-content,
+.modal-responsive {
+  background-color: #1f1f1f; 
+  color: #f5f5f5;
+  padding: var(--spacing-lg); 
+  border-radius: var(--border-radius-lg);
+  width: var(--modal-width-md);
+  max-width: var(--modal-max-width); 
+  max-height: var(--modal-max-height);
+  overflow-y: auto;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+/* Ajustes globais de responsividade para todos os modais */
+@media (max-width: 1024px) {
+  .order-form,
+  .print-modal,
+  .dashboard-container,
+  .modal-content,
+  .modal-responsive {
+    width: var(--modal-width-md);
+    max-width: var(--modal-max-width);
+    padding: var(--spacing-md);
+  }
+}
+
+@media (max-width: 768px) {
+  .order-form,
+  .print-modal,
+  .dashboard-container,
+  .modal-content,
+  .modal-responsive {
+    width: var(--modal-width-lg);
+    max-width: var(--modal-max-width);
+    padding: var(--spacing-md);
+  }
+}
+
+@media (max-width: 480px) {
+  .modal-overlay {
+    padding: var(--spacing-xs);
+  }
+  
+  .order-form,
+  .print-modal,
+  .dashboard-container,
+  .modal-content,
+  .modal-responsive {
+    width: var(--modal-width-lg);
+    max-width: var(--modal-max-width);
+    padding: var(--spacing-sm);
+  }
+}
+
+/* Ajustes para telas com zoom (notebooks, etc) */
+@media screen and (min-resolution: 1.25dppx) {
+  .order-form,
+  .print-modal,
+  .dashboard-container,
+  .modal-content,
+  .modal-responsive {
+    max-height: var(--modal-max-height);
+  }
+}
+
+/* Ajustes para telas 720p */
+@media (min-height: 720px) and (max-height: 768px) {
+  .modal-overlay {
+    align-items: flex-start;
+    padding-top: 2vh;
+  }
+  
+  .order-form,
+  .print-modal,
+  .dashboard-container,
+  .modal-content,
+  .modal-responsive {
+    max-height: 85vh;
+  }
+}
+
+/* Ajustes para monitores pequenos de 14 polegadas */
+@media screen and (max-width: 1366px) and (max-height: 768px) {
+  .order-form,
+  .print-modal,
+  .dashboard-container,
+  .modal-content,
+  .modal-responsive {
+    padding: var(--spacing-md);
+  }
+}
+
+/* Estilos para o corpo durante o carregamento */
+body.loading {
+  overflow: hidden;
+}
+
+/* Efeito de transição suave para toda a aplicação */
+.router-view-transition-enter-active,
+.router-view-transition-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.router-view-transition-enter-from,
+.router-view-transition-leave-to {
+  opacity: 0;
 }
 </style>

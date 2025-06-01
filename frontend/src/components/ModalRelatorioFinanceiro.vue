@@ -1,6 +1,6 @@
 <template>
-  <div class="modal" v-if="isOpen">
-    <div class="modal-content">
+  <div class="modal-overlay" v-if="isOpen" @click.self="fecharModal">
+    <div class="modal-content" @click.stop>
       <div class="modal-header">
         <h2 class="modal-title">
           <i class="material-icons">account_balance</i>
@@ -13,7 +13,7 @@
       
       <div class="modal-body">
         <!-- Componente de Resumo Financeiro -->
-        <FinancialSummary @edit-pedido="handleEditPedido" />
+        <FinancialSummary :pedidos="pedidos" @edit-pedido="handleEditPedido" />
         
         <!-- Filtros adicionais para relatório -->
         <div class="filters-section">
@@ -236,7 +236,6 @@ export default {
           this.initCharts();
         });
       } catch (error) {
-        console.error('Erro ao buscar pedidos:', error);
         this.toast.error('Erro ao carregar dados financeiros');
       }
     },
@@ -573,7 +572,6 @@ export default {
         
         this.toast.success(`Relatório sendo gerado em formato ${formato.toUpperCase()}`);
       } catch (error) {
-        console.error('Erro ao exportar relatório:', error);
         this.toast.error('Erro ao gerar relatório');
       }
     },
@@ -602,17 +600,19 @@ export default {
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Material+Icons&display=swap');
 
-.modal {
+/* Modal Overlay */
+.modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
-  right: 0;
-  bottom: 0;
+  width: 100vw;
+  height: 100vh;
   background-color: rgba(0, 0, 0, 0.85);
+  z-index: 1000;
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
+  transition: opacity 0.3s ease-in-out;
   overflow-y: auto;
   padding: 15px;
   box-sizing: border-box;
@@ -626,6 +626,10 @@ export default {
   max-height: 90vh;
   overflow-y: auto;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  color: #f5f5f5;
   scrollbar-width: thin;
   scrollbar-color: #ff6f61 #333;
 }

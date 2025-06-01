@@ -113,12 +113,25 @@
           </div>
 
           <div class="form-group">
-            <label for="editPassword">Nova Senha (deixe em branco para manter a atual)</label>
-            <input 
-              id="editPassword" 
-              type="password" 
-              v-model="editingUser.newPassword" 
-            />
+            <label for="editNewPassword">Nova Senha</label>
+            <div class="password-field">
+              <input 
+                id="editNewPassword" 
+                :type="showPassword ? 'text' : 'password'" 
+                v-model="editingUser.newPassword" 
+                placeholder="Deixe em branco para manter a senha atual"
+              />
+              <button 
+                type="button" 
+                class="toggle-password" 
+                @click="togglePasswordVisibility"
+              >
+                <i :class="showPassword ? 'fa-eye-slash' : 'fa-eye'"></i>
+              </button>
+            </div>
+            <div class="password-hint" v-if="!editingUser.newPassword">
+              A senha atual será mantida.
+            </div>
           </div>
 
           <div class="button-group">
@@ -158,7 +171,8 @@ export default {
       originalUserData: null,
       isDemoMode: false,
       isLoading: false,
-      hasLoadedData: false
+      hasLoadedData: false,
+      showPassword: false
     };
   },
   created() {
@@ -323,26 +337,43 @@ export default {
         
         const userData = { ...this.editingUser };
         
-        if (!userData.newPassword) {
+        // Verificar se foi fornecida uma nova senha
+        const senhaAlterada = userData.newPassword && userData.newPassword.trim() !== '';
+        
+        // Remover campos de senha se não houver alteração
+        if (!senhaAlterada) {
           delete userData.newPassword;
+          delete userData.senha;
         } else {
+          // Se houver senha nova, usar ela como senha
           userData.senha = userData.newPassword;
           delete userData.newPassword;
         }
         
         const changes = this.getChanges(this.originalUserData, userData);
         
-        if (Object.keys(changes).length > 0) {
+        // Verificar se houve alteração no tipo de usuário
+        const tipoUsuarioAlterado = this.originalUserData.tipo_usuario !== userData.tipo_usuario;
+        
+        if (Object.keys(changes).length > 0 || senhaAlterada) {
           const currentUser = authService.getUser();
           userData.log = {
             changedBy: currentUser.nome,
             changedAt: new Date().toISOString(),
             changes: changes
           };
+          
+          // Adicionar informação sobre alteração de senha no log se aplicável
+          if (senhaAlterada) {
+            userData.log.changes.senha = {
+              from: '[protegido]',
+              to: '[nova senha protegida]'
+            };
+          }
         }
         
         const token = authService.getToken();
-        await axios.put(
+        const response = await axios.put(
           `${process.env.VUE_APP_API_URL}/usuarios/${userData._id}`,
           userData,
           {
@@ -350,19 +381,58 @@ export default {
           }
         );
         
+        // Verificar informações de resposta da API
+        const info = response.data?.info || {};
+        const tipoUsuarioAlteradoConfirmado = info.tipo_usuario_alterado || tipoUsuarioAlterado;
+        const senhaAlteradaConfirmada = info.senha_alterada || senhaAlterada;
+        
         this.toast.success('Usuário atualizado com sucesso!');
+        
+        // Mostrar mensagem específica se a senha foi alterada
+        if (senhaAlteradaConfirmada) {
+          this.toast.info('A senha do usuário foi alterada.');
+        }
+        
+        // Obter o usuário atual da sessão para saber se estamos alterando nosso próprio usuário
+        const currentUser = authService.getUser();
+        const alterandoProprioUsuario = currentUser && currentUser.nome === userData.nome;
+        
+        // Mostrar mensagens específicas baseadas nas alterações
+        if (tipoUsuarioAlteradoConfirmado) {
+          // Apenas tipo de usuário alterado
+          if (alterandoProprioUsuario) {
+            this.toast.warning('Suas permissões foram alteradas. Você precisará fazer login novamente.', {
+              timeout: 8000
+            });
+          } else {
+            this.toast.info(`O tipo de usuário de ${userData.nome} foi alterado para ${this.getUserTypeLabel(userData.tipo_usuario)}.`);
+          }
+        }
+        
+        // Se estamos alterando nosso próprio usuário e houver alterações que exigem novo login
+        if (alterandoProprioUsuario && (tipoUsuarioAlteradoConfirmado || senhaAlteradaConfirmada)) {
+          // Dar tempo para o usuário ler a mensagem antes de fazer logout
+          setTimeout(() => {
+            authService.logout();
+            this.$router.push('/login');
+          }, 5000);
+        }
+        
         this.closeEditModal();
         this.fetchUsers();
       } catch (error) {
         console.error('Erro ao atualizar usuário:', error);
-        this.toast.error('Erro ao atualizar usuário');
+        this.toast.error('Erro ao atualizar usuário: ' + (error.response?.data?.detail || error.message));
       }
     },
     getChanges(original, updated) {
       const changes = {};
       
+      // Campos a serem ignorados
+      const ignoredFields = ['_id', 'log', 'senha', 'newPassword', 'sessao_expirada'];
+      
       for (const key in updated) {
-        if (['_id', 'log', 'senha', 'newPassword'].includes(key)) continue;
+        if (ignoredFields.includes(key)) continue;
         
         if (original[key] !== updated[key]) {
           changes[key] = {
@@ -370,13 +440,6 @@ export default {
             to: updated[key]
           };
         }
-      }
-      
-      if (updated.senha) {
-        changes.senha = {
-          from: '[protegido]',
-          to: '[nova senha protegida]'
-        };
       }
       
       return changes;
@@ -409,6 +472,9 @@ export default {
         default:
           return 'USUÁRIO';
       }
+    },
+    togglePasswordVisibility() {
+      this.showPassword = !this.showPassword;
     },
   }
 };
@@ -592,6 +658,7 @@ h2 {
   max-height: 90vh;
   overflow-y: auto;
   color: white;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
 }
 
 .modal-header {
@@ -599,76 +666,132 @@ h2 {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
+  border-bottom: 1px solid #444;
+  padding-bottom: 15px;
 }
 
 .modal-header h3 {
   margin: 0;
   color: #66ccff;
+  font-size: 1.4em;
+  font-weight: 600;
+  letter-spacing: 0.5px;
 }
 
 .form-group {
-  margin-bottom: 15px;
+  margin-bottom: 20px;
 }
 
 .form-group label {
   display: block;
-  margin-bottom: 5px;
+  margin-bottom: 8px;
   font-weight: bold;
-  color: #ccc;
+  color: #eee;
+  font-size: 0.95em;
+  letter-spacing: 0.5px;
 }
 
 .form-group input,
 .form-group select {
   width: 100%;
-  padding: 10px;
+  padding: 12px;
   background-color: #333;
   border: 1px solid #444;
-  border-radius: 5px;
+  border-radius: 8px;
   color: white;
   font-size: 16px;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .form-group input:focus,
 .form-group select:focus {
   outline: none;
   border-color: #66ccff;
+  box-shadow: 0 0 0 2px rgba(102, 204, 255, 0.2);
+}
+
+.password-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-field input {
+  padding-right: 40px;
+  flex: 1;
+}
+
+.toggle-password {
+  position: absolute;
+  right: 10px;
+  background: none;
+  border: none;
+  color: #999;
+  cursor: pointer;
+  padding: 5px;
+  transition: color 0.2s;
+}
+
+.toggle-password:hover {
+  color: #66ccff;
+}
+
+.password-hint {
+  margin-top: 6px;
+  font-size: 0.85em;
+  color: #999;
+  font-style: italic;
 }
 
 .button-group {
   display: flex;
   justify-content: flex-end;
-  gap: 10px;
-  margin-top: 20px;
+  gap: 15px;
+  margin-top: 30px;
+  border-top: 1px solid #444;
+  padding-top: 20px;
 }
 
 .save-btn {
   background-color: #4CAF50;
   color: white;
   border: none;
-  padding: 10px 20px;
-  border-radius: 5px;
+  padding: 12px 24px;
+  border-radius: 8px;
   cursor: pointer;
   font-weight: bold;
-  transition: background-color 0.2s;
+  transition: background-color 0.2s, transform 0.1s;
+  letter-spacing: 0.5px;
 }
 
 .save-btn:hover {
   background-color: #45a049;
+  transform: translateY(-2px);
+}
+
+.save-btn:active {
+  transform: translateY(0);
 }
 
 .cancel-btn {
-  background-color: #f44336;
+  background-color: #555;
   color: white;
   border: none;
-  padding: 10px 20px;
-  border-radius: 5px;
+  padding: 12px 24px;
+  border-radius: 8px;
   cursor: pointer;
   font-weight: bold;
-  transition: background-color 0.2s;
+  transition: background-color 0.2s, transform 0.1s;
+  letter-spacing: 0.5px;
 }
 
 .cancel-btn:hover {
-  background-color: #da190b;
+  background-color: #666;
+  transform: translateY(-2px);
+}
+
+.cancel-btn:active {
+  transform: translateY(0);
 }
 
 .button-row {
@@ -701,6 +824,80 @@ h2 {
   .edit-modal {
     width: 95%;
     padding: 15px;
+  }
+  
+  .order-form {
+    padding-bottom: 100px; /* Espaço adicional para não ocultar botões */
+    width: 100%;
+    max-width: 100%;
+    border-radius: 10px;
+  }
+  
+  .button-row {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: #1e1e1e;
+    z-index: 10;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
+    padding: 10px;
+    margin: 0;
+    display: flex;
+    justify-content: space-between;
+  }
+  
+  .close-btn {
+    margin: 0;
+  }
+}
+
+/* Dispositivos móveis pequenos */
+@media (max-width: 480px) {
+  .order-form {
+    padding: 20px;
+    padding-bottom: 120px; /* Mais espaço para os botões */
+    height: 100%;
+    max-height: 100%;
+    border-radius: 0;
+  }
+  
+  .edit-modal {
+    width: 100%;
+    max-width: 100%;
+    height: 100%;
+    max-height: 100%;
+    border-radius: 0;
+    padding: 15px;
+    padding-bottom: 120px; /* Espaço para botões fixos */
+  }
+  
+  .button-group {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: #2a2a2a;
+    z-index: 10;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
+    padding: 15px;
+    margin: 0;
+    display: flex;
+    justify-content: space-between;
+  }
+  
+  .save-btn, .cancel-btn {
+    flex: 1;
+    margin: 0 5px;
+  }
+  
+  .button-row {
+    padding: 15px;
+  }
+  
+  .debug-btn, .close-btn {
+    padding: 12px 15px;
+    font-size: 14px;
   }
 }
 

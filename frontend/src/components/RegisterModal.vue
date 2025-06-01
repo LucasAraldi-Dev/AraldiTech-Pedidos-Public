@@ -5,107 +5,112 @@
         <!-- Formulário de cadastro normal -->
         <div v-if="!isRegistering && !registerSuccess && !registerError">
           <h2>Cadastro</h2>
-          <form @submit.prevent="startRegistrationProcess">
-            <div class="form-group">
-              <label for="name" class="form-label">Nome Completo</label>
-              <div class="input-container">
-                <div class="input-icon">
-                  <i class="fa-user"></i>
+          <form @submit.prevent="startRegistrationProcess" class="register-form">
+            <div class="form-grid">
+              <!-- Nome e Username -->
+              <div class="form-group">
+                <label for="name" class="form-label">Nome Completo</label>
+                <div class="input-container">
+                  <div class="input-icon">
+                    <i class="fa-user"></i>
+                  </div>
+                  <input id="name" type="text" v-model="name" required />
                 </div>
-                <input
-                  id="name"
-                  type="text"
-                  v-model="name"
-                  required
-                />
               </div>
-            </div>
 
-            <div class="form-group">
-              <label for="username" class="form-label">Nome de Usuário</label>
-              <div class="input-container">
-                <div class="input-icon">
-                  <i class="fa-user-tag"></i>
+              <div class="form-group">
+                <label for="username" class="form-label">Nome de Usuário</label>
+                <div class="input-container">
+                  <div class="input-icon">
+                    <i class="fa-user-tag"></i>
+                  </div>
+                  <input 
+                    id="username" 
+                    type="text" 
+                    v-model="username" 
+                    @input="validateUsername"
+                    required 
+                  />
                 </div>
-                <input
-                  id="username"
-                  type="text"
-                  v-model="username"
-                  required
-                />
+                <div v-if="usernameError" class="input-error">
+                  {{ usernameError }}
+                </div>
               </div>
-            </div>
 
-            <div class="form-group">
-              <label for="signupEmail" class="form-label">E-mail</label>
-              <div class="input-container">
-                <div class="input-icon">
-                  <i class="fa-envelope"></i>
+              <!-- Email e Setor -->
+              <div class="form-group">
+                <label for="signupEmail" class="form-label">E-mail</label>
+                <div class="input-container">
+                  <div class="input-icon">
+                    <i class="fa-envelope"></i>
+                  </div>
+                  <input id="signupEmail" type="email" v-model="signupEmail" required />
                 </div>
-                <input
-                  id="signupEmail"
-                  type="email"
-                  v-model="signupEmail"
-                  required
-                />
               </div>
-            </div>
 
-            <div class="form-group">
-              <label for="signupPassword" class="form-label">Senha</label>
-              <div class="input-container">
-                <div class="input-icon">
-                  <i class="fa-lock"></i>
+              <div class="form-group">
+                <label for="setor" class="form-label">Setor</label>
+                <div class="input-container">
+                  <div class="input-icon">
+                    <i class="fa-building"></i>
+                  </div>
+                  <select v-model="setor" id="setor" required>
+                    <option value="" disabled selected>Selecione um setor</option>
+                    <option value="Escritório">Escritório</option>
+                    <option value="Fábrica de Ração">Fábrica de Ração</option>
+                    <option value="CPO">CPO</option>
+                    <option value="Granjas">Granjas</option>
+                    <option value="Abatedouro">Abatedouro</option>
+                    <option value="Transporte">Transporte</option>
+                    <option value="Incubatório">Incubatório</option>
+                    <option value="Favorito">Favorito</option>
+                  </select>
                 </div>
-                <input
-                  id="signupPassword"
-                  type="password"
-                  v-model="signupPassword"
-                  required
-                  @input="checkPasswordStrength"
-                />
               </div>
-              <div class="password-strength" :class="passwordStrengthClass">
-                {{ passwordStrengthMessage }}
-              </div>
-            </div>
 
-            <div class="form-group">
-              <label for="confirmPassword" class="form-label">Repetir Senha</label>
-              <div class="input-container">
-                <div class="input-icon">
-                  <i class="fa-shield"></i>
+              <!-- Senha e Confirmação -->
+              <div class="form-group span-full">
+                <label for="signupPassword" class="form-label">Senha</label>
+                <div class="input-container">
+                  <div class="input-icon">
+                    <i class="fa-lock"></i>
+                  </div>
+                  <input
+                    id="signupPassword"
+                    :type="showPassword ? 'text' : 'password'"
+                    v-model="signupPassword"
+                    required
+                    @input="checkPasswordStrength"
+                  />
+                  <div class="password-toggle" @click="togglePassword">
+                    <i :class="showPassword ? 'fa-eye-slash' : 'fa-eye'"></i>
+                  </div>
                 </div>
-                <input
-                  id="confirmPassword"
-                  type="password"
-                  v-model="confirmPassword"
-                  required
-                  @input="checkPasswordMatch"
-                />
+                <div class="password-strength" :class="passwordStrengthClass">
+                  {{ passwordStrengthMessage }}
+                </div>
               </div>
-              <div v-if="!passwordsMatch && confirmPassword" class="password-error">
-                As senhas não coincidem
-              </div>
-            </div>
 
-            <div class="form-group">
-              <label for="setor" class="form-label">Setor</label>
-              <div class="input-container">
-                <div class="input-icon">
-                  <i class="fa-building"></i>
+              <div class="form-group span-full">
+                <label for="confirmPassword" class="form-label">Repetir Senha</label>
+                <div class="input-container">
+                  <div class="input-icon">
+                    <i class="fa-shield"></i>
+                  </div>
+                  <input
+                    id="confirmPassword"
+                    :type="showConfirmPassword ? 'text' : 'password'"
+                    v-model="confirmPassword"
+                    required
+                    @input="checkPasswordMatch"
+                  />
+                  <div class="password-toggle" @click="toggleConfirmPassword">
+                    <i :class="showConfirmPassword ? 'fa-eye-slash' : 'fa-eye'"></i>
+                  </div>
                 </div>
-                <select v-model="setor" id="setor" required>
-                  <option value="" disabled selected>Selecione um setor</option>
-                  <option value="Escritório">Escritório</option>
-                  <option value="Fábrica de Ração">Fábrica de Ração</option>
-                  <option value="CPO">CPO</option>
-                  <option value="Granjas">Granjas</option>
-                  <option value="Abatedouro">Abatedouro</option>
-                  <option value="Transporte">Transporte</option>
-                  <option value="Incubatório">Incubatório</option>
-                  <option value="Favorito">Favorito</option>
-                </select>
+                <div v-if="!passwordsMatch && confirmPassword" class="password-error">
+                  As senhas não coincidem
+                </div>
               </div>
             </div>
 
@@ -220,6 +225,9 @@ export default {
     const confirmPassword = ref("");
     const setor = ref("");
     
+    // Validação de username
+    const usernameError = ref("");
+    
     // Estados para o fluxo de cadastro
     const isRegistering = ref(false);
     const registerSuccess = ref(false);
@@ -242,6 +250,9 @@ export default {
     const passwordStrengthMessage = ref("");
     const passwordsMatch = ref(true);
     
+    const showPassword = ref(false);
+    const showConfirmPassword = ref(false);
+    
     const passwordStrengthClass = computed(() => ({
       'weak': passwordStrength.value < 2,
       'medium': passwordStrength.value === 2,
@@ -255,7 +266,8 @@ export default {
       signupPassword.value && 
       confirmPassword.value && 
       passwordsMatch.value &&
-      setor.value
+      setor.value &&
+      !usernameError.value
     );
     
     // Método para iniciar o processo de cadastro
@@ -344,12 +356,10 @@ export default {
           registerSuccess.value = true;
         } catch (error) {
           // Erro específico do cadastro
-          console.error("Erro na resposta do cadastro:", error);
           isRegistering.value = false;
           showDatabaseError(error.message);
         }
       } catch (error) {
-        console.error("Erro ao processar cadastro:", error);
         isRegistering.value = false;
         
         // Mostrar erro específico com base no tipo de erro
@@ -479,6 +489,30 @@ export default {
       }
     });
     
+    // Função para validar o username
+    const validateUsername = () => {
+      // Converter para minúsculo
+      username.value = username.value.toLowerCase();
+      
+      // Remover caracteres não permitidos
+      const alphanumericOnly = username.value.replace(/[^a-z0-9]/g, '');
+      
+      if (username.value !== alphanumericOnly) {
+        usernameError.value = "O nome de usuário deve conter apenas letras e números";
+        username.value = alphanumericOnly;
+      } else {
+        usernameError.value = "";
+      }
+    };
+    
+    const togglePassword = () => {
+      showPassword.value = !showPassword.value;
+    };
+    
+    const toggleConfirmPassword = () => {
+      showConfirmPassword.value = !showConfirmPassword.value;
+    };
+    
     return {
       // Campos do formulário
       name,
@@ -521,7 +555,19 @@ export default {
       getUserInitials,
       
       // Utilitários
-      toast
+      toast,
+      
+      // Validação de username
+      usernameError,
+      validateUsername,
+      
+      // Métodos para alternar entre mostrar/ocultar senha
+      togglePassword,
+      toggleConfirmPassword,
+      
+      // Estado para mostrar/ocultar senha
+      showPassword,
+      showConfirmPassword
     };
   }
 };
@@ -541,6 +587,7 @@ export default {
   z-index: 1000;
   backdrop-filter: blur(8px);
   transition: backdrop-filter 0.3s ease;
+  overflow-y: auto;
 }
 
 .modal {
@@ -553,6 +600,7 @@ export default {
   box-shadow: 0px 10px 20px rgba(0, 0, 0, 0.4);
   position: relative;
   overflow: hidden;
+  margin: auto;
 }
 
 h2 {
@@ -825,16 +873,6 @@ h2 {
   transform: scale(0);
 }
 
-@keyframes scaleIn {
-  to { transform: scale(1); }
-}
-
-@keyframes pulse {
-  0% { box-shadow: 0 5px 15px rgba(0, 204, 102, 0.4); }
-  50% { box-shadow: 0 5px 25px rgba(0, 204, 102, 0.7); }
-  100% { box-shadow: 0 5px 15px rgba(0, 204, 102, 0.4); }
-}
-
 .success-message {
   font-size: 22px;
   font-weight: 600;
@@ -854,10 +892,6 @@ h2 {
   animation: fadeIn 0.5s ease-in-out forwards;
   opacity: 0;
   z-index: 10;
-}
-
-@keyframes fadeIn {
-  to { opacity: 1; }
 }
 
 .user-card-header {
@@ -971,13 +1005,6 @@ h2 {
   transform: translate3d(0, 0, 0);
 }
 
-@keyframes shakeError {
-  10%, 90% { transform: translate3d(-1px, 0, 0); }
-  20%, 80% { transform: translate3d(2px, 0, 0); }
-  30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
-  40%, 60% { transform: translate3d(4px, 0, 0); }
-}
-
 .error-icon {
   width: 70px;
   height: 70px;
@@ -991,12 +1018,6 @@ h2 {
   margin-bottom: 20px;
   box-shadow: 0 5px 15px rgba(255, 61, 113, 0.4);
   animation: pulseError 2s infinite;
-}
-
-@keyframes pulseError {
-  0% { transform: scale(1); box-shadow: 0 5px 15px rgba(255, 61, 113, 0.4); }
-  50% { transform: scale(1.05); box-shadow: 0 5px 25px rgba(255, 61, 113, 0.6); }
-  100% { transform: scale(1); box-shadow: 0 5px 15px rgba(255, 61, 113, 0.4); }
 }
 
 .error-title {
@@ -1121,28 +1142,45 @@ h2 {
   }
 }
 
+/* Ajustes específicos para mobile - para evitar corte do modal */
 @media (max-width: 480px) {
+  .modal-overlay {
+    align-items: flex-start;
+    padding: 20px 0;
+    overflow-y: auto;
+    height: 100%;
+  }
+  
   .modal {
-    padding: 25px;
+    padding: 20px;
     width: 95%;
     border-radius: 10px;
+    margin: auto;
+    max-height: none;
   }
   
   h2 {
-    font-size: 22px;
+    font-size: 20px;
     margin-bottom: 15px;
+  }
+  
+  /* Transformar grid em coluna única */
+  .register-form .form-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
   }
   
   .input-container input, 
   .input-container select {
     padding: 10px 8px;
     padding-left: 36px;
-    font-size: 15px;
+    font-size: 14px;
   }
   
   .form-label {
     font-size: 14px;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
   }
   
   .input-icon {
@@ -1151,19 +1189,21 @@ h2 {
   }
   
   .form-group {
-    margin-bottom: 15px;
+    margin-bottom: 12px;
   }
   
   .action-buttons {
     flex-direction: column;
+    margin-top: 20px;
   }
   
   .submit-button, .cancel-button {
-    padding: 10px 15px;
+    padding: 12px 15px;
     font-size: 15px;
     margin-bottom: 10px;
   }
   
+  /* Ajustes para o card de usuário em telas pequenas */
   .user-card-header, .user-card-body, .user-card-footer {
     padding: 15px;
   }
@@ -1173,24 +1213,136 @@ h2 {
     height: 40px;
     font-size: 16px;
   }
+  
+  /* Ajustes para o progresso de registro */
+  .progress-steps {
+    margin-bottom: 20px;
+  }
+  
+  .progress-step {
+    margin-bottom: 10px;
+  }
+  
+  .step-indicator {
+    width: 24px;
+    height: 24px;
+    font-size: 12px;
+  }
+  
+  .step-label {
+    font-size: 13px;
+  }
+  
+  .spinner {
+    width: 40px;
+    height: 40px;
+    margin: 15px 0;
+  }
+  
+  /* Ajustes para a mensagem de sucesso */
+  .success-icon {
+    width: 60px;
+    height: 60px;
+    font-size: 30px;
+    margin-bottom: 15px;
+  }
+  
+  .success-message {
+    font-size: 18px;
+    margin-bottom: 15px;
+  }
+  
+  /* Ajustes para mensagem de erro */
+  .error-icon {
+    width: 60px;
+    height: 60px;
+    font-size: 30px;
+    margin-bottom: 15px;
+  }
+  
+  .error-title {
+    font-size: 18px;
+  }
+  
+  .error-message, .error-help {
+    font-size: 14px;
+  }
+  
+  /* Ajustes para termos */
+  .terms-info {
+    font-size: 12px;
+    margin: 10px 0;
+  }
 }
 
+/* Ajustes para dispositivos muito pequenos */
 @media (max-width: 320px) {
+  .modal-overlay {
+    padding: 10px 0;
+  }
+  
   .modal {
-    padding: 20px;
+    padding: 15px;
+    width: 98%;
   }
   
   h2 {
-    font-size: 20px;
+    font-size: 18px;
+    margin-bottom: 12px;
   }
   
   .input-container input, 
   .input-container select {
-    padding-left: 32px;
+    padding: 8px 6px;
+    padding-left: 30px;
+    font-size: 13px;
+  }
+  
+  .form-label {
+    font-size: 12px;
   }
   
   .input-icon {
-    left: 10px;
+    left: 8px;
+    font-size: 14px;
+  }
+  
+  .form-group {
+    margin-bottom: 10px;
+  }
+  
+  .password-strength, .password-error {
+    font-size: 11px;
+  }
+  
+  .submit-button, .cancel-button {
+    padding: 10px;
+    font-size: 14px;
+  }
+}
+
+/* Ajustes para telas altas com teclado virtual ativo */
+@media (max-height: 600px) and (max-width: 480px) {
+  .modal-overlay {
+    padding: 10px 0;
+    align-items: flex-start;
+  }
+  
+  .modal {
+    margin-top: 5px;
+    padding: 15px;
+  }
+  
+  .form-group {
+    margin-bottom: 8px;
+  }
+  
+  .terms-info {
+    margin: 8px 0;
+  }
+  
+  .action-buttons {
+    margin-top: 12px;
   }
 }
 
@@ -1210,5 +1362,325 @@ h2 {
 
 .terms-link:hover {
   color: #99ddff;
+}
+
+/* Adicionando grid para o formulário */
+.register-form .form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.register-form .span-full {
+  grid-column: 1 / -1;
+}
+
+@media (min-width: 1200px) {
+  .register-form .form-grid {
+    gap: 24px;
+  }
+  
+  .modal {
+    max-width: 600px;
+    padding: 50px;
+  }
+  
+  h2 {
+    font-size: 28px;
+    margin-bottom: 30px;
+  }
+  
+  .input-container input, 
+  .input-container select {
+    padding: 16px 22px;
+    padding-left: 50px;
+    font-size: 17px;
+  }
+  
+  .input-icon {
+    left: 18px;
+  }
+  
+  .form-label {
+    font-size: 17px;
+  }
+  
+  .submit-button, .cancel-button {
+    padding: 16px 22px;
+    font-size: 17px;
+  }
+}
+
+@media (max-width: 768px) {
+  .register-form .form-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .modal {
+    padding: 30px;
+    max-width: 450px;
+  }
+  
+  .input-container input, 
+  .input-container select {
+    padding: 12px 15px;
+    padding-left: 40px;
+  }
+  
+  .input-icon {
+    left: 12px;
+  }
+  
+  .form-label {
+    font-size: 15px;
+  }
+}
+
+/* Ajustes específicos para orientação retrato em dispositivos móveis */
+@media (max-width: 480px) and (orientation: portrait) {
+  .modal-overlay {
+    align-items: flex-start;
+    justify-content: flex-start;
+    padding: 10px 0;
+    overflow-y: auto;
+  }
+  
+  .modal {
+    /* Ajuste para garantir que o modal não seja cortado em dispositivos móveis */
+    position: absolute;
+    top: 10px;
+    margin-bottom: 20px;
+    transform: none;
+    max-height: none;
+  }
+}
+
+/* Ajustes específicos para orientação paisagem em dispositivos móveis */
+@media (max-height: 450px) and (orientation: landscape) {
+  .modal-overlay {
+    align-items: flex-start;
+    padding: 5px 0;
+    overflow-y: auto;
+  }
+  
+  .modal {
+    padding: 15px;
+    margin: 5px auto;
+    max-height: none;
+  }
+  
+  h2 {
+    font-size: 18px;
+    margin-bottom: 10px;
+  }
+  
+  .register-form .form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  
+  .register-form .span-full {
+    grid-column: 1 / -1;
+  }
+  
+  .form-group {
+    margin-bottom: 8px;
+  }
+  
+  .form-label {
+    margin-bottom: 2px;
+    font-size: 12px;
+  }
+  
+  .input-container input, 
+  .input-container select {
+    padding: 8px 6px 8px 30px;
+    font-size: 13px;
+  }
+  
+  .input-icon {
+    left: 8px;
+    font-size: 14px;
+  }
+  
+  .action-buttons {
+    flex-direction: row;
+    margin-top: 10px;
+  }
+  
+  .submit-button, .cancel-button {
+    padding: 8px 12px;
+    font-size: 13px;
+    margin-bottom: 0;
+  }
+  
+  .terms-info {
+    font-size: 11px;
+    margin: 8px 0;
+  }
+  
+  /* Ajustes para o estado de progresso em paisagem */
+  .progress-steps {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 15px;
+  }
+  
+  .progress-step {
+    margin-bottom: 0;
+    margin-right: 10px;
+  }
+}
+
+.input-container select {
+  padding-left: 48px !important; /* Garante espaço extra para o ícone */
+  height: 48px; /* Mantém altura igual ao input, se necessário */
+  line-height: 1.2;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+.input-container .input-icon {
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* Estilos para o botão de mostrar/ocultar senha */
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 0.9375rem; /* 15px */
+  transform: translateY(-50%);
+  cursor: pointer;
+  color: #aaa;
+  transition: all 0.3s ease;
+  z-index: 2;
+}
+
+.password-toggle:hover {
+  color: #66ccff;
+}
+
+.password-toggle i::before {
+  content: '';
+  display: inline-block;
+  width: 1.125rem; /* 18px */
+  height: 1.125rem; /* 18px */
+  background-size: contain;
+  background-repeat: no-repeat;
+}
+
+.password-toggle .fa-eye::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='24' height='24'%3E%3Cpath fill='none' d='M0 0h24v24H0z'/%3E%3Cpath d='M12 6c-5.33 0-9.6 3.33-11.4 8 1.8 4.67 6.07 8 11.4 8 5.33 0 9.6-3.33 11.4-8-1.8-4.67-6.07-8-11.4-8zm0 13c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z' fill='%23aaa'/%3E%3C/svg%3E");
+}
+
+.password-toggle .fa-eye-slash::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='24' height='24'%3E%3Cpath fill='none' d='M0 0h24v24H0z'/%3E%3Cpath d='M12 6c-5.33 0-9.6 3.33-11.4 8 1.8 4.67 6.07 8 11.4 8 5.33 0 9.6-3.33 11.4-8-1.8-4.67-6.07-8-11.4-8zm0 13c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z' fill='%23aaa'/%3E%3Cline x1='3' y1='3' x2='21' y2='21' stroke='%23aaa' stroke-width='2'/%3E%3C/svg%3E");
+}
+
+/* Melhorar a responsividade */
+@media (max-width: 480px) {
+  .modal {
+    width: 95%;
+    max-width: 450px;
+    padding: 1.25rem; /* 20px */
+  }
+  
+  .form-grid {
+    grid-gap: 1rem; /* 16px */
+  }
+  
+  .form-group {
+    margin-bottom: 1rem; /* 16px */
+  }
+  
+  .input-container input,
+  .input-container select {
+    padding: 0.75rem 0.75rem; /* 12px */
+    padding-left: 2.5rem; /* 40px */
+    padding-right: 2.5rem; /* 40px para o botão de mostrar/ocultar */
+    min-height: 3.125rem; /* 50px */
+    font-size: 1rem; /* 16px - evitar zoom no iOS */
+  }
+  
+  .action-buttons {
+    flex-direction: column;
+  }
+  
+  .action-buttons button {
+    width: 100%;
+    margin: 0.5rem 0;
+  }
+  
+  .password-toggle {
+    right: 0.75rem; /* 12px */
+  }
+}
+
+/* Estilo para a mensagem de erro do username */
+.input-error {
+  color: #ff6b6b;
+  font-size: 13px;
+  margin-top: 5px;
+  padding-left: 5px;
+  animation: fadeIn 0.3s ease-in;
+}
+
+/* Animações mais suaves */
+.modal-overlay {
+  animation: fadeIn 0.3s forwards;
+}
+
+.modal {
+  animation: slideIn 0.4s forwards;
+}
+
+.register-progress,
+.register-success,
+.register-error {
+  animation: fadeInUp 0.5s forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideIn {
+  from { transform: translateY(-20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scaleIn {
+  from { transform: scale(0); }
+  to { transform: scale(1); }
+}
+
+@keyframes pulse {
+  0% { box-shadow: 0 5px 15px rgba(0, 204, 102, 0.4); }
+  50% { box-shadow: 0 5px 25px rgba(0, 204, 102, 0.7); }
+  100% { box-shadow: 0 5px 15px rgba(0, 204, 102, 0.4); }
+}
+
+@keyframes pulseError {
+  0% { transform: scale(1); box-shadow: 0 5px 15px rgba(255, 61, 113, 0.4); }
+  50% { transform: scale(1.05); box-shadow: 0 5px 25px rgba(255, 61, 113, 0.6); }
+  100% { transform: scale(1); box-shadow: 0 5px 15px rgba(255, 61, 113, 0.4); }
+}
+
+@keyframes shakeError {
+  10%, 90% { transform: translate3d(-1px, 0, 0); }
+  20%, 80% { transform: translate3d(2px, 0, 0); }
+  30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+  40%, 60% { transform: translate3d(4px, 0, 0); }
 }
 </style>

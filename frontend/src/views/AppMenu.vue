@@ -1,5 +1,27 @@
 <template>
   <div class="app-container">
+    <!-- Header do Menu com Notificações -->
+    <div class="menu-header-bar">
+      <div class="menu-header-content">
+        <div class="menu-title">
+          <h2>Sistema de Pedidos</h2>
+          <span class="user-info">{{ userName }} - {{ userSetor }}</span>
+        </div>
+        <div class="menu-actions">
+          <!-- Indicador de Notificações -->
+          <NotificationIndicator />
+          <!-- Informações do usuário -->
+          <div class="user-badge" :class="userTypeClass">
+            <i :class="userTypeIcon"></i>
+            <span>{{ userTypeLabel }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Fundo com logo -->
+    <div class="background-logo"></div>
+    
     <!-- Botão para abrir o menu no mobile -->
     <button class="open-menu-btn" @click="toggleMenu" v-if="isMobile">
       Menu
@@ -33,50 +55,65 @@
       >
         Gerenciar Usuários
       </button>
-      <!-- Botão de Ajuda para todos os usuários -->
-      <button class="menu-btn help-btn" @click="openHelp">
-        Ajuda
+      <!-- Botão Visualizador de Logs para administradores -->
+      <button 
+        v-if="isAdmin" 
+        class="menu-btn log-btn" 
+        @click="openLogViewer"
+      >
+        Visualizar Logs
       </button>
-      <button class="menu-btn logout-btn" @click="logout">Sair</button>
+      <div class="logout-spacer"></div>
+      <button class="menu-btn logout-btn" @click="confirmLogout">Sair</button>
     </div>
 
     <!-- Menu de tela cheia no mobile -->
     <div v-if="isMenuOpen && isMobile" class="fullscreen-menu">
-      <button class="menu-btn" @click="openCreateOrderSection">Criar Pedido</button>
-      <button class="menu-btn" @click="openConsultOrdersSection">Consultar Pedidos</button>
-      <!-- Botão Dashboard apenas para gestores -->
-      <button 
-        v-if="isGestor" 
-        class="menu-btn gestor-btn" 
-        @click="openDashboard"
-      >
-        Dashboard de Gestão
-      </button>
-      <!-- Botão Relatório Financeiro para gestores -->
-      <button 
-        v-if="isGestor" 
-        class="menu-btn finance-btn" 
-        @click="openFinancialReport"
-      >
-        Relatório Financeiro
-      </button>
-      <!-- Botão Gerenciar Usuários apenas para administradores -->
-      <button 
-        v-if="isAdmin" 
-        class="menu-btn admin-btn" 
-        @click="openUserManagementModal"
-      >
-        Gerenciar Usuários
-      </button>
-      <!-- Botão de Ajuda para todos os usuários -->
-      <button class="menu-btn help-btn" @click="openHelp">
-        Ajuda
-      </button>
-      <button class="menu-btn close-menu-btn" @click="toggleMenu">Fechar Menu</button>
-      <button class="menu-btn logout-btn" @click="logout">Sair</button>
+      <div class="menu-header">
+        <button class="close-menu-btn" @click="toggleMenu">X</button>
+      </div>
+      <div class="menu-content">
+        <button class="menu-btn" @click="openCreateOrderSection">Criar Pedido</button>
+        <button class="menu-btn" @click="openConsultOrdersSection">Consultar Pedidos</button>
+        <!-- Botão Dashboard apenas para gestores -->
+        <button 
+          v-if="isGestor" 
+          class="menu-btn gestor-btn" 
+          @click="openDashboard"
+        >
+          Dashboard de Gestão
+        </button>
+        <!-- Botão Relatório Financeiro para gestores -->
+        <button 
+          v-if="isGestor" 
+          class="menu-btn finance-btn" 
+          @click="openFinancialReport"
+        >
+          Relatório Financeiro
+        </button>
+        <!-- Botão Gerenciar Usuários apenas para administradores -->
+        <button 
+          v-if="isAdmin" 
+          class="menu-btn admin-btn" 
+          @click="openUserManagementModal"
+        >
+          Gerenciar Usuários
+        </button>
+        <!-- Botão Visualizador de Logs para administradores -->
+        <button 
+          v-if="isAdmin" 
+          class="menu-btn log-btn" 
+          @click="openLogViewer"
+        >
+          Visualizar Logs
+        </button>
+      </div>
+      
+      <!-- Botão Sair flutuante para mobile -->
+      <button class="floating-logout-btn" @click="confirmLogout">Sair</button>
     </div>
 
-    <div class="main-content" :class="{'has-content': isCreateOrderSectionOpen || isConsultOrdersSectionOpen || isPrintModalOpen || isEditOrderOpen || isUserManagementOpen || isFinancialReportOpen || isDashboardOpen}">
+    <div class="main-content" :class="{'has-content': isCreateOrderSectionOpen || isConsultOrdersSectionOpen || isEditOrderOpen || isUserManagementOpen || isFinancialReportOpen || isDashboardOpen}">
       <!-- O Dashboard foi movido para um componente modal separado e foi removido daqui -->
     </div>
 
@@ -110,15 +147,6 @@
       @update-order="handleEditOrder"
     />
 
-    <!-- Modal de Impressão de Pedido -->
-    <ModalImprimirPedido
-      v-if="isPrintModalOpen"
-      :isOpen="isPrintModalOpen"
-      :pedido="pedidoCriado"
-      @close="closePrintModal"
-      @new-order="openNewOrderFromPrintModal"
-    />
-
     <!-- Modal de Gerenciamento de Usuários -->
     <ModalGerenciarUsuarios
       v-if="isUserManagementOpen"
@@ -128,10 +156,12 @@
     />
 
     <!-- Modal de Relatório Financeiro -->
-    <ModalRelatorioFinanceiro
+    <ModalFinanceiro
       v-if="isFinancialReportOpen"
       :isOpen="isFinancialReportOpen"
       @close="closeFinancialReport"
+      @edit-pedido="openEditOrderSection"
+      @view-pedido="handlePrintModal"
     />
 
     <!-- Modal de Dashboard de Gestão -->
@@ -139,14 +169,60 @@
       v-if="isDashboardOpen"
       :isOpen="isDashboardOpen"
       @close="closeDashboard"
+      @open-order="handlePrintModal"
     />
 
-    <!-- Modal de Tutorial -->
-    <TutorialModal
-      v-if="isTutorialOpen"
-      :isOpen="isTutorialOpen"
-      @close="closeTutorial"
+    <!-- Modal de Visualização de Logs -->
+    <ModalLogViewer
+      v-if="isLogViewerOpen"
+      :isOpen="isLogViewerOpen"
+      @close="closeLogViewer"
+      @open-order="handlePrintModal"
     />
+    
+    <!-- Modal de Impressão de Pedido - deve ter a maior prioridade de renderização -->
+    <div class="high-priority-modal-container" v-if="isPrintModalOpen && pedidoCriado">
+      <ModalImprimirPedido
+        :isOpen="isPrintModalOpen"
+        :pedido="pedidoCriado"
+        :origin="previousOpenModal ? 'consultation' : 'creation'"
+        @close="closePrintModal"
+        @new-order="handleNewOrderFromPrintModal"
+      />
+    </div>
+    <!-- Modal de Confirmação de Logout -->
+    <div v-if="showLogoutConfirmation" class="logout-modal-overlay" @click="cancelLogout">
+      <div class="logout-modal-content" @click.stop>
+        <div class="logout-modal-header">
+          <div class="logout-icon">
+            <i class="material-icons">logout</i>
+          </div>
+          <h3>Confirmar Saída</h3>
+          <button class="close-modal-btn" @click="cancelLogout">
+            <i class="material-icons">close</i>
+          </button>
+        </div>
+        
+        <div class="logout-modal-body">
+          <p>Tem certeza de que deseja sair do sistema?</p>
+          <div class="logout-warning">
+            <i class="material-icons">info</i>
+            <span>Você precisará fazer login novamente para acessar o sistema.</span>
+          </div>
+        </div>
+        
+        <div class="logout-modal-footer">
+          <button class="logout-cancel-btn" @click="cancelLogout">
+            <i class="material-icons">close</i>
+            Cancelar
+          </button>
+          <button class="logout-confirm-btn" @click="proceedWithLogout">
+            <i class="material-icons">logout</i>
+            Sair do Sistema
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -156,14 +232,17 @@ import ModalConsultaPedidos from '@/components/ModalConsultaPedidos.vue';
 import ModalEditarPedido from '@/components/ModalEditarPedido.vue';
 import ModalImprimirPedido from '@/components/ModalImprimirPedido.vue';
 import ModalGerenciarUsuarios from '@/components/ModalGerenciarUsuarios.vue';
-import ModalRelatorioFinanceiro from '@/components/ModalRelatorioFinanceiro.vue';
+import ModalFinanceiro from '@/components/ModalFinanceiro.vue';
 import ModalDashboard from '@/components/ModalDashboard.vue';
-import TutorialModal from '@/components/TutorialModal.vue';
+import ModalLogViewer from '@/components/ModalLogViewer.vue';
+import NotificationIndicator from '@/components/NotificationIndicator.vue';
 import html2canvas from "html2canvas";
 // Importação modificada para evitar o erro de 'module is not defined'
 import * as axiosModule from "axios";
 const axios = axiosModule.default || axiosModule;
 import { Chart, registerables } from 'chart.js';
+import authService from '@/api/authService';
+import websocketService from '@/utils/websocket';
 
 // Registrar todos os componentes do Chart.js
 Chart.register(...registerables);
@@ -176,9 +255,10 @@ export default {
     ModalEditarPedido,
     ModalImprimirPedido,
     ModalGerenciarUsuarios,
-    ModalRelatorioFinanceiro,
+    ModalFinanceiro,
     ModalDashboard,
-    TutorialModal,
+    ModalLogViewer,
+    NotificationIndicator,
   },
   data() {
     return {
@@ -190,20 +270,56 @@ export default {
       isFinancialReportOpen: false,
       isUserManagementOpen: false,
       isMenuOpen: false,
-      isTutorialOpen: false,
       isMobile: false,
       pedidoCriado: null,
       selectedOrder: null,
       orders: [],
-      // Remover variáveis específicas do dashboard que não são mais necessárias
+      // Dados do usuário para o header
       userName: '',
+      userSetor: '',
+      userType: '',
       // Verificar permissões de usuário
       isAdmin: false,
-      isGestor: false
+      isGestor: false,
+      isLogViewerOpen: false,
+      // Adicionar variável para debug
+      debugInterval: null,
+      // Adicionar variável para rastrear modal aberto anteriormente
+      previousOpenModal: null,
+      // Modal de confirmação de logout
+      showLogoutConfirmation: false
     };
   },
+  computed: {
+    userTypeClass() {
+      return {
+        'admin-badge': this.userType === 'admin',
+        'gestor-badge': this.userType === 'gestor',
+        'comum-badge': this.userType === 'comum'
+      };
+    },
+    userTypeIcon() {
+      switch (this.userType) {
+        case 'admin':
+          return 'fas fa-crown';
+        case 'gestor':
+          return 'fas fa-user-tie';
+        default:
+          return 'fas fa-user';
+      }
+    },
+    userTypeLabel() {
+      switch (this.userType) {
+        case 'admin':
+          return 'Administrador';
+        case 'gestor':
+          return 'Gestor';
+        default:
+          return 'Usuário';
+      }
+    }
+  },
   created() {
-    console.log("AppMenu criado, verificando autenticação...");
     this.checkIfMobile();
     window.addEventListener("resize", this.checkIfMobile);
     
@@ -211,35 +327,41 @@ export default {
     const token = localStorage.getItem("access_token");
     const user = JSON.parse(localStorage.getItem("user"));
     
-    console.log("Token presente:", token ? "Sim" : "Não");
-    console.log("Usuário presente:", user ? "Sim" : "Não");
-    console.log("Tipo de usuário:", user?.tipo_usuario);
-    console.log("Primeiro login:", user?.primeiro_login ? "Sim" : "Não");
-    
     if (!token || !user) {
-      console.warn("Usuário não autenticado, redirecionando para login");
       this.$router.push({ name: "Login" });
     } else {
+      // Inicializar dados do usuário para o header
+      this.userName = user.nome || user.username || 'Usuário';
+      this.userSetor = user.setor || 'Escritório';
+      this.userType = user.tipo_usuario || 'comum';
+      
       this.isAdmin = user.tipo_usuario === "admin";
       this.isGestor = user.tipo_usuario === "gestor" || user.tipo_usuario === "admin";
-      
-      // Verificar se é o primeiro login do usuário
-      const urlSearchParams = new URLSearchParams(window.location.search);
-      const isFirstLogin = urlSearchParams.get('firstLogin') === 'true';
-      
-      console.log("Parâmetro firstLogin:", isFirstLogin ? "Sim" : "Não");
-      console.log("Tipo de usuário:", user.tipo_usuario);
-      
-      // Verificar se o tutorial deve ser exibido
-      if ((isFirstLogin || user.primeiro_login) && user.tipo_usuario === 'comum') {
-        console.log("Abrindo tutorial para novo usuário...");
-        // Se for o primeiro login de um usuário comum, mostrar o tutorial
-        this.openTutorial();
-      }
     }
+
+    // Conectar ao WebSocket
+    websocketService.connect();
+    
+    // Verificar se a conexão foi estabelecida
+    setTimeout(() => {
+      if (websocketService.checkConnection()) {
+        // Emitir evento para que outros componentes possam se conectar
+        window.dispatchEvent(new CustomEvent('websocket-ready', {
+          detail: { websocketService }
+        }));
+      } else {
+        websocketService.connect();
+      }
+    }, 2000);
+
+    // Listener para abrir modal de impressão via notificações
+    window.addEventListener('open-print-modal', this.handleOpenPrintModalFromNotification);
   },
   unmounted() {
     window.removeEventListener("resize", this.checkIfMobile);
+    window.removeEventListener('open-print-modal', this.handleOpenPrintModalFromNotification);
+    // Desconectar do WebSocket
+    websocketService.disconnect();
   },
   methods: {
     openCreateOrderSection() {
@@ -283,25 +405,156 @@ export default {
       this.isEditOrderOpen = false;
     },
     handlePrintModal(pedido) {
-      this.pedidoCriado = pedido;
-      this.isPrintModalOpen = true;
+      try {
+        // Limpar qualquer intervalo de debug anterior
+        if (this.debugInterval) {
+          clearInterval(this.debugInterval);
+          this.debugInterval = null;
+        }
+        
+        // Se recebermos apenas o ID do pedido em vez do objeto completo
+        if (typeof pedido === 'number' || (typeof pedido === 'string' && !isNaN(parseInt(pedido, 10)))) {
+          const pedidoId = typeof pedido === 'number' ? pedido : parseInt(pedido, 10);
+          
+          // Buscar os detalhes do pedido a partir do ID
+          this.fetchPedidoById(pedidoId);
+          return;
+        }
+        
+        // Verificar se o pedido tem as propriedades esperadas
+        if (!pedido || !pedido.id) {
+          alert('Pedido inválido ou sem ID.');
+          return;
+        }
+        
+        // Salvar qual modal está aberto antes de abrir o modal de impressão
+        this.savePreviousOpenModal();
+        
+        // Obter informações do usuário do localStorage
+        let userInfo = null;
+        try {
+          if (localStorage.getItem('user')) {
+            userInfo = JSON.parse(localStorage.getItem('user'));
+          }
+        } catch (e) {
+          // Silenciar erro em produção
+        }
+        
+        this.pedidoCriado = {
+          ...pedido,
+          // Definir valores padrão para campos que podem estar ausentes
+          descricao: pedido.descricao || '',
+          quantidade: pedido.quantidade || 0,
+          urgencia: pedido.urgencia || 'Normal',
+          categoria: pedido.categoria || 'Geral',
+          deliveryDate: pedido.deliveryDate || new Date().toISOString().split('T')[0],
+          observacao: pedido.observacao || '',
+          sender: pedido.sender || (userInfo ? userInfo.nome : '')
+        };
+        
+        // Diretamente definir como aberto, sem usar nextTick
+        this.isPrintModalOpen = true;
+        
+        // Forçar renderização direta
+        this.$forceUpdate();
+        
+        // Verificar se modal foi criado e tentar novamente se necessário
+        setTimeout(() => {
+          const modalElement = document.querySelector('.print-modal');
+          
+          if (!modalElement) {
+            this.isPrintModalOpen = false;
+            this.$forceUpdate();
+            
+            setTimeout(() => {
+              this.isPrintModalOpen = true;
+              this.$forceUpdate();
+            }, 100);
+          }
+        }, 100);
+      } catch (err) {
+        alert(`Erro ao abrir modal: ${err.message}`);
+      }
+    },
+    
+    // Método para lidar com abertura de modal via notificação
+    handleOpenPrintModalFromNotification(event) {
+      const pedidoId = event.detail.pedidoId;
+      
+      // Buscar os detalhes do pedido e abrir o modal
+      this.fetchPedidoById(pedidoId);
+    },
+    
+    // Método auxiliar para fechar todos os modais
+    closeAllModals() {
+      this.isCreateOrderSectionOpen = false;
+      this.isConsultOrdersSectionOpen = false;
+      this.isEditOrderOpen = false;
+      this.isFinancialReportOpen = false;
+      this.isDashboardOpen = false;
+      this.isUserManagementOpen = false;
+      this.isLogViewerOpen = false;
+      this.isMenuOpen = false;
+      this.isPrintModalOpen = false; // Fechar este também para garantir uma nova montagem
     },
     closePrintModal() {
       this.isPrintModalOpen = false;
+      
+      // Limpar qualquer intervalo de debug
+      if (this.debugInterval) {
+        clearInterval(this.debugInterval);
+        this.debugInterval = null;
+      }
+      
+      // Reabrir o modal anterior se houver algum
+      if (this.previousOpenModal) {
+        setTimeout(() => {
+          switch (this.previousOpenModal) {
+            case 'consulta':
+              this.isConsultOrdersSectionOpen = true;
+              break;
+            case 'dashboard':
+              this.isDashboardOpen = true;
+              break;
+            case 'logViewer':
+              this.isLogViewerOpen = true;
+              break;
+            case 'createOrder':
+              this.isCreateOrderSectionOpen = true;
+              break;
+            case 'editOrder':
+              this.isEditOrderOpen = true;
+              break;
+            case 'financialReport':
+              this.isFinancialReportOpen = true;
+              break;
+            case 'userManagement':
+              this.isUserManagementOpen = true;
+              break;
+          }
+        }, 100);
+      }
     },
-    openNewOrderFromPrintModal() {
+    handleNewOrderFromPrintModal() {
+      // Fechar o modal de impressão
       this.isPrintModalOpen = false;
+      
+      // Limpar qualquer modal anterior salvo pois estamos indo para outra tela
+      this.previousOpenModal = null;
+      
+      // Abrir a tela de criação de novo pedido
       this.isCreateOrderSectionOpen = true;
     },
-    logout() {
-      // Remove todos os itens relacionados à autenticação
-      localStorage.removeItem("user");
-      localStorage.removeItem("tipo_usuario");
-      localStorage.removeItem("token_type");
-      localStorage.removeItem("access_token");
-      
-      console.log("Logout realizado, redirecionando para Login");
-      this.$router.push({ name: "Login" });
+    async logout() {
+      try {
+        // Usa o serviço de autenticação para fazer logout
+        await authService.logout();
+      } catch (error) {
+        // Silenciar erro em produção
+      } finally {
+        // Redireciona para a página de login independentemente do resultado
+        this.$router.push({ name: "Login" });
+      }
     },
     toggleMenu() {
       this.isMenuOpen = !this.isMenuOpen;
@@ -322,15 +575,21 @@ export default {
         });
         this.orders = response.data;
       } catch (error) {
-        console.error("Erro ao carregar pedidos:", error);
+        // Silenciar erro em produção
       }
     },
     handleCreateOrder(pedidoCriado) {
+      // Salvar qual modal está aberto antes de abrir o modal de impressão
+      this.savePreviousOpenModal();
+      
       this.pedidoCriado = pedidoCriado;
       this.isPrintModalOpen = true;
       this.isCreateOrderSectionOpen = false;
     },
     async handleCreateOrderWithImage(pedidoCriado) {
+      // Salvar qual modal está aberto antes de abrir o modal de impressão
+      this.savePreviousOpenModal();
+      
       // Guardar o pedido temporariamente
       this.pedidoCriado = pedidoCriado;
       
@@ -377,10 +636,14 @@ export default {
             link.click();
           }
         } catch (error) {
-          console.error("Erro ao gerar imagem automática:", error);
+          // Silenciar erro em produção
         } finally {
-          // Fechar o modal de impressão após gerar a imagem
-          this.isPrintModalOpen = false;
+          // Não fechar o modal de impressão automaticamente
+          // O usuário deve fechá-lo manualmente para voltar ao modal anterior
+          // this.isPrintModalOpen = false;
+          
+          // Mostrar mensagem para o usuário
+          alert("Imagem do pedido gerada com sucesso!");
         }
       }, 500); // Dar um tempo para o DOM ser renderizado completamente
     },
@@ -408,692 +671,916 @@ export default {
     closeFinancialReport() {
       this.isFinancialReportOpen = false;
     },
-    openHelp() {
-      // Se for um usuário comum, abrir o tutorial
-      const user = JSON.parse(localStorage.getItem("user"));
-      if (user && user.tipo_usuario === 'comum') {
-        this.openTutorial();
-      } else {
-        // Para outros tipos de usuário, redirecionar para a página de ajuda
-        this.$router.push({ name: "Ajuda" });
+    openLogViewer() {
+      this.isLogViewerOpen = true;
+    },
+    closeLogViewer() {
+      this.isLogViewerOpen = false;
+    },
+    // Novo método para buscar um pedido pelo ID
+    async fetchPedidoById(pedidoId) {
+      // Limpar qualquer intervalo de debug anterior
+      if (this.debugInterval) {
+        clearInterval(this.debugInterval);
+        this.debugInterval = null;
       }
-      this.isMenuOpen = false;
-    },
-    openTutorial() {
-      this.isTutorialOpen = true;
-      this.isMenuOpen = false;
-    },
-    async closeTutorial() {
-      this.isTutorialOpen = false;
       
       try {
-        // Atualizar o campo primeiro_login no backend
         const token = localStorage.getItem("access_token");
-        if (token) {
-          const response = await axios.put(
-            `${process.env.VUE_APP_API_URL}/usuarios/primeiro-login`,
-            {},
-            {
-              headers: { Authorization: `Bearer ${token}` }
-            }
-          );
+        if (!token) {
+          alert("Sessão expirada. Faça login novamente.");
+          return;
+        }
+        
+        // Buscar todos os pedidos para encontrar este específico
+        const response = await axios.get(`${process.env.VUE_APP_API_URL}/pedidos`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (response && response.data && Array.isArray(response.data)) {
+          // Encontrar o pedido pelo ID
+          const pedido = response.data.find(p => p.id == pedidoId);
           
-          console.log("Primeiro login atualizado no backend:", response.data);
-          
-          // Atualizar também no localStorage
-          const user = JSON.parse(localStorage.getItem("user"));
-          if (user) {
-            user.primeiro_login = false;
-            localStorage.setItem("user", JSON.stringify(user));
+          if (pedido) {
+            // Salvar qual modal está aberto antes de abrir o modal de impressão
+            this.savePreviousOpenModal();
+            
+            // Garantir que todos os campos necessários existam
+            this.pedidoCriado = {
+              ...pedido,
+              // Garantir que todos os campos necessários existam
+              descricao: pedido.descricao || '',
+              quantidade: pedido.quantidade || 0,
+              urgencia: pedido.urgencia || 'Normal',
+              categoria: pedido.categoria || 'Geral',
+              deliveryDate: pedido.deliveryDate || new Date().toISOString().split('T')[0],
+              observacao: pedido.observacao || '',
+              sender: pedido.sender || (localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')).nome : '')
+            };
+            
+            // Abrir o modal
+            this.$nextTick(() => {
+              this.isPrintModalOpen = true;
+            });
+            
+            return true;
+          } else {
+            // Notificar o usuário
+            alert(`Pedido #${pedidoId} não encontrado. Verifique se o pedido existe.`);
+            return false;
           }
+        } else {
+          alert("Formato de resposta inválido ao buscar pedidos.");
+          return false;
         }
       } catch (error) {
-        console.error("Erro ao atualizar status de primeiro login:", error);
+        alert("Não foi possível carregar os detalhes do pedido. Tente novamente mais tarde.");
+        return false;
       }
-      
-      // Limpar parâmetros da URL para não reabrir o tutorial em atualizações de página
-      const currentUrl = window.location.href;
-      const urlWithoutParams = currentUrl.split('?')[0];
-      window.history.replaceState({}, document.title, urlWithoutParams);
+    },
+    savePreviousOpenModal() {
+      // Armazenar qual modal estava aberto anteriormente
+      if (this.isConsultOrdersSectionOpen) {
+        this.previousOpenModal = 'consulta';
+      } else if (this.isDashboardOpen) {
+        this.previousOpenModal = 'dashboard';
+      } else if (this.isLogViewerOpen) {
+        this.previousOpenModal = 'logViewer';
+      } else if (this.isCreateOrderSectionOpen) {
+        this.previousOpenModal = 'createOrder';
+      } else if (this.isEditOrderOpen) {
+        this.previousOpenModal = 'editOrder';
+      } else if (this.isFinancialReportOpen) {
+        this.previousOpenModal = 'financialReport';
+      } else if (this.isUserManagementOpen) {
+        this.previousOpenModal = 'userManagement';
+      } else {
+        this.previousOpenModal = null;
+      }
+    },
+    confirmLogout() {
+      // Exibir o modal de confirmação
+      this.showLogoutConfirmation = true;
+    },
+    proceedWithLogout() {
+      // Fechar o modal de confirmação
+      this.showLogoutConfirmation = false;
+      // Executar o logout
+      this.logout();
+    },
+    cancelLogout() {
+      // Apenas fecha o modal de confirmação
+      this.showLogoutConfirmation = false;
     },
   },
 };
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
-
 .app-container {
+  position: relative;
+  min-height: 100vh;
   display: flex;
-  font-family: 'Roboto', sans-serif;
-  color: #f5f5f5;
-  background-color: #1a1a1a;
-  height: 100vh;
+  background-color: #2c2c2c;
 }
 
-.sidebar {
-  width: 250px;
-  background-color: #2e2e2e;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding-top: 20px;
-  box-shadow: 2px 0 15px rgba(0, 0, 0, 0.5);
+/* Background com a logo */
+.background-logo {
   position: fixed;
   top: 0;
   left: 0;
-  height: 100%;
+  width: 100vw;
+  height: 100vh;
+  background-image: url('@/assets/logo.png');
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-size: 40%; /* Ajuste o tamanho conforme necessário */
+  opacity: 0.1; /* Transparência da logo */
   z-index: 1;
+  pointer-events: none; /* Permite clicar através da imagem */
 }
 
-.menu-btn {
-  background-color: #424242;
-  color: #f5f5f5;
-  font-weight: bold;
-  font-size: 1rem;
-  width: 80%;
-  margin: 10px 0;
-  padding: 12px 0;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
+/* Header do Menu */
+.menu-header-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4rem;
+  background: linear-gradient(135deg, #1a1a1a 0%, #2c2c2c 100%);
+  border-bottom: 1px solid #444;
+  z-index: var(--z-index-header, 200);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.menu-header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 100%;
+  padding: 0 var(--spacing-lg);
+  max-width: 100%;
+}
+
+.menu-title h2 {
+  margin: 0;
+  color: #fff;
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+  background: linear-gradient(90deg, #fff, #ccc);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.user-info {
+  display: block;
+  color: #aaa;
+  font-size: var(--font-size-sm);
+  margin-top: 0.25rem;
+}
+
+.menu-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.user-badge {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--border-radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
   transition: all 0.3s ease;
 }
 
-.logout-btn {
-  background-color: #ff5252;
+.user-badge.admin-badge {
+  background: linear-gradient(135deg, #b73c3c, #9a3232);
+  color: white;
+  box-shadow: 0 2px 8px rgba(183, 60, 60, 0.3);
 }
 
-.logout-btn:hover {
-  background-color: #ff3333;
+.user-badge.gestor-badge {
+  background: linear-gradient(135deg, #3c7bb7, #32689a);
+  color: white;
+  box-shadow: 0 2px 8px rgba(60, 123, 183, 0.3);
 }
 
-.admin-btn {
-  background-color: #FF5733;
-  border-color: #FF5733;
+.user-badge.comum-badge {
+  background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+  border: 1px solid #357abd;
 }
 
-.admin-btn:hover {
-  background-color: #e64a2e;
-  border-color: #e64a2e;
+.user-badge i {
+  font-size: var(--font-size-md);
 }
 
-.gestor-btn {
-  background-color: #5bc0de;
-  border-color: #5bc0de;
-}
-
-.gestor-btn:hover {
-  background-color: #666666;
-}
-
-.finance-btn {
-  background-color: #555555; /* Cinza neutro para Relatório Financeiro */
-}
-
-.finance-btn:hover {
-  background-color: #666666;
-}
-
-.main-content {
-  min-height: 100vh;
-  width: calc(100vw - 250px); 
-  margin-left: 250px;
-  padding: 40px;
-  background-color: #1f1f1f;
+/* Sidebar */
+.sidebar {
+  width: 16rem; /* Convertido de fixo para rem */
+  height: 100vh;
+  position: fixed;
+  top: 4rem; /* Ajustado para ficar abaixo do header */
+  left: 0;
+  background-color: #262626;
+  padding: var(--spacing-lg) 0;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  box-shadow: inset 0px 0px 10px rgba(0, 0, 0, 0.3);
-  position: relative;
+  gap: var(--spacing-sm);
   overflow-y: auto;
+  z-index: var(--z-index-sidebar, 100);
+  box-shadow: 0.25rem 0 1.25rem rgba(0, 0, 0, 0.2);
+  height: calc(100vh - 4rem); /* Ajustado para considerar o header */
 }
 
-/* Background com logo apenas quando não há conteúdo ativo */
-.main-content:not(.has-content) {
-  background-image: url('../components/favicon_logo_branco.png');
-  background-size: 70%; 
-  background-position: center;
-  background-repeat: no-repeat;
-  opacity: 0.3;
+/* Conteúdo principal */
+.main-content {
+  flex: 1;
+  margin-left: 16rem; /* Alinhado com a largura da sidebar */
+  margin-top: 4rem; /* Ajustado para ficar abaixo do header */
+  width: calc(100% - 16rem); /* Largura - sidebar */
+  min-height: calc(100vh - 4rem); /* Ajustado para considerar o header */
+  padding: var(--spacing-lg);
+  background-color: transparent; /* Alterado de #2c2c2c para transparente para mostrar o background */
+  overflow-y: auto;
+  transition: all 0.3s ease;
+  position: relative;
+  z-index: 2; /* Colocado acima do background-logo */
 }
 
 .main-content.has-content {
-  opacity: 1;
-  background-image: none;
+  padding: 0;
 }
 
-.open-menu-btn {
-  position: fixed;
-  top: 20px;
-  left: 20px;
-  background-color: #424242;
-  color: #f5f5f5;
-  padding: 10px 20px;
-  border-radius: 5px;
-  font-size: 1rem;
-  z-index: 1000;
+/* Botões do menu */
+.menu-btn {
+  display: block;
+  width: 90%;
+  margin: 0 auto var(--spacing-sm);
+  padding: 0.875rem 1.25rem; /* Convertido de 14px 20px para rem */
+  text-align: center;
+  background: linear-gradient(145deg, #3b3b3b, #2c2c2c);
+  color: white;
+  border: none;
+  border-radius: var(--border-radius-md);
   cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 500;
+  font-size: var(--font-size-md);
+  box-shadow: 0 0.25rem 0.625rem rgba(0, 0, 0, 0.3);
 }
 
+.menu-btn:hover {
+  transform: translateY(-0.1875rem); /* Convertido de -3px para rem */
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.4);
+  background: linear-gradient(145deg, #444, #333);
+}
+
+.menu-btn:active {
+  transform: translateY(-0.0625rem); /* Convertido de -1px para rem */
+}
+
+/* Botão para administrador */
+.admin-btn {
+  background: linear-gradient(145deg, #b73c3c, #9a3232);
+  color: white;
+}
+
+.admin-btn:hover {
+  background: linear-gradient(145deg, #c54040, #aa3636);
+}
+
+.gestor-btn {
+  background: linear-gradient(145deg, #3c7bb7, #32689a);
+  color: white;
+}
+
+.gestor-btn:hover {
+  background: linear-gradient(145deg, #4086c5, #3673aa);
+}
+
+.finance-btn {
+  background: linear-gradient(145deg, #5c3cb7, #4d329a);
+  color: white;
+}
+
+.finance-btn:hover {
+  background: linear-gradient(145deg, #6a44d0, #573aaa);
+}
+
+.logout-btn {
+  margin-top: auto;
+  background-color: #444;
+  border: 0.0625rem solid #555; /* Convertido de 1px para rem */
+}
+
+.logout-btn:hover {
+  background-color: #555;
+}
+
+/* Botão do menu mobile */
+.open-menu-btn {
+  display: none;
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 90;
+  background-color: #333;
+  color: white;
+  border: none;
+  border-radius: var(--border-radius-md);
+  padding: 0.625rem 1.25rem; /* Convertido de 10px 20px para rem */
+  cursor: pointer;
+  box-shadow: 0 0.25rem 0.625rem rgba(0, 0, 0, 0.3);
+}
+
+/* Menu de tela cheia no mobile */
 .fullscreen-menu {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
-  height: 100%;
-  background-color: #1a1a1a;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.95);
+  z-index: 1000;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  z-index: 2000;
-  padding: 20px;
-}
-
-.close-menu-btn {
-  margin-top: 20px;
-  background-color: #424242;
-  color: #f5f5f5;
-  font-weight: bold;
-  width: 80%;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-}
-
-/* Dashboard Styles */
-.dashboard-grid {
-  width: 100%;
-  display: grid;
-  grid-gap: 20px;
-  padding: 20px 0;
-}
-
-.dashboard-title {
-  grid-column: 1 / -1;
-  text-align: center;
-  font-size: 28px;
-  margin-bottom: 20px;
-  color: #f5f5f5;
-}
-
-.dashboard-row {
-  display: grid;
-  grid-gap: 20px;
-  width: 100%;
-}
-
-.kpi-row {
-  grid-template-columns: repeat(3, 1fr);
-}
-
-.chart-row {
-  grid-template-columns: repeat(3, 1fr);
-  min-height: 300px;
-}
-
-.split-row {
-  grid-template-columns: 1fr 1fr;
-}
-
-.kpi-card {
-  background-color: #333;
-  border-radius: 10px;
-  padding: 20px;
-  text-align: center;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  transition: transform 0.3s, box-shadow 0.3s;
-}
-
-.kpi-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
-}
-
-.kpi-card h3 {
-  font-size: 16px;
-  margin-bottom: 15px;
-  color: #aaa;
-}
-
-.kpi-value {
-  font-size: 32px;
-  font-weight: bold;
-  color: #fff;
-}
-
-.chart-wrapper {
-  background-color: #333;
-  border-radius: 10px;
-  padding: 20px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  display: flex;
-  flex-direction: column;
-  height: 300px;
-}
-
-.chart-wrapper h3 {
-  margin-bottom: 10px;
-  text-align: center;
-  font-size: 16px;
-  color: #aaa;
-}
-
-.activities-section, .reports-section {
-  background-color: #333;
-  border-radius: 10px;
-  padding: 20px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  min-height: 400px;
-  max-height: 500px;
-  display: flex;
-  flex-direction: column;
-}
-
-.activities-section h2, .reports-section h2 {
-  margin-bottom: 15px;
-  font-size: 20px;
-  color: #f5f5f5;
-  border-bottom: 1px solid #444;
-  padding-bottom: 10px;
-}
-
-.activity-feed {
-  flex: 1;
+  justify-content: flex-start;
+  padding: 0;
   overflow-y: auto;
-  padding-right: 10px;
 }
 
-.activity-list {
+/* Novos estilos para a estrutura do menu */
+.menu-header {
+  width: 100%;
   display: flex;
-  flex-direction: column;
-  gap: 10px;
+  justify-content: flex-end;
+  padding: 1rem;
+  position: sticky;
+  top: 0;
+  z-index: 1002;
+  background-color: rgba(0, 0, 0, 0.8);
 }
 
-.activity-item {
-  background-color: #444;
-  border-radius: 8px;
-  padding: 15px;
+.menu-content {  
+  width: 100%;  
+  display: flex;  
+  flex-direction: column;  
+  align-items: center;  
+  flex: 1;  
+  overflow-y: auto;  
+  padding: 1rem 0 2rem 0;  
+  /* Ajustando a altura para evitar scrolling desnecessário */  
+  height: auto;  
+  max-height: calc(100vh - 10rem); /* Altura máxima considerando o header e o botão flutuante */
+}
+
+.menu-footer {
+  width: 100%;
   display: flex;
-  gap: 15px;
-  transition: background-color 0.3s;
-}
-
-.activity-item:hover {
-  background-color: #555;
-}
-
-.activity-icon {
-  display: flex;
-  align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  color: white;
-  flex-shrink: 0;
+  padding: 1rem 0;
+  position: sticky;
+  bottom: 0;
+  z-index: 1002;
+  background-color: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(5px);
 }
 
-.activity-icon-create {
-  background-color: #4CAF50;
+.menu-footer .logout-btn {
+  background: linear-gradient(145deg, #b73c3c, #9a3232);
+  width: 80%;
+  max-width: 25rem;
+  margin-bottom: 0;
 }
 
-.activity-icon-edit {
-  background-color: #2196F3;
+.menu-footer .logout-btn:hover {
+  background: linear-gradient(145deg, #c54040, #aa3636);
 }
 
-.activity-icon-complete {
-  background-color: #9C27B0;
+.fullscreen-menu .menu-btn {
+  margin-bottom: var(--spacing-md);
+  width: 80%;
+  max-width: 25rem;
 }
 
-.activity-icon-cancel {
-  background-color: #FF5722;
-}
-
-.activity-icon-login {
-  background-color: #607D8B;
-}
-
-.activity-icon-default {
-  background-color: #9E9E9E;
-}
-
-.activity-content {
-  flex: 1;
-}
-
-.activity-header {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 5px;
-}
-
-.activity-user {
-  font-weight: bold;
-  color: #e0e0e0;
-}
-
-.activity-date {
-  color: #aaa;
-  font-size: 0.85em;
-}
-
-.activity-description {
-  margin-bottom: 5px;
-  color: #ccc;
-}
-
-.activity-details a {
-  color: #8ab4f8;
-  cursor: pointer;
-  text-decoration: underline;
-}
-
-.view-order-btn {
-  display: inline-block;
-  background-color: #4a6da7;
-  color: white !important;
-  padding: 5px 10px;
-  border-radius: 4px;
-  text-decoration: none !important;
-  font-size: 0.85em;
-  margin-top: 5px;
-  transition: background-color 0.3s, transform 0.2s;
-}
-
-.view-order-btn:hover {
-  background-color: #5e82bc;
-  transform: translateY(-2px);
-}
-
-.report-options {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 15px;
-  margin-bottom: 20px;
-}
-
-.form-group {
-  margin-bottom: 15px;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 5px;
-  color: #aaa;
-}
-
-.form-group select, .form-group input {
-  width: 100%;
-  padding: 8px;
-  background-color: #444;
-  border: 1px solid #555;
-  border-radius: 4px;
-  color: #f5f5f5;
-}
-
-.date-range {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-
-.btn-generate {
-  width: 100%;
-  padding: 12px;
-  background-color: #2ecc71;
+/* Estilo para o botão fechar */
+.menu-header .close-menu-btn {
+  background-color: #333;
   color: white;
   border: none;
-  border-radius: 5px;
-  font-weight: bold;
-  cursor: pointer;
-  transition: background-color 0.3s;
-}
-
-.btn-generate:hover {
-  background-color: #27ae60;
-}
-
-.loading {
+  border-radius: 50%;
+  width: 2.5rem;
+  height: 2.5rem;
+  font-size: 1rem;
   display: flex;
-  justify-content: center;
   align-items: center;
-  height: 100px;
-  color: #aaa;
-}
-
-.empty-feed {
-  display: flex;
   justify-content: center;
-  align-items: center;
-  height: 100px;
-  color: #aaa;
-  font-style: italic;
+  padding: 0;
+  margin: 0;
 }
 
-.financial-summary-section {
-  background-color: #2c3e50;
-  border-radius: 10px;
-  padding: 20px;
-  margin-top: 20px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-}
-
-.financial-kpis {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
-  margin-bottom: 20px;
-}
-
-.financial-kpi {
-  background-color: #34495e;
-  border-radius: 8px;
-  padding: 15px;
-  text-align: center;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-.financial-kpi h3 {
-  margin: 0 0 10px 0;
-  font-size: 16px;
-  color: #ccc;
-}
-
-.financial-kpi .kpi-value {
-  font-size: 24px;
-  font-weight: bold;
-}
-
-.positive-balance .kpi-value {
-  color: #2ecc71;
-}
-
-.negative-balance .kpi-value {
-  color: #e74c3c;
-}
-
-.financial-chart-wrapper {
-  background-color: #34495e;
-  border-radius: 8px;
-  padding: 15px;
-  height: 300px;
-  margin-top: 20px;
-}
-
-.financial-chart-wrapper h3 {
-  margin: 0 0 15px 0;
-  font-size: 18px;
-  text-align: center;
-  color: #f5f5f5;
-}
-
-.activity-icon-finance {
-  background-color: #9b59b6;
-}
-
-.help-btn {
-  background-color: #5cb85c;
-  border-color: #5cb85c;
-}
-
-.help-btn:hover {
-  background-color: #4cae4c;
-  border-color: #4cae4c;
-}
-
+/* Responsividade */
 @media (max-width: 768px) {
+  .menu-header-content {
+    padding: 0 var(--spacing-md);
+  }
+  
+  .menu-title h2 {
+    font-size: var(--font-size-lg);
+  }
+  
+  .user-info {
+    font-size: var(--font-size-xs);
+  }
+  
+  .user-badge {
+    padding: var(--spacing-xs);
+    font-size: var(--font-size-xs);
+  }
+  
+  .user-badge span {
+    display: none; /* Ocultar texto no mobile, manter apenas ícone */
+  }
+  
   .sidebar {
     display: none;
   }
+  
   .main-content {
-    width: 100vw;
+    width: 100%;
     margin-left: 0;
-    padding: 20px;
+    margin-top: 4rem; /* Manter margem do header */
+    padding: var(--spacing-md);
   }
   
-  .kpi-row, .chart-row, .split-row {
-    grid-template-columns: 1fr;
+  .open-menu-btn {
+    display: block;
+    top: 4.5rem; /* Ajustado para ficar abaixo do header */
   }
   
-  .dashboard-title {
-    font-size: 22px;
-  }
-  .financial-kpis {
-    grid-template-columns: 1fr;
+  /* Ajustes específicos para mobile */
+  .fullscreen-menu {
+    max-height: 100vh;
+    overflow-y: auto;
+    justify-content: flex-start;
+    padding: 0;
+    padding-bottom: 6rem; /* Espaço adicional para garantir que conteúdo não fique sob o botão flutuante */
+    top: 4rem; /* Começar abaixo do header */
+    height: calc(100vh - 4rem); /* Ajustar altura */
   }
 }
 
 /* Otimizações para tablets e telas 1024x768 */
 @media (min-width: 769px) and (max-width: 1024px) {
   .sidebar {
-    width: 200px;
+    width: 12.5rem; /* Convertido de 200px para rem */
   }
   
   .main-content {
-    width: calc(100vw - 200px);
-    margin-left: 200px;
-    padding: 25px;
-  }
-  
-  .kpi-row {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .kpi-card:last-child {
-    grid-column: span 2;
-  }
-  
-  .chart-row {
-    grid-template-columns: 1fr;
-  }
-  
-  .financial-kpis {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  
-  .financial-kpi:last-child {
-    grid-column: span 2;
+    width: calc(100% - 12.5rem);
+    margin-left: 12.5rem;
+    padding: var(--spacing-lg);
   }
   
   .menu-btn {
-    font-size: 14px;
-    padding: 10px 15px;
+    font-size: 0.875rem; /* Convertido de 14px para rem */
+    padding: 0.625rem 0.9375rem; /* Convertido de 10px 15px para rem */
   }
 }
 
 /* Otimizações para telas entre 1025px e 1200px */
 @media (min-width: 1025px) and (max-width: 1200px) {
-  .chart-row {
-    grid-template-columns: 1fr 1fr;
-  }
-  
-  .chart-wrapper:last-child {
-    grid-column: span 2;
-  }
-  
   .main-content {
-    padding: 30px;
+    padding: var(--spacing-lg);
   }
 }
 
 /* Otimizações para telas Full HD (1920x1080) */
 @media (min-width: 1367px) and (max-width: 1920px) {
   .main-content {
-    padding: 40px 60px;
+    padding: 2.5rem 3.75rem; /* Convertido de 40px 60px para rem */
   }
   
   .sidebar {
-    width: 270px;
+    width: 16.875rem; /* Convertido de 270px para rem */
   }
   
   .main-content {
-    width: calc(100vw - 270px);
-    margin-left: 270px;
+    width: calc(100% - 16.875rem);
+    margin-left: 16.875rem;
   }
   
   .menu-btn {
-    padding: 15px 25px;
-    font-size: 18px;
-  }
-  
-  .dashboard-title {
-    font-size: 32px;
-  }
-  
-  .kpi-card {
-    padding: 25px;
-  }
-  
-  .kpi-card h3 {
-    font-size: 18px;
-  }
-  
-  .kpi-value {
-    font-size: 38px;
+    padding: 0.9375rem 1.5625rem; /* Convertido de 15px 25px para rem */
+    font-size: 1.125rem; /* Convertido de 18px para rem */
   }
 }
 
 /* Otimizações para telas maiores que Full HD */
 @media (min-width: 1921px) {
   .sidebar {
-    width: 300px;
+    width: 18.75rem; /* Convertido de 300px para rem */
   }
   
   .main-content {
-    width: calc(100vw - 300px);
-    margin-left: 300px;
-    padding: 50px 80px;
+    width: calc(100% - 18.75rem);
+    margin-left: 18.75rem;
+    padding: 3.125rem 5rem; /* Convertido de 50px 80px para rem */
   }
   
   .menu-btn {
-    padding: 18px 30px;
-    font-size: 20px;
-    margin-bottom: 15px;
+    padding: 1.125rem 1.875rem; /* Convertido de 18px 30px para rem */
+    font-size: 1.25rem; /* Convertido de 20px para rem */
+    margin-bottom: 0.9375rem; /* Convertido de 15px para rem */
   }
-  
-  .dashboard-title {
-    font-size: 36px;
+}
+
+/* Estilos para seções específicas */
+.order-section {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0;
+  background-color: transparent;
+}
+
+/* Container de alta prioridade para modais */
+.high-priority-modal-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 99999;
+}
+
+.high-priority-modal-container > * {
+  pointer-events: auto;
+}
+
+/* Espaçador antes do botão Sair */
+.logout-spacer {
+  flex-grow: 1;
+  min-height: 2rem;
+  margin-top: 1rem;
+}
+
+/* Estilo para o botão Sair */
+.logout-btn {
+  background: linear-gradient(145deg, #b73c3c, #9a3232);
+  color: white;
+  font-weight: bold;
+}
+
+.logout-btn:hover {
+  background: linear-gradient(145deg, #c54040, #aa3636);
+}
+
+/* Modal de Confirmação de Logout */
+.logout-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.85);
+  z-index: var(--z-index-modal);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: opacity 0.3s ease-in-out;
+  overflow-y: auto;
+  padding: var(--spacing-md);
+  box-sizing: border-box;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.logout-modal-content {
+  background-color: #1f1f1f;
+  color: #f5f5f5;
+  border-radius: var(--border-radius-lg);
+  width: 100%;
+  max-width: 500px;
+  border: 1px solid #333;
+  overflow: hidden;
+  animation: modalSlideIn 0.3s ease-out;
+}
+
+.logout-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-lg);
+  border-bottom: 1px solid #333;
+  background-color: #2a2a2a;
+}
+
+.logout-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  background-color: #b73c3c;
+  border-radius: 50%;
+  margin-right: var(--spacing-md);
+  flex-shrink: 0;
+}
+
+.logout-icon i {
+  color: white;
+  font-size: 1.5rem;
+}
+
+.logout-modal-header h3 {
+  margin: 0;
+  font-size: var(--font-size-xl);
+  color: #f5f5f5;
+  font-weight: 600;
+  flex: 1;
+}
+
+.close-modal-btn {
+  background-color: #444;
+  border: 1px solid #555;
+  color: #f5f5f5;
+  padding: var(--spacing-xs);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: var(--font-size-lg);
+  width: 2.5rem;
+  height: 2.5rem;
+  flex-shrink: 0;
+}
+
+.close-modal-btn:hover {
+  background-color: #555;
+  border-color: #666;
+  transform: rotate(90deg);
+}
+
+.logout-modal-body {
+  padding: var(--spacing-lg);
+  text-align: center;
+}
+
+.logout-modal-body p {
+  margin: 0 0 var(--spacing-md) 0;
+  color: #f5f5f5;
+  font-size: var(--font-size-lg);
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.logout-warning {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #444;
+  border: 1px solid #555;
+  border-radius: var(--border-radius-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  margin-top: var(--spacing-md);
+  gap: var(--spacing-sm);
+}
+
+.logout-warning i {
+  color: #ffc107;
+  font-size: var(--font-size-lg);
+  flex-shrink: 0;
+}
+
+.logout-warning span {
+  color: #ddd;
+  font-size: var(--font-size-sm);
+  line-height: 1.4;
+}
+
+.logout-modal-footer {
+  padding: var(--spacing-lg);
+  border-top: 1px solid #333;
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-md);
+  background-color: #262626;
+}
+
+.logout-cancel-btn, .logout-confirm-btn {
+  display: flex;
+  align-items: center;
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border: none;
+  border-radius: var(--border-radius-md);
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  gap: var(--spacing-xs);
+  min-width: 8rem;
+  justify-content: center;
+}
+
+.logout-cancel-btn {
+  background-color: #444;
+  border: 1px solid #555;
+  color: #f5f5f5;
+}
+
+.logout-cancel-btn:hover {
+  background-color: #555;
+  transform: translateY(-1px);
+}
+
+.logout-confirm-btn {
+  background-color: #b73c3c;
+  color: white;
+  border: none;
+}
+
+.logout-confirm-btn:hover {
+  background-color: #9a3232;
+  transform: translateY(-1px);
+}
+
+.logout-confirm-btn:active {
+  transform: translateY(0);
+}
+
+/* Animações */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
   }
-  
-  .kpi-row, .chart-row {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 30px;
+  to {
+    opacity: 1;
   }
-  
-  .kpi-card {
-    padding: 30px;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-30px) scale(0.95);
   }
-  
-  .kpi-card h3 {
-    font-size: 20px;
-    margin-bottom: 20px;
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
-  
-  .kpi-value {
-    font-size: 42px;
+}
+
+/* Ajustes específicos para botão Sair no sidebar */
+.sidebar .logout-btn {
+  width: 90%;
+  margin: 0 auto;
+}
+
+/* Responsividade para o Modal de Logout */
+@media (max-width: 768px) {
+  .logout-modal-overlay {
+    padding: var(--spacing-sm);
+  }
+
+  .logout-modal-content {
+    max-width: 95%;
+  }
+
+  .logout-modal-header {
+    padding: var(--spacing-md);
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+  }
+
+  .logout-modal-header h3 {
+    font-size: var(--font-size-lg);
+  }
+
+  .logout-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    margin-right: var(--spacing-sm);
+  }
+
+  .logout-icon i {
+    font-size: 1.25rem;
+  }
+
+  .logout-modal-body {
+    padding: var(--spacing-md);
+  }
+
+  .logout-modal-body p {
+    font-size: var(--font-size-md);
+  }
+
+  .logout-warning {
+    flex-direction: column;
+    text-align: center;
+    gap: var(--spacing-xs);
+  }
+
+  .logout-modal-footer {
+    padding: var(--spacing-md);
+    flex-direction: column;
+    gap: var(--spacing-sm);
+  }
+
+  .logout-cancel-btn, .logout-confirm-btn {
+    width: 100%;
+    padding: var(--spacing-md);
+    font-size: var(--font-size-md);
+  }
+}
+
+@media (max-width: 480px) {
+  .logout-modal-overlay {
+    padding: var(--spacing-xs);
+  }
+
+  .logout-modal-content {
+    max-width: 98%;
+  }
+
+  .logout-modal-header {
+    padding: var(--spacing-sm);
+  }
+
+  .logout-modal-header h3 {
+    font-size: var(--font-size-md);
+  }
+
+  .logout-icon {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .logout-icon i {
+    font-size: 1rem;
+  }
+
+  .logout-modal-body {
+    padding: var(--spacing-sm);
+  }
+
+  .logout-modal-body p {
+    font-size: var(--font-size-sm);
+  }
+
+  .logout-warning span {
+    font-size: var(--font-size-xs);
+  }
+
+  .logout-modal-footer {
+    padding: var(--spacing-sm);
+  }
+
+  .logout-cancel-btn, .logout-confirm-btn {
+    padding: var(--spacing-sm);
+    font-size: var(--font-size-sm);
+    min-width: auto;
+  }
+}
+
+/* Botão sair flutuante para mobile */
+.floating-logout-btn {
+  position: fixed;
+  bottom: 4.5rem; /* Posicionado mais alto para evitar a barra do navegador */
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80%;
+  max-width: 20rem;
+  padding: 1.25rem;
+  background-color: #b73c3c;
+  color: white;
+  font-weight: bold;
+  font-size: 1.2rem;
+  border: none;
+  border-radius: 0.5rem;
+  z-index: 1010; /* Garantir que esteja acima de tudo */
+  cursor: pointer;
+}
+
+.floating-logout-btn:active {
+  background-color: #9a3232;
+  transform: translateX(-50%) scale(0.98);
+}
+
+@media (max-height: 600px) {
+  /* Para telas muito pequenas em altura */
+  .floating-logout-btn {
+    bottom: 3.5rem;
+    padding: 0.75rem;
   }
 }
 </style>

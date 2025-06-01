@@ -62,6 +62,8 @@ class Pedido(BaseModel):
     data_orcamento: Optional[datetime] = None  # Data de registro do orçamento
     data_custo_real: Optional[datetime] = None  # Data de registro do custo real
     fornecedor: Optional[str] = None  # Fornecedor escolhido
+    # Dados de conclusão detalhados
+    conclusao_dados: Optional[dict] = None  # Dados completos da conclusão do pedido
 
     class Config:
         json_encoders = {
@@ -107,11 +109,14 @@ class PedidoHistorico(BaseModel):
 # Modelo de atividade para o MongoDB
 class Atividade(BaseModel):
     id: Optional[str] = None
-    tipo: str  # criacao, edicao, conclusao, cancelamento, login, registro, orcamento
+    tipo: str  # criacao, edicao, conclusao, cancelamento, login, registro, orcamento, seguranca, erro
     descricao: str
     usuario_nome: str
     data: datetime = Field(default_factory=datetime.now)
     pedido_id: Optional[int] = None
+    ip_address: Optional[str] = None
+    user_agent: Optional[str] = None
+    dados_adicionais: Optional[dict] = None
     
     class Config:
         json_encoders = {

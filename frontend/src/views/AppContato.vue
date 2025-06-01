@@ -144,11 +144,11 @@ export default {
 <style scoped>
 /* Componentes específicos desta página */
 .logo-container {
-  margin-bottom: 20px;
+  margin-bottom: var(--spacing-md);
 }
 
 .logo {
-  max-width: 150px;
+  max-width: 9.375rem; /* Convertido de 150px para rem */
   height: auto;
 }
 
@@ -157,9 +157,9 @@ export default {
   flex-direction: column;
   align-items: center;
   width: 100%;
-  max-width: 1200px;
+  max-width: 75rem; /* Convertido de 1200px para rem */
   margin: 0 auto;
-  padding: 40px 20px;
+  padding: var(--spacing-xl) var(--spacing-md);
 }
 
 /* Sobrescrever estilos específicos */
@@ -170,42 +170,42 @@ p {
 .form-container {
   display: flex;
   flex-wrap: wrap;
-  gap: 30px;
+  gap: var(--spacing-lg);
   width: 100%;
-  margin-bottom: 30px;
+  margin-bottom: var(--spacing-lg);
 }
 
 form {
   flex: 1;
-  min-width: 300px;
+  min-width: 18.75rem; /* Convertido de 300px para rem */
   background: linear-gradient(145deg, #3b3b3b, #2c2c2c);
-  padding: 30px;
-  border-radius: 12px;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+  padding: var(--spacing-lg);
+  border-radius: var(--border-radius-lg);
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.3);
 }
 
 .contact-info {
   flex: 1;
-  min-width: 300px;
+  min-width: 18.75rem; /* Convertido de 300px para rem */
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: var(--spacing-md);
 }
 
 .input-box {
   position: relative;
-  margin-bottom: 25px;
+  margin-bottom: 1.5625rem; /* Convertido de 25px para rem */
 }
 
 .input-box input, 
 .input-box textarea {
   width: 100%;
-  padding: 15px 15px 15px 45px;
+  padding: 0.9375rem 0.9375rem 0.9375rem 2.8125rem; /* Convertido de 15px 15px 15px 45px para rem */
   background-color: #444;
   border: 1px solid #555;
-  border-radius: 8px;
+  border-radius: var(--border-radius-md);
   color: #fff;
-  font-size: 16px;
+  font-size: var(--font-size-md);
   transition: all 0.3s ease;
 }
 
@@ -215,8 +215,8 @@ form {
 
 .input-box label {
   position: absolute;
-  left: 45px;
-  top: 15px;
+  left: 2.8125rem; /* Convertido de 45px para rem */
+  top: 0.9375rem; /* Convertido de 15px para rem */
   color: #999;
   pointer-events: none;
   transition: all 0.3s ease;
@@ -227,7 +227,7 @@ form {
 .input-box input:not(:placeholder-shown),
 .input-box textarea:not(:placeholder-shown) {
   border-color: #66ccff;
-  box-shadow: 0 0 8px rgba(102, 204, 255, 0.3);
+  box-shadow: 0 0 0.5rem rgba(102, 204, 255, 0.3);
   outline: none;
 }
 
@@ -235,55 +235,55 @@ form {
 .input-box textarea:focus ~ label,
 .input-box input:not(:placeholder-shown) ~ label,
 .input-box textarea:not(:placeholder-shown) ~ label {
-  top: -10px;
-  left: 15px;
+  top: -0.625rem; /* Convertido de -10px para rem */
+  left: 0.9375rem; /* Convertido de 15px para rem */
   background-color: #2c2c2c;
-  padding: 0 5px;
-  font-size: 14px;
+  padding: 0 0.3125rem; /* Convertido de 0 5px para rem */
+  font-size: var(--font-size-sm);
   color: #66ccff;
 }
 
 .input-icon {
   position: absolute;
-  left: 15px;
-  top: 17px;
+  left: 0.9375rem; /* Convertido de 15px para rem */
+  top: 1.0625rem; /* Convertido de 17px para rem */
   color: #999;
 }
 
 .textarea .input-icon {
-  top: 17px;
+  top: 1.0625rem; /* Convertido de 17px para rem */
 }
 
 .info-item {
   display: flex;
   align-items: center;
   background: linear-gradient(145deg, #3b3b3b, #2c2c2c);
-  padding: 20px;
-  border-radius: 12px;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+  padding: var(--spacing-md);
+  border-radius: var(--border-radius-lg);
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.3);
 }
 
 .info-icon {
-  font-size: 24px;
-  width: 50px;
-  height: 50px;
+  font-size: 1.5rem; /* Convertido de 24px para rem */
+  width: 3.125rem; /* Convertido de 50px para rem */
+  height: 3.125rem; /* Convertido de 50px para rem */
   background: #444;
   border-radius: 50%;
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-right: 15px;
+  margin-right: 0.9375rem; /* Convertido de 15px para rem */
   color: #fff;
 }
 
 .info-text h3 {
-  font-size: 18px;
-  margin-bottom: 5px;
+  font-size: var(--font-size-lg);
+  margin-bottom: 0.3125rem; /* Convertido de 5px para rem */
   color: #eee;
 }
 
 .info-text p {
-  font-size: 16px;
+  font-size: var(--font-size-md);
   color: #aaa;
   margin: 0;
   text-align: left;
@@ -291,56 +291,56 @@ form {
 
 .btn-submit {
   width: 100%;
-  padding: 14px;
+  padding: 0.875rem; /* Convertido de 14px para rem */
   background: linear-gradient(145deg, #3b3b3b, #2c2c2c);
   color: #fff;
   border: none;
-  border-radius: 8px;
-  font-size: 16px;
+  border-radius: var(--border-radius-md);
+  font-size: var(--font-size-md);
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0.3125rem 0.9375rem rgba(0, 0, 0, 0.3);
 }
 
 .btn-submit:hover {
   background: linear-gradient(145deg, #444, #333);
-  transform: translateY(-3px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+  transform: translateY(-0.1875rem); /* Convertido de -3px para rem */
+  box-shadow: 0 0.5rem 1.25rem rgba(0, 0, 0, 0.4);
 }
 
 .action-buttons {
-  margin-top: 20px;
+  margin-top: var(--spacing-md);
 }
 
 .btn-secondary {
   display: inline-block;
-  padding: 14px 30px;
-  font-size: 16px;
+  padding: 0.875rem 1.875rem; /* Convertido de 14px 30px para rem */
+  font-size: var(--font-size-md);
   font-weight: 600;
   text-decoration: none;
-  border-radius: 8px;
+  border-radius: var(--border-radius-md);
   transition: all 0.3s ease;
   background: transparent;
   color: #fff;
   border: 2px solid #444;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 0.25rem 0.625rem rgba(0, 0, 0, 0.2);
 }
 
 .btn-secondary:hover {
   background: rgba(255, 255, 255, 0.05);
-  transform: translateY(-3px);
-  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+  transform: translateY(-0.1875rem); /* Convertido de -3px para rem */
+  box-shadow: 0 0.375rem 0.9375rem rgba(0, 0, 0, 0.3);
 }
 
 /* Responsividade */
 @media (max-width: 1024px) {
   .contact-section {
-    padding: 30px 20px;
+    padding: var(--spacing-lg) var(--spacing-md);
   }
   
   form, .contact-info {
-    min-width: 280px;
+    min-width: 17.5rem; /* Convertido de 280px para rem */
   }
 }
 
@@ -351,51 +351,51 @@ form {
   
   .input-box input, 
   .input-box textarea {
-    padding: 12px 12px 12px 40px;
-    font-size: 15px;
+    padding: 0.75rem 0.75rem 0.75rem 2.5rem; /* Convertido de 12px 12px 12px 40px para rem */
+    font-size: var(--font-size-md);
   }
   
   .input-box label {
-    left: 40px;
-    top: 12px;
+    left: 2.5rem; /* Convertido de 40px para rem */
+    top: 0.75rem; /* Convertido de 12px para rem */
   }
   
   .input-icon {
-    left: 12px;
-    top: 14px;
+    left: 0.75rem; /* Convertido de 12px para rem */
+    top: 0.875rem; /* Convertido de 14px para rem */
   }
   
   .textarea .input-icon {
-    top: 14px;
+    top: 0.875rem; /* Convertido de 14px para rem */
   }
 }
 
 @media (max-width: 480px) {
   .contact-section {
-    padding: 20px 15px;
+    padding: var(--spacing-md) var(--spacing-sm);
   }
   
   .input-box {
-    margin-bottom: 20px;
+    margin-bottom: var(--spacing-md);
   }
   
   .info-icon {
-    width: 40px;
-    height: 40px;
-    font-size: 18px;
+    width: 2.5rem; /* Convertido de 40px para rem */
+    height: 2.5rem; /* Convertido de 40px para rem */
+    font-size: var(--font-size-lg);
   }
   
   .info-text h3 {
-    font-size: 16px;
+    font-size: var(--font-size-md);
   }
   
   .info-text p {
-    font-size: 14px;
+    font-size: var(--font-size-sm);
   }
   
   .btn-submit {
-    padding: 12px;
-    font-size: 14px;
+    padding: 0.75rem; /* Convertido de 12px para rem */
+    font-size: var(--font-size-sm);
   }
 }
 </style>
