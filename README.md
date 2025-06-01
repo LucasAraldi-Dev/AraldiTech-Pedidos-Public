@@ -8,7 +8,7 @@ Sistema moderno de gestão de pedidos com interface intuitiva e responsiva.<br/>
 Suporte completo para autenticação JWT, dashboard interativo e hierarquia de usuários.<br/>
 Deploy **GRATUITO** com um clique da sua aplicação privada de gestão de pedidos.
 
-**Português (Brasil)** · [📋 Documentação][docs] · [📝 Changelog][changelog] · [🐛 Issues][github-issues-link] · [💬 Suporte][support-link]
+**Português (Brasil)** · [📋 Documentação][docs] · [📝 Changelog][changelog] · [📄 CHANGELOG.MD](CHANGELOG.MD) · [🐛 Issues][github-issues-link] · [💬 Suporte][support-link]
 
 <!-- SHIELD GROUP -->
 
@@ -27,7 +27,7 @@ Deploy **GRATUITO** com um clique da sua aplicação privada de gestão de pedid
 [![][share-linkedin-shield]][share-linkedin-link]
 [![][share-email-shield]][share-email-link]
 
-<sup>🚀 Inovando a gestão de pedidos com tecnologia moderna. Construído para você, o profissional do futuro.</sup>
+<sup>🚀 Inovando a gestão de pedidos com tecnologia moderna. Desenvolvido por um profissional dedicado.</sup>
 
 ![AraldiTech Overview](https://img.shields.io/badge/Status-Em%20Desenvolvimento-orange?style=for-the-badge)
 
@@ -38,7 +38,7 @@ Deploy **GRATUITO** com um clique da sua aplicação privada de gestão de pedid
 
 #### Navegação
 
-- [🏠 Início & Comunidade](#-início--comunidade)
+- [🏠 Início](#-início)
 - [✨ Funcionalidades](#-funcionalidades)
   - [`1` Sistema de Autenticação JWT](#1-sistema-de-autenticação-jwt)
   - [`2` Dashboard Interativo](#2-dashboard-interativo)
@@ -53,6 +53,7 @@ Deploy **GRATUITO** com um clique da sua aplicação privada de gestão de pedid
 - [⚡️ Performance](#️-performance)
 - [🚀 Instalação e Deploy](#-instalação-e-deploy)
   - [`A` Instalação Local](#a-instalação-local)
+  - [Variáveis de Ambiente](#variáveis-de-ambiente)
 - [🛠️ Tecnologias](#️-tecnologias)
 - [⌨️ Desenvolvimento Local](#️-desenvolvimento-local)
 - [🤝 Contribuição](#-contribuição)
@@ -71,7 +72,8 @@ Deploy **GRATUITO** com um clique da sua aplicação privada de gestão de pedid
   <p>
     <a href="#readme-content">📖 README</a> • 
     <a href="#changelog-content">📝 CHANGELOG</a> • 
-    <a href="#documentacao-content">📚 Documentação</a>
+    <a href="#documentacao-content">📚 Documentação</a> •
+    <a href="CHANGELOG.MD">📄 CHANGELOG.MD</a>
   </p>
 </div>
 
@@ -83,12 +85,11 @@ Deploy **GRATUITO** com um clique da sua aplicação privada de gestão de pedid
 
 Sou um desenvolvedor focado em criar soluções modernas e eficientes e práticas , sem enrolação para qualquer tipo de empresa e qualquer problema.
 
-
 O **AraldiTech - Pedidos** está atualmente em desenvolvimento ativo, e feedback é bem-vindo para qualquer [problema encontrado][github-issues-link].
 
 | [![][demo-shield-badge]][demo-link]   | Acesse o repositório oficial no GitHub para baixar e instalar o projeto.                           |
 | :---------------------------------------- | :----------------------------------------------------------------------------------------------------------------- |
-| [![][github-shield-badge]][github-link] | Junte-se à nossa comunidade no GitHub! Aqui você pode se conectar com desenvolvedores e outros usuários entusiastas. |
+| [![][github-shield-badge]][github-link] | Acesse o repositório no GitHub para acompanhar o desenvolvimento e contribuir com o projeto. |
 
 > [!IMPORTANT]
 >
@@ -97,7 +98,7 @@ O **AraldiTech - Pedidos** está atualmente em desenvolvimento ativo, e feedback
 [![][image-star]][github-stars-link]
 
 ### 🚨 Aviso Importante sobre Versões Futuras
-> **⚠️ ATENÇÃO:** A partir da versão **0.9.1**, todas as novas versões do AraldiTech - Pedidos serão desenvolvidas em um **repositório privado**. Esta é a **última versão pública** do projeto. Para acesso às versões futuras, entre em contato com a equipe de desenvolvimento.
+> **⚠️ ATENÇÃO:** A partir da versão **0.9.1**, todas as novas versões do AraldiTech - Pedidos serão desenvolvidas em um **repositório privado**. Esta é a **última versão pública** do projeto. Para acesso às versões futuras, entre em contato com o desenvolvedor.
 
 <div align="right">
 
@@ -109,7 +110,7 @@ O **AraldiTech - Pedidos** está atualmente em desenvolvimento ativo, e feedback
 
 ### `1` Sistema de Autenticação JWT
 
-Experiência de segurança de ponta com autenticação baseada em JSON Web Tokens. Nosso sistema oferece proteção robusta com controle de acesso granular, garantindo que apenas usuários autorizados tenham acesso às funcionalidades apropriadas.
+Experiência de segurança de ponta com autenticação baseada em JSON Web Tokens. O sistema oferece proteção robusta com controle de acesso granular, garantindo que apenas usuários autorizados tenham acesso às funcionalidades apropriadas.
 
 **Características principais:**
 - 🔐 Tokens JWT seguros e criptografados
@@ -372,13 +373,13 @@ npm run serve
 
 ## 🤝 Contribuição
 
-Contribuições são muito bem-vindas! Se você está interessado em contribuir com código, sinta-se à vontade para verificar nossas [Issues][github-issues-link] no GitHub.
+Contribuições são muito bem-vindas! Se você está interessado em contribuir com código, sinta-se à vontade para verificar as [Issues][github-issues-link] no GitHub.
 
 > [!TIP]
 >
-> Estamos criando um fórum orientado por tecnologia, promovendo a interação de conhecimento e troca de ideias que podem culminar em inspiração mútua e inovação colaborativa.
+> Estou criando um projeto focado em tecnologia, promovendo a interação de conhecimento e troca de ideias que podem culminar em inspiração mútua e inovação colaborativa.
 >
-> Ajude-nos a tornar o AraldiTech - Pedidos melhor. Seja bem-vindo para fornecer feedback sobre design do produto e discussões sobre experiência do usuário diretamente para nós.
+> Ajude-me a tornar o AraldiTech - Pedidos melhor. Seja bem-vindo para fornecer feedback sobre design do produto e discussões sobre experiência do usuário diretamente para mim.
 
 [![][pr-welcome-shield]][pr-welcome-link]
 
@@ -736,7 +737,7 @@ Agradecemos a todos que contribuíram, testaram e forneceram feedback durante o 
 
 [demo-shield-badge]: https://img.shields.io/badge/ACESSAR%20PROJETO-GITHUB-55b467?labelColor=black&logo=github&style=for-the-badge
 [demo-link]: https://github.com/LucasAraldi-Dev/AraldiTech-Pedidos
-[github-shield-badge]: https://img.shields.io/badge/GITHUB-COMUNIDADE-black?labelColor=black&logo=github&style=for-the-badge
+[github-shield-badge]: https://img.shields.io/badge/GITHUB-REPOSITÓRIO-black?labelColor=black&logo=github&style=for-the-badge
 [github-link]: https://github.com/LucasAraldi-Dev/AraldiTech-Pedidos
 
 [image-star]: https://img.shields.io/badge/⭐-Dar%20uma%20Estrela-yellow?style=for-the-badge
