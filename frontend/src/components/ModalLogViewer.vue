@@ -237,7 +237,6 @@
 import { useToast } from "vue-toastification";
 import LoadingIndicator from "./ui/LoadingIndicator.vue";
 import axiosService from "../api/axiosService";
-import { validateDate } from "../utils/validationService";
 import ModalLogDetail from "./ModalLogDetail.vue";
 
 export default {
@@ -384,93 +383,65 @@ export default {
   methods: {
     async fetchLogs() {
       this.loading = true;
-      console.log("Iniciando busca de logs...");
       
       try {
-        // Validar datas se estiver usando período personalizado
-        if (this.filters.period === 'personalizado') {
-          const startDateValid = validateDate(this.filters.startDate);
-          const endDateValid = validateDate(this.filters.endDate);
-          
-          if (!startDateValid.isValid || !endDateValid.isValid) {
-            this.toast.error('Por favor, verifique o formato das datas');
-            this.loading = false;
-            return;
-          }
-          
-          // Verificar se a data inicial é anterior à final
-          const startDate = new Date(this.filters.startDate);
-          const endDate = new Date(this.filters.endDate);
-          
-          if (startDate > endDate) {
-            this.toast.error('A data inicial deve ser anterior à data final');
-            this.loading = false;
-            return;
-          }
-        }
-        
-        // Preparar parâmetros para a requisição
+        // Construir parâmetros da requisição
         const params = {
-          limit: 1000  // Limite alto para obter muitos logs
+          limit: 1000,
+          incluir_logs_sistema: true
         };
         
-        // Adicionar filtro de tipo se não for TODOS
+        // Adicionar filtro de tipo se não for "TODOS"
         if (this.filters.type !== 'TODOS') {
           params.tipo = this.filters.type;
         }
         
-        // Adicionar filtros de data conforme o período selecionado
-        if (this.filters.period === 'hoje') {
-          const today = new Date();
-          params.start_date = this.formatDateForAPI(today);
-          params.end_date = this.formatDateForAPI(today, true);
-        } else if (this.filters.period === '7dias') {
-          const today = new Date();
-          const sevenDaysAgo = new Date();
-          sevenDaysAgo.setDate(today.getDate() - 7);
-          params.start_date = this.formatDateForAPI(sevenDaysAgo);
-          params.end_date = this.formatDateForAPI(today, true);
-        } else if (this.filters.period === '30dias') {
-          const today = new Date();
-          const thirtyDaysAgo = new Date();
-          thirtyDaysAgo.setDate(today.getDate() - 30);
-          params.start_date = this.formatDateForAPI(thirtyDaysAgo);
-          params.end_date = this.formatDateForAPI(today, true);
-        } else if (this.filters.period === 'personalizado') {
-          params.start_date = this.formatDateForAPI(new Date(this.filters.startDate));
-          params.end_date = this.formatDateForAPI(new Date(this.filters.endDate), true);
+        // Adicionar filtros de data baseados no período selecionado
+        const now = new Date();
+        let startDate, endDate;
+        
+        switch (this.filters.period) {
+          case 'hoje':
+            startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+            break;
+          case '7dias':
+            startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            endDate = now;
+            break;
+          case '30dias':
+            startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+            endDate = now;
+            break;
+          case 'personalizado':
+            if (this.filters.startDate && this.filters.endDate) {
+              startDate = new Date(this.filters.startDate);
+              endDate = new Date(this.filters.endDate);
+              endDate.setHours(23, 59, 59, 999); // Incluir o dia inteiro
+            }
+            break;
         }
         
-        // Adicionar termo de busca se houver
-        if (this.filters.search && this.filters.search.trim() !== "") {
-          params.search = this.filters.search;
+        if (startDate && endDate) {
+          params.start_date = startDate.toISOString();
+          params.end_date = endDate.toISOString();
         }
         
-        console.log("Buscando dados do endpoint /atividades com parâmetros:", params);
+        // Adicionar filtro de busca se especificado
+        if (this.filters.search && this.filters.search.trim()) {
+          params.search = this.filters.search.trim();
+        }
         
-        // Fazer a requisição direta sem cache
-        const response = await axiosService.get('/atividades', { params });
+        // Fazer a requisição para o endpoint de atividades
+        const response = await axiosService.get('/atividades/', { params });
         
-        // Atualizar os logs
         this.logs = response.data || [];
-        console.log(`Recebidos ${this.logs.length} logs do endpoint /atividades`);
         
-        // Ordenar por data, do mais recente para o mais antigo
-        this.logs.sort((a, b) => new Date(b.data) - new Date(a.data));
-        
-        // Mostrar estatísticas no console
-        const tiposEncontrados = [...new Set(this.logs.map(log => log.tipo))];
-        console.log("Tipos de logs encontrados:", tiposEncontrados);
-        console.log("Total de logs:", this.logs.length);
-        
-        // Resetar para a primeira página
-        this.currentPage = 1;
-      } catch (error) {
-        console.error('Erro ao carregar logs:', error);
-        this.toast.error('Erro ao carregar logs. Tente novamente mais tarde.');
-        this.logs = [];
-      } finally {
         this.loading = false;
+        
+      } catch (error) {
+        this.loading = false;
+        this.toast.error('Erro ao carregar logs do sistema');
       }
     },
     formatDateTime(dateString) {
@@ -523,8 +494,7 @@ export default {
       return `log-type-${type}`;
     },
     closeModal() {
-      console.log('[CRÍTICO] Método closeModal chamado - fechando ModalLogViewer');
-      this.onClose();
+      this.$emit('close');
     },
     nextPage() {
       if (this.currentPage < this.totalPages) {
@@ -623,114 +593,61 @@ export default {
     },
     async showOrderInfo(pedidoId) {
       try {
-        console.log(`[CRÍTICO] showOrderInfo chamado com pedidoId: ${pedidoId}`);
-        
-        // Adicionar um feedback visual claro para o usuário
-        this.toast.info(`Buscando detalhes do pedido #${pedidoId}...`, {
-          timeout: 3000,
-          closeButton: false
-        });
-        
-        // Método 1: Fazer uma busca específica pelo ID do pedido usando axios
+        // Verificar se o usuário está autenticado
         const token = localStorage.getItem('access_token');
         if (!token) {
-          console.error('[CRÍTICO] Token de autenticação não encontrado');
           this.toast.error('Sessão expirada. Faça login novamente.');
           return;
         }
         
-        // Garantir que pedidoId seja numérico
+        // Converter para número se necessário
         const pedidoIdNum = typeof pedidoId === 'string' ? parseInt(pedidoId, 10) : pedidoId;
-        console.log(`[CRÍTICO] ID do pedido convertido para número: ${pedidoIdNum}`);
         
-        // Emitir evento para o componente pai (AppMenu) para abrir o modal de impressão
-        console.log(`[CRÍTICO] Emitindo evento open-order com pedidoId: ${pedidoIdNum}`);
+        // Emitir evento para o componente pai abrir o modal de impressão
         this.$emit('open-order', pedidoIdNum);
         
-        console.log('[CRÍTICO] Evento open-order emitido com sucesso');
-              
-        // Não fechamos mais o modal para que ele possa ser reaberto quando o pedido for fechado
-        // console.log('[CRÍTICO] Fechando modal de logs depois de emitir o evento');
-        // this.onClose();
+        // Fechar este modal após emitir o evento
+        // this.closeModal();
         
-        return true;
       } catch (error) {
-        console.error('[CRÍTICO] Erro ao buscar detalhes do pedido:', error);
-        
-        let mensagemErro = 'Não foi possível carregar os detalhes do pedido.';
-        
+        // Tratamento de erro detalhado
         if (error.response) {
           // O servidor respondeu com um código de erro
-          console.error(`Erro de resposta: ${error.response.status}`, error.response.data);
-          if (error.response.status === 403) {
-            mensagemErro += ' Você não tem permissão para ver este pedido.';
-          } else if (error.response.status === 404) {
-            mensagemErro += ' Pedido não encontrado.';
-          } else if (error.response.status >= 500) {
-            mensagemErro += ' Erro no servidor. Tente novamente mais tarde.';
+          if (error.response.status === 404) {
+            this.toast.error(`Pedido #${pedidoId} não encontrado.`);
+          } else if (error.response.status === 403) {
+            this.toast.error('Você não tem permissão para visualizar este pedido.');
+          } else {
+            this.toast.error(`Erro do servidor: ${error.response.status}`);
           }
         } else if (error.request) {
-          // A requisição foi feita mas não houve resposta (problema de rede)
-          console.error('Erro de rede - sem resposta do servidor:', error.request);
-          mensagemErro += ' Verifique sua conexão com a internet.';
+          // A requisição foi feita mas não houve resposta
+          this.toast.error('Erro de conexão. Verifique sua internet.');
         } else {
-          // Erro de configuração da requisição ou outro tipo de erro
-          console.error('Outro tipo de erro:', error.message);
+          // Algo aconteceu na configuração da requisição
+          this.toast.error('Erro inesperado ao buscar pedido.');
         }
-        
-        this.toast.error(mensagemErro, {
-          timeout: 5000,
-          closeButton: false
-        });
-        
-        return false;
       }
     },
-    copyLogToClipboard(log) {
+    async copyLogToClipboard(log) {
       try {
-        // Criar texto formatado para copiar
-        const formattedLog = `
-          Tipo: ${this.formatLogType(log.tipo)}
-          Data: ${this.formatDateTime(log.data)}
-          Descrição: ${log.descricao}
-          Usuário: ${log.usuario_nome || 'Sistema'}
-          ${log.pedido_id ? `Pedido: #${log.pedido_id}` : ''}
-          ID: ${log.id}
-        `.trim();
+        const logText = `[${this.formatDateTime(log.data)}] ${this.formatLogType(log.tipo)}: ${log.descricao}`;
         
-        // Método alternativo para copiar para o clipboard, compatível com mais navegadores
-        const textArea = document.createElement('textarea');
-        textArea.value = formattedLog;
-        textArea.style.position = 'fixed';
-        textArea.style.left = '-999999px';
-        textArea.style.top = '-999999px';
-        document.body.appendChild(textArea);
-        textArea.focus();
-        textArea.select();
-        
-        const successful = document.execCommand('copy');
-        
-        if (successful) {
-          this.toast.success('Log copiado para a área de transferência');
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(logText);
         } else {
-          // Tentar método moderno se o antigo falhar
-          if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(formattedLog)
-              .then(() => {
-                this.toast.success('Log copiado para a área de transferência');
-              })
-              .catch(err => {
-                throw err;
-              });
-          } else {
-            this.toast.error('Seu navegador não suporta copiar para área de transferência');
-          }
+          // Fallback para navegadores mais antigos
+          const textArea = document.createElement('textarea');
+          textArea.value = logText;
+          document.body.appendChild(textArea);
+          textArea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textArea);
         }
         
-        document.body.removeChild(textArea);
+        this.toast.success('Log copiado para a área de transferência');
       } catch (error) {
-        console.error('Erro ao copiar log:', error);
-        this.toast.error('Não foi possível copiar o log');
+        this.toast.error('Erro ao copiar log');
       }
     },
     getFilterPeriodLabel() {

@@ -47,12 +47,9 @@ app.use(router);
 app.mount('#app');
 
 // Inicializar proteções de segurança
-inicializarProtecoesSeguranca().then(sucesso => {
-  if (sucesso) {
-    console.log('Proteções de segurança inicializadas com sucesso');
-  } else {
-    console.warn('Houve falhas na inicialização das proteções de segurança');
+inicializarProtecoesSeguranca().catch(error => {
+  // Silenciar erros de inicialização em produção
+  if (process.env.NODE_ENV === 'development') {
+    console.error('Erro na inicialização de proteções de segurança:', error);
   }
-}).catch(error => {
-  console.error('Erro na inicialização de proteções de segurança:', error);
 });

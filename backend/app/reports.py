@@ -19,7 +19,7 @@ try:
     from reportlab.lib.utils import ImageReader
     REPORTLAB_AVAILABLE = True
 except ImportError as e:
-    print(f"Erro ao importar ReportLab: {e}")
+    logger.warning(f"ReportLab não disponível: {e}")
     REPORTLAB_AVAILABLE = False
 
 # Imports do PIL com tratamento de erro
@@ -27,7 +27,7 @@ try:
     from PIL import Image as PILImage
     PIL_AVAILABLE = True
 except ImportError as e:
-    print(f"Erro ao importar PIL: {e}")
+    logger.warning(f"PIL não disponível: {e}")
     PIL_AVAILABLE = False
 
 # Configurar logging

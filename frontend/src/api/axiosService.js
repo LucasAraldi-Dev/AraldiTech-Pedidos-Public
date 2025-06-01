@@ -74,17 +74,12 @@ axiosInstance.interceptors.request.use(
     const csrfExemptPaths = ['/token', '/security/csrf-token', '/usuarios/'];
     const isExemptPath = csrfExemptPaths.some(path => config.url.includes(path));
     
-    console.log(`Requisição ${config.method.toUpperCase()} para ${config.url} - Isento de CSRF: ${isExemptPath}`);
-    
     // Adicionar token CSRF para métodos que modificam dados (exceto endpoints isentos)
     if (['post', 'put', 'delete'].includes(config.method.toLowerCase()) && !isExemptPath) {
       const csrfToken = getCsrfToken();
       if (csrfToken) {
         config.headers['X-CSRF-Token'] = csrfToken;
-        console.log('Token CSRF adicionado à requisição:', csrfToken.substring(0, 20) + '...');
       } else {
-        console.warn('Token CSRF não encontrado. Renovando token...');
-        
         // Se estamos em processo de renovação, coloca na fila
         if (isRefreshingCsrf) {
           return new Promise((resolve, reject) => {
@@ -97,12 +92,9 @@ axiosInstance.interceptors.request.use(
           const newToken = await ensureCsrfToken();
           if (newToken) {
             config.headers['X-CSRF-Token'] = newToken;
-            console.log('Novo token CSRF obtido e adicionado:', newToken.substring(0, 20) + '...');
-          } else {
-            console.error('Não foi possível obter um token CSRF válido.');
           }
         } catch (error) {
-          console.error('Erro ao renovar token CSRF:', error);
+          // Erro silencioso - será tratado no interceptor de resposta
         }
       }
     }
@@ -167,7 +159,7 @@ axiosInstance.interceptors.response.use(
             return axiosInstance(error.config);
           }
         } catch (refreshError) {
-          console.error('Erro ao renovar token CSRF após falha 403:', refreshError);
+          // Erro silencioso - será tratado pelo handleApiError
         }
       } else {
         // Se já estamos renovando, coloca na fila
@@ -192,10 +184,6 @@ axiosInstance.interceptors.response.use(
  * @param {Error} error - Objeto de erro do Axios
  */
 const handleApiError = (error) => {
-  // Verificar se é um erro de timeout
-  if (error.code === 'ECONNABORTED') {
-    console.error('Timeout na requisição:', error.config.url);
-  }
   // Obter dados de resposta se disponíveis
   const response = error.response;
   if (response) {
@@ -203,7 +191,6 @@ const handleApiError = (error) => {
     switch (response.status) {
       case 401:
         // Erro de autenticação - token expirado ou inválido
-        console.warn('Sessão expirada ou token inválido');
         // Se não estiver na página de login, redirecionar
         if (!window.location.pathname.includes('/login')) {
           // Eventos para autenticar novamente o usuário
@@ -212,37 +199,28 @@ const handleApiError = (error) => {
         break;
       case 403:
         // Erro de permissão
-        console.warn('Permissão negada para esta operação');
         document.dispatchEvent(new Event('auth:permissionDenied'));
         break;
       case 404:
-        // Recurso não encontrado
-        console.warn('Recurso não encontrado:', response.config.url);
+        // Recurso não encontrado - erro silencioso
         break;
       case 422:
-        // Erro de validação
-        console.warn('Erro de validação:', response.data);
+        // Erro de validação - será tratado pelos componentes
         break;
       case 429:
-        // Rate limiting
-        console.warn('Muitas requisições. Tente novamente em alguns instantes.');
+        // Rate limiting - erro silencioso
         break;
       case 500:
       case 502:
       case 503:
       case 504:
         // Erros de servidor
-        console.error('Erro no servidor:', response.status, response.data);
         document.dispatchEvent(new Event('api:serverError'));
         break;
     }
   } else if (error.request) {
     // Requisição enviada mas sem resposta (problemas de rede)
-    console.error('Erro de conexão. Verifique sua internet.');
     document.dispatchEvent(new Event('api:connectionError'));
-  } else {
-    // Erro ao configurar a requisição
-    console.error('Erro ao configurar requisição:', error.message);
   }
 };
 

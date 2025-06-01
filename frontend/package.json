@@ -15,6 +15,7 @@
     "jspdf": "^2.5.2",
     "moment": "^2.29.1",
     "notivue": "^2.4.5",
+    "socket.io-client": "^4.8.1",
     "vue": "^3.0.0",
     "vue-router": "^4.0.0-0",
     "vue-toast-notification": "^3.1.3",

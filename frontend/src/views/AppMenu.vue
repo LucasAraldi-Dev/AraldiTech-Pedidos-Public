@@ -320,7 +320,6 @@ export default {
     }
   },
   created() {
-    console.log("AppMenu criado, verificando autenticação...");
     this.checkIfMobile();
     window.addEventListener("resize", this.checkIfMobile);
     
@@ -328,12 +327,7 @@ export default {
     const token = localStorage.getItem("access_token");
     const user = JSON.parse(localStorage.getItem("user"));
     
-    console.log("Token presente:", token ? "Sim" : "Não");
-    console.log("Usuário presente:", user ? "Sim" : "Não");
-    console.log("Tipo de usuário:", user?.tipo_usuario);
-    
     if (!token || !user) {
-      console.warn("Usuário não autenticado, redirecionando para login");
       this.$router.push({ name: "Login" });
     } else {
       // Inicializar dados do usuário para o header
@@ -346,20 +340,16 @@ export default {
     }
 
     // Conectar ao WebSocket
-    console.log("Tentando conectar ao WebSocket...");
     websocketService.connect();
     
     // Verificar se a conexão foi estabelecida
     setTimeout(() => {
       if (websocketService.checkConnection()) {
-        console.log("✅ WebSocket conectado com sucesso!");
-        
         // Emitir evento para que outros componentes possam se conectar
         window.dispatchEvent(new CustomEvent('websocket-ready', {
           detail: { websocketService }
         }));
       } else {
-        console.warn("❌ WebSocket não conectou. Tentando reconectar...");
         websocketService.connect();
       }
     }, 2000);
@@ -415,8 +405,6 @@ export default {
       this.isEditOrderOpen = false;
     },
     handlePrintModal(pedido) {
-      console.log('[CRÍTICO] handlePrintModal chamado com pedido:', pedido);
-      
       try {
         // Limpar qualquer intervalo de debug anterior
         if (this.debugInterval) {
@@ -427,7 +415,6 @@ export default {
         // Se recebermos apenas o ID do pedido em vez do objeto completo
         if (typeof pedido === 'number' || (typeof pedido === 'string' && !isNaN(parseInt(pedido, 10)))) {
           const pedidoId = typeof pedido === 'number' ? pedido : parseInt(pedido, 10);
-          console.log(`[CRÍTICO] Recebido apenas o ID do pedido (${pedidoId}). Buscando detalhes completos...`);
           
           // Buscar os detalhes do pedido a partir do ID
           this.fetchPedidoById(pedidoId);
@@ -436,32 +423,21 @@ export default {
         
         // Verificar se o pedido tem as propriedades esperadas
         if (!pedido || !pedido.id) {
-          console.error('[CRÍTICO] Pedido inválido recebido em handlePrintModal:', pedido);
           alert('Pedido inválido ou sem ID.');
           return;
         }
         
-        console.log('[CRÍTICO] Pedido válido encontrado, ID:', pedido.id);
-        
         // Salvar qual modal está aberto antes de abrir o modal de impressão
         this.savePreviousOpenModal();
-        
-        // Não fechamos mais os modais, para que o modal anterior possa ser reaberto
-        // Apenas removemos o código que fecha todos os modais
-        
-        // Garantir que todos os campos necessários existam
-        console.log('[DEBUG] Pedido original:', pedido);
-        console.log('[DEBUG] Valor de sender no pedido:', pedido.sender);
         
         // Obter informações do usuário do localStorage
         let userInfo = null;
         try {
           if (localStorage.getItem('user')) {
             userInfo = JSON.parse(localStorage.getItem('user'));
-            console.log('[DEBUG] Informações do usuário:', userInfo);
           }
         } catch (e) {
-          console.error('[DEBUG] Erro ao obter informações do usuário:', e);
+          // Silenciar erro em produção
         }
         
         this.pedidoCriado = {
@@ -476,40 +452,27 @@ export default {
           sender: pedido.sender || (userInfo ? userInfo.nome : '')
         };
         
-        console.log('[DEBUG] Valor final de sender para o modal:', this.pedidoCriado.sender);
-        
-        console.log('[CRÍTICO] Abrindo modal de impressão com pedido:', pedido.id);
-        
         // Diretamente definir como aberto, sem usar nextTick
         this.isPrintModalOpen = true;
         
         // Forçar renderização direta
         this.$forceUpdate();
         
-        // Para debug
+        // Verificar se modal foi criado e tentar novamente se necessário
         setTimeout(() => {
           const modalElement = document.querySelector('.print-modal');
-          console.log('[CRÍTICO] Modal visível?', !!modalElement);
           
           if (!modalElement) {
-            console.log('[CRÍTICO] Modal não encontrado! Tentando novamente...');
             this.isPrintModalOpen = false;
             this.$forceUpdate();
             
             setTimeout(() => {
               this.isPrintModalOpen = true;
               this.$forceUpdate();
-              
-              // Verificar novamente
-              setTimeout(() => {
-                const modalElementRetry = document.querySelector('.print-modal');
-                console.log('[CRÍTICO] Modal visível após retry?', !!modalElementRetry);
-              }, 100);
             }, 100);
           }
         }, 100);
       } catch (err) {
-        console.error('[CRÍTICO] Erro ao abrir modal de impressão:', err);
         alert(`Erro ao abrir modal: ${err.message}`);
       }
     },
@@ -517,7 +480,6 @@ export default {
     // Método para lidar com abertura de modal via notificação
     handleOpenPrintModalFromNotification(event) {
       const pedidoId = event.detail.pedidoId;
-      console.log('[NOTIFICAÇÃO] Abrindo modal de impressão para pedido:', pedidoId);
       
       // Buscar os detalhes do pedido e abrir o modal
       this.fetchPedidoById(pedidoId);
@@ -536,7 +498,6 @@ export default {
       this.isPrintModalOpen = false; // Fechar este também para garantir uma nova montagem
     },
     closePrintModal() {
-      console.log('[CRÍTICO] Fechando modal de impressão');
       this.isPrintModalOpen = false;
       
       // Limpar qualquer intervalo de debug
@@ -547,9 +508,6 @@ export default {
       
       // Reabrir o modal anterior se houver algum
       if (this.previousOpenModal) {
-        console.log(`[CRÍTICO] Reabrindo modal anterior: ${this.previousOpenModal}`);
-        
-        // Usar setTimeout para garantir que o modal de impressão seja fechado primeiro
         setTimeout(() => {
           switch (this.previousOpenModal) {
             case 'consulta':
@@ -591,9 +549,8 @@ export default {
       try {
         // Usa o serviço de autenticação para fazer logout
         await authService.logout();
-        console.log("Logout realizado, redirecionando para Login");
       } catch (error) {
-        console.error("Erro durante logout:", error);
+        // Silenciar erro em produção
       } finally {
         // Redireciona para a página de login independentemente do resultado
         this.$router.push({ name: "Login" });
@@ -618,7 +575,7 @@ export default {
         });
         this.orders = response.data;
       } catch (error) {
-        console.error("Erro ao carregar pedidos:", error);
+        // Silenciar erro em produção
       }
     },
     handleCreateOrder(pedidoCriado) {
@@ -679,7 +636,7 @@ export default {
             link.click();
           }
         } catch (error) {
-          console.error("Erro ao gerar imagem automática:", error);
+          // Silenciar erro em produção
         } finally {
           // Não fechar o modal de impressão automaticamente
           // O usuário deve fechá-lo manualmente para voltar ao modal anterior
@@ -722,8 +679,6 @@ export default {
     },
     // Novo método para buscar um pedido pelo ID
     async fetchPedidoById(pedidoId) {
-      console.log(`Buscando detalhes completos do pedido #${pedidoId}...`);
-      
       // Limpar qualquer intervalo de debug anterior
       if (this.debugInterval) {
         clearInterval(this.debugInterval);
@@ -733,7 +688,6 @@ export default {
       try {
         const token = localStorage.getItem("access_token");
         if (!token) {
-          console.error("Token de autenticação não encontrado");
           alert("Sessão expirada. Faça login novamente.");
           return;
         }
@@ -744,14 +698,10 @@ export default {
         });
         
         if (response && response.data && Array.isArray(response.data)) {
-          console.log(`Resposta recebida com ${response.data.length} pedidos, procurando ID #${pedidoId}`);
-          
           // Encontrar o pedido pelo ID
           const pedido = response.data.find(p => p.id == pedidoId);
           
           if (pedido) {
-            console.log(`Pedido #${pedidoId} encontrado:`, pedido);
-            
             // Salvar qual modal está aberto antes de abrir o modal de impressão
             this.savePreviousOpenModal();
             
@@ -771,23 +721,19 @@ export default {
             // Abrir o modal
             this.$nextTick(() => {
               this.isPrintModalOpen = true;
-              console.log(`Modal de impressão aberto para o pedido #${pedidoId}`);
             });
             
             return true;
           } else {
-            console.error(`Pedido #${pedidoId} não encontrado na lista`);
             // Notificar o usuário
             alert(`Pedido #${pedidoId} não encontrado. Verifique se o pedido existe.`);
             return false;
           }
         } else {
-          console.error("Formato de resposta inválido:", response);
           alert("Formato de resposta inválido ao buscar pedidos.");
           return false;
         }
       } catch (error) {
-        console.error("Erro ao buscar pedido:", error);
         alert("Não foi possível carregar os detalhes do pedido. Tente novamente mais tarde.");
         return false;
       }
@@ -811,7 +757,6 @@ export default {
       } else {
         this.previousOpenModal = null;
       }
-      console.log(`[CRÍTICO] Modal anterior salvo: ${this.previousOpenModal}`);
     },
     confirmLogout() {
       // Exibir o modal de confirmação

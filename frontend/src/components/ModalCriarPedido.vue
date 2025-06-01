@@ -710,9 +710,8 @@ export default {
         this.userType = userObj.tipo_usuario;
         this.userSector = userObj.setor;
         this.orderSenderSector = userObj.setor || ""; // Preenche automaticamente com o setor do usuário
-        console.log("Dados do usuário carregados:", this.userName, this.userType, this.userSector);
       } catch (e) {
-        console.error("Erro ao parsear dados do usuário:", e);
+        // Silenciar erro em produção
       }
     }
     
@@ -726,12 +725,9 @@ export default {
     
     // Verificar autenticação ao montar o componente
     if (!this.token) {
-      console.error("Usuário não autenticado.");
       this.$emit("close");
       const toast = useToast();
       toast.error("É necessário estar autenticado para criar pedidos.");
-    } else {
-      console.log("Usuário autenticado:", this.userName);
     }
 
     // Verificar se o dispositivo é móvel
@@ -852,7 +848,6 @@ export default {
       try {
         await ensureCsrfToken();
       } catch (error) {
-        console.error("Erro ao obter token CSRF:", error);
         toast.error("Erro de segurança. Tente fazer login novamente.");
         return;
       }
@@ -900,9 +895,8 @@ export default {
           delete payload.fileBase64;
           
           // Log para debug do arquivo
-          console.log(`[DEBUG] Pedido ${i+1} - Tem arquivo:`, !!payload.file);
           if (payload.file) {
-            console.log(`[DEBUG] Pedido ${i+1} - Tamanho do arquivo base64:`, payload.file.length);
+            // Arquivo presente - processamento silencioso
           }
           
           try {
@@ -910,7 +904,6 @@ export default {
             results.push(response.data);
             toast.success(`Pedido ${i+1}/${totalOrders} criado com sucesso!`);
           } catch (error) {
-            console.error("Erro ao criar pedido:", error);
             toast.error(`Erro ao criar pedido ${i+1}/${totalOrders}: ${error.response?.data?.detail || "Erro desconhecido"}`);
             // Continuar para o próximo pedido mesmo com erro
           }
@@ -935,7 +928,6 @@ export default {
         
       } catch (error) {
         toast.error("Ocorreu um erro durante o envio dos pedidos.");
-        console.error("Erro geral ao enviar pedidos:", error);
       } finally {
         // Desativar indicador de carregamento
         this.isSubmitting = false;
@@ -955,7 +947,6 @@ export default {
       try {
         await ensureCsrfToken();
       } catch (error) {
-        console.error("Erro ao obter token CSRF:", error);
         toast.error("Erro de segurança. Tente fazer login novamente.");
         return;
       }
@@ -1000,7 +991,7 @@ export default {
             this.userName = userObj.nome;
             this.userSector = userObj.setor;
           } catch (e) {
-            console.error("Erro ao parsear dados do usuário:", e);
+            // Silenciar erro em produção
           }
         }
       }
@@ -1083,7 +1074,6 @@ export default {
       } catch (error) {
         // Exibe a notificação de erro
         toast.error(error.response?.data?.detail || "Erro ao criar o pedido. Verifique sua autenticação.");
-        console.error("Erro ao criar pedido:", error.response ? error.response.data : error);
         
         // Se for erro de autenticação
         if (error.response && (error.response.status === 401 || error.response.status === 403)) {
@@ -1116,11 +1106,8 @@ export default {
       const file = event.target.files[0];
 
       if (!file) {
-        console.error("Nenhum arquivo selecionado.");
         return;
       }
-
-      console.log("Arquivo selecionado:", file);
 
       // Armazenar o arquivo selecionado
       this.orderFile = file;
@@ -1129,20 +1116,16 @@ export default {
 
       reader.onloadend = () => {
         const result = reader.result;
-        console.log("FileReader resultado bruto:", result);
 
         if (result.includes(",")) {
           this.orderFileBase64 = result.split(",")[1];
         } else {
           this.orderFileBase64 = result;
         }
-
-        console.log("Base64 gerado:", this.orderFileBase64);
-        console.log("Arquivo armazenado:", this.orderFile);
       };
 
-      reader.onerror = (error) => {
-        console.error("Erro ao ler o arquivo:", error);
+      reader.onerror = () => {
+        // Silenciar erro em produção
       };
 
       reader.readAsDataURL(file);
@@ -1317,9 +1300,7 @@ export default {
       this.resetForm();
     },
     toggleOrdersList() {
-      console.log("toggleOrdersList chamado, valor anterior:", this.isOrdersListExpanded);
       this.isOrdersListExpanded = !this.isOrdersListExpanded;
-      console.log("Novo valor após toggle:", this.isOrdersListExpanded);
     },
   },
 };

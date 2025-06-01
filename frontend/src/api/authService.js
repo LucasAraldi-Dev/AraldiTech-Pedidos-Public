@@ -48,21 +48,14 @@ const authService = {
   // Realiza o login do usuário
   async login(username, senha) {
     try {
-      console.log('Iniciando processo de login para:', username);
-      
       // Limpar completamente a sessão anterior
       this.logout();
-      console.log('Sessão anterior limpa');
       
       // Limpar qualquer token CSRF e obter um novo
       localStorage.removeItem('csrf_token');
-      const csrfToken = await ensureCsrfToken(true);
-      console.log('Novo token CSRF obtido:', csrfToken ? 'Sim' : 'Não');
+      await ensureCsrfToken(true);
       
-      console.log('Enviando requisição de login...');
       const response = await axiosService.post('/token', { username, senha });
-      console.log('Resposta recebida do servidor:', response.status);
-      console.log('Dados da resposta:', response.data);
       
       // Armazenar token e informações do usuário
       if (response.data && response.data.access_token) {
@@ -82,23 +75,19 @@ const authService = {
         // Renovar token CSRF após login bem-sucedido
         await ensureCsrfToken(true);
         
-        console.log('Login bem-sucedido para usuário:', userData.nome, 'com tipo:', userData.tipo_usuario);
         return { success: true, user: userData };
       }
       
       return { success: false, error: 'Dados inválidos na resposta' };
     } catch (error) {
-      console.error('Erro no login:', error);
       let errorMessage = 'Ocorreu um erro durante o login';
       
       if (error.response) {
         // Erro retornado pelo servidor
         errorMessage = error.response.data?.detail || 'Credenciais inválidas';
-        console.error('Erro do servidor:', error.response.status, error.response.data);
       } else if (error.request) {
         // Sem resposta do servidor
         errorMessage = 'Erro de conexão com o servidor';
-        console.error('Sem resposta do servidor:', error.request);
       }
       
       return { success: false, error: errorMessage };
@@ -115,9 +104,7 @@ const authService = {
           await axiosService.post('/auth/logout', {}, {
             headers: { Authorization: `Bearer ${token}` }
           });
-          console.log('Logout registrado no servidor');
         } catch (error) {
-          console.warn('Erro ao registrar logout no servidor:', error);
           // Continuamos com o logout local mesmo se o servidor falhar
         }
       }
@@ -127,7 +114,6 @@ const authService = {
       localStorage.removeItem('token_type');
       localStorage.removeItem('user');
       localStorage.removeItem('tipo_usuario');
-      console.log('Dados locais de autenticação removidos');
     }
   }
 };

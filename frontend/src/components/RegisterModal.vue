@@ -356,12 +356,10 @@ export default {
           registerSuccess.value = true;
         } catch (error) {
           // Erro específico do cadastro
-          console.error("Erro na resposta do cadastro:", error);
           isRegistering.value = false;
           showDatabaseError(error.message);
         }
       } catch (error) {
-        console.error("Erro ao processar cadastro:", error);
         isRegistering.value = false;
         
         // Mostrar erro específico com base no tipo de erro

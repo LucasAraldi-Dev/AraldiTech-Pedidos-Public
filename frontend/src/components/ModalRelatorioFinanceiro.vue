@@ -236,7 +236,6 @@ export default {
           this.initCharts();
         });
       } catch (error) {
-        console.error('Erro ao buscar pedidos:', error);
         this.toast.error('Erro ao carregar dados financeiros');
       }
     },
@@ -573,7 +572,6 @@ export default {
         
         this.toast.success(`Relatório sendo gerado em formato ${formato.toUpperCase()}`);
       } catch (error) {
-        console.error('Erro ao exportar relatório:', error);
         this.toast.error('Erro ao gerar relatório');
       }
     },

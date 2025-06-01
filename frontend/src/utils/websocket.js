@@ -151,29 +151,72 @@ class WebSocketService {
       
       // Verificar se a notificação é relevante para o usuário
       let shouldShowNotification = false;
+      let filterReason = '';
       
-      // Admins e gestores veem todas as notificações
-      if (userType === 'admin' || userType === 'gestor') {
-        shouldShowNotification = true;
+      // FILTRO PARA NOTIFICAÇÕES DE LOGIN
+      if (data.type === 'user_login') {
+        const loginUserType = data.data?.user?.tipo_usuario || 'comum';
+        
+        if (userType === 'admin' || userType === 'gestor') {
+          // Admins/gestores veem todos os logins
+          shouldShowNotification = true;
+          filterReason = 'admin/gestor vê todos os logins';
+        } else if (userType === 'comum') {
+          // Usuários comuns só veem logins de admins/gestores
+          if (loginUserType === 'admin' || loginUserType === 'gestor') {
+            shouldShowNotification = true;
+            filterReason = 'usuário comum vendo login de admin/gestor';
+          } else {
+            shouldShowNotification = false;
+            filterReason = 'usuário comum não deve ver login de outro usuário comum';
+          }
+        }
       }
-      // Usuários comuns só veem notificações do seu setor
-      else if (data.data && data.data.pedido && data.data.pedido.setor === userSetor) {
-        shouldShowNotification = true;
-      }
-      // Se a notificação tem campo setor, verificar se é do setor do usuário
-      else if (data.setor && data.setor === userSetor) {
-        shouldShowNotification = true;
+      // FILTRO PARA NOTIFICAÇÕES DE PEDIDOS
+      else {
+        const pedidoSetor = data.data?.pedido?.setor;
+        const notificationSetor = data.setor;
+        
+        // Admins e gestores veem todas as notificações de pedidos
+        if (userType === 'admin' || userType === 'gestor') {
+          shouldShowNotification = true;
+          filterReason = 'admin/gestor vê todas as notificações de pedidos';
+        }
+        // Usuários comuns só veem notificações do seu setor - comparação EXATA
+        else if (pedidoSetor && userSetor && pedidoSetor.trim() === userSetor.trim()) {
+          shouldShowNotification = true;
+          filterReason = `usuário comum vendo pedido do mesmo setor`;
+        }
+        // Se a notificação tem campo setor, verificar se é do setor do usuário
+        else if (notificationSetor && userSetor && notificationSetor.trim() === userSetor.trim()) {
+          shouldShowNotification = true;
+          filterReason = `usuário comum vendo notificação do mesmo setor`;
+        } else {
+          shouldShowNotification = false;
+          filterReason = `usuário comum não deve ver notificação de outro setor`;
+          // Log apenas para casos suspeitos
+          if (pedidoSetor && userSetor && pedidoSetor !== userSetor) {
+            console.log(`❌ Notificação filtrada: usuário do setor '${userSetor}' não deve ver pedido do setor '${pedidoSetor}'`);
+          }
+        }
       }
       
       if (!shouldShowNotification) {
-        console.log('Notificação filtrada - não é do setor do usuário:', data);
+        console.log('❌ Notificação filtrada:', filterReason);
         return;
       }
       
-      console.log('Processando notificação:', notificationId, data);
+      console.log('✅ Processando notificação:', notificationId);
       
       // Exibir toast baseado no tipo de notificação
       switch (data.type) {
+        case 'user_login':
+          this.toast.info(`👤 ${data.data.message || data.message}`, {
+            timeout: 5000,
+            position: 'top-right'
+          });
+          break;
+          
         case 'novo_pedido':
           this.toast.info(data.data.message || data.message, {
             timeout: 8000,

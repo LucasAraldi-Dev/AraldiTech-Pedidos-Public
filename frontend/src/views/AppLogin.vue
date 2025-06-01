@@ -175,7 +175,7 @@ export default {
         // Inicializar proteção CSRF
         await initCsrfProtection();
       } catch (error) {
-        console.error("Falha ao inicializar proteção CSRF:", error);
+        // Silenciar erro em produção
       }
     });
     
@@ -252,18 +252,9 @@ export default {
         
         // Obter dados do usuário logado
         const userData = authService.getUser();
-        console.log("Usuário autenticado:", userData);
-        
-        // Para compatibilidade com código existente
-        const nome = userData.nome;
-        const tipo_usuario = userData.tipo_usuario;
-        const primeiro_login = userData.primeiro_login;
         
         // Verificar se é a primeira vez que o usuário faz login
-        const shouldShowTutorial = userData.tipo_usuario === 'comum' && primeiro_login;
-
-        // Registrar dados do usuário no log (para uso das variáveis)
-        console.log(`Usuário: ${nome}, Tipo: ${tipo_usuario}`);
+        const shouldShowTutorial = userData.tipo_usuario === 'comum' && userData.primeiro_login;
 
         // Avançar para o passo 3 e aguardar mais 1 segundo
         currentStep.value = 3;
@@ -282,7 +273,6 @@ export default {
               window.location.href = '/#/menu';
             }
           } catch (navError) {
-            console.error("Erro durante navegação:", navError);
             window.location.href = '/';
           }
         }, 3000);
@@ -290,7 +280,6 @@ export default {
         // Após login bem-sucedido:
         await initCsrfProtection();
       } catch (error) {
-        console.error("Erro ao fazer login:", error);
         isLoggingIn.value = false;
         
         // Verificar se é erro de credenciais ou conexão
@@ -451,9 +440,7 @@ export default {
 
     const handleSignup = async (userData, callback) => {
       try {
-        console.log("Iniciando cadastro de usuário...");
-
-        const response = await axios.post(
+        await axios.post(
           `${process.env.VUE_APP_API_URL}/usuarios/`,
           userData,
           {
@@ -462,8 +449,6 @@ export default {
             }
           }
         );
-        
-        console.log("Usuário cadastrado com sucesso:", response.data);
         
         // Chamar o callback com sucesso se existir
         if (typeof callback === 'function') {
@@ -475,8 +460,6 @@ export default {
         // O modal permanecerá aberto até que o usuário escolha fechá-lo
         // ou clicar em "Fazer Login"
       } catch (error) {
-        console.error("Erro no cadastro:", error.response?.data?.detail || error.message);
-        
         // Chamar o callback com erro se existir
         if (typeof callback === 'function') {
           let errorMessage = "Erro na conexão com o servidor";
@@ -497,25 +480,6 @@ export default {
           
           callback(false, new Error(errorMessage));
         }
-        
-        // Exibir mensagem de erro usando toast
-        let toastMessage = "Erro ao cadastrar usuário. Por favor, tente novamente.";
-        
-        if (error.response?.status === 422) {
-          const validationErrors = error.response?.data?.detail;
-          if (Array.isArray(validationErrors)) {
-            toastMessage = "Erro de validação: " + validationErrors.map(err => 
-              `${err.loc?.join('.')} - ${err.msg}`
-            ).join('; ');
-          } else {
-            toastMessage = error.response?.data?.detail || "Erro de validação dos dados";
-          }
-        } else {
-          toastMessage = error.response?.data?.detail || "Erro ao cadastrar usuário. Por favor, tente novamente.";
-        }
-        
-        toast.error(toastMessage);
-        // Não fechar o modal em caso de erro para permitir nova tentativa
       }
     };
 

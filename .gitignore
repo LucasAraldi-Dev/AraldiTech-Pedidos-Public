@@ -53,6 +53,3 @@ logs/
 # Arquivos temporários
 tmp/
 temp/
-
-# Cursor Rules
-.cursor/ 

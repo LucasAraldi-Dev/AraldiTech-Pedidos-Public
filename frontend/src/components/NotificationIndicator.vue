@@ -155,10 +155,11 @@ export default {
     const websocketService = ref(null);
     const activeFilter = ref('all');
     
-    // Computed para verificar se deve mostrar o indicador (apenas para admin/gestor)
+    // Computed para verificar se deve mostrar o indicador (para todos os usuários)
     const showIndicator = computed(() => {
       const user = JSON.parse(localStorage.getItem('user') || '{}');
-      return user.tipo_usuario === 'admin' || user.tipo_usuario === 'gestor';
+      // Mostrar para todos os tipos de usuário
+      return user.tipo_usuario === 'admin' || user.tipo_usuario === 'gestor' || user.tipo_usuario === 'comum';
     });
     
     // Computed para contar notificações não lidas
@@ -323,6 +324,8 @@ export default {
           return 'edit';
         case 'pedido_concluido':
           return 'check_circle';
+        case 'user_login':
+          return 'login';
         case 'error':
           return 'error';
         case 'warning':
@@ -343,6 +346,8 @@ export default {
           return 'type-update';
         case 'pedido_concluido':
           return 'type-success';
+        case 'user_login':
+          return 'type-login';
         case 'error':
           return 'type-error';
         case 'warning':
@@ -790,6 +795,10 @@ export default {
 
 .notification-icon-type.type-test {
   background: linear-gradient(135deg, #9b59b6, #8e44ad);
+}
+
+.notification-icon-type.type-login {
+  background: linear-gradient(135deg, #1abc9c, #16a085);
 }
 
 .notification-icon-type.type-info {

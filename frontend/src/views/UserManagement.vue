@@ -164,7 +164,6 @@ export default {
           this.toast.error('Acesso restrito a administradores');
         }
       } catch (error) {
-        console.error('Erro ao verificar acesso:', error);
         this.$router.push('/login');
         this.toast.error('Erro ao verificar permissões');
       }
@@ -196,9 +195,7 @@ export default {
         this.users = response.data;
         this.filteredUsers = [...this.users];
       } catch (error) {
-        console.error('Erro ao buscar usuários:', error);
         if (process.env.NODE_ENV === 'development') {
-          console.log('Criando usuários fictícios para ambiente de desenvolvimento');
           this.users = [
             { _id: '1', nome: 'Admin Teste', username: 'admin', email: 'admin@example.com', tipo_usuario: 'admin' },
             { _id: '2', nome: 'Usuário Teste', username: 'user', email: 'user@example.com', tipo_usuario: 'comum' }
@@ -301,7 +298,6 @@ export default {
         this.closeModal();
         this.fetchUsers();
       } catch (error) {
-        console.error('Erro ao salvar usuário:', error);
         this.toast.error('Erro ao salvar usuário');
       }
     },
@@ -328,7 +324,6 @@ export default {
         this.toast.success('Usuário excluído com sucesso!');
         this.fetchUsers();
       } catch (error) {
-        console.error('Erro ao excluir usuário:', error);
         this.toast.error('Erro ao excluir usuário');
       }
     },

@@ -157,31 +157,57 @@ async def broadcast_to_all(event: str, data: dict):
 
 async def broadcast_to_admins(event: str, data: dict):
     """
-    Envia uma mensagem apenas para usuários administradores.
+    Envia uma mensagem apenas para usuários administradores e gestores.
     
     Args:
         event: Nome do evento a ser emitido
         data: Dados a serem enviados
     """
-    # Implementação simplificada - na prática, você verificaria quais usuários são admins
-    # e enviaria apenas para eles
-    admin_sessions = []
-    for email, sessions in connected_users.items():
-        # Aqui você verificaria se o usuário é admin
-        # Por enquanto, vamos assumir que emails com 'admin' são admins
-        if 'admin' in email or 'gestor' in email:
-            admin_sessions.extend(sessions)
-    
-    for sid in admin_sessions:
-        try:
-            await sio.emit(event, data, to=sid)
-            logger.info(f"Notificação de admin enviada para SID: {sid}")
-        except Exception as e:
-            logger.error(f"Erro ao enviar notificação de admin para {sid}: {e}")
+    try:
+        logger.info(f"[WEBSOCKET ADMIN] Iniciando broadcast para admins/gestores - evento: {event}")
+        
+        # Buscar admins e gestores no banco de dados
+        db = await database.get_db()
+        admins_gestores = await db["users"].find({
+            "tipo_usuario": {"$in": ["admin", "gestor"]}
+        }).to_list(None)
+        
+        logger.info(f"[WEBSOCKET ADMIN] Encontrados {len(admins_gestores)} admins/gestores")
+        
+        admin_sessions = []
+        admins_notified = []
+        
+        for user in admins_gestores:
+            user_email = user.get("email")
+            user_name = user.get("nome", "Sem nome")
+            user_type = user.get("tipo_usuario")
+            
+            if user_email and user_email in connected_users:
+                sessions = connected_users[user_email]
+                admin_sessions.extend(sessions)
+                admins_notified.append(f"{user_name}({user_email}) - {user_type}")
+                logger.info(f"[WEBSOCKET ADMIN] ✓ {user_name}({user_email}) - {user_type} - {len(sessions)} sessões")
+        
+        notifications_sent = 0
+        for sid in admin_sessions:
+            try:
+                await sio.emit(event, data, to=sid)
+                logger.info(f"[WEBSOCKET ADMIN] ✓ Broadcast enviado para SID: {sid}")
+                notifications_sent += 1
+            except Exception as e:
+                logger.error(f"[WEBSOCKET ERROR] Erro ao enviar broadcast para {sid}: {e}")
+        
+        logger.info(f"[WEBSOCKET ADMIN] ✓ RESUMO: {notifications_sent} broadcasts enviados para {len(admins_notified)} admins/gestores")
+        logger.info(f"[WEBSOCKET ADMIN] ✓ Admins notificados: {admins_notified}")
+        
+    except Exception as e:
+        logger.error(f"[WEBSOCKET ERROR] Erro ao enviar broadcast para admins: {e}")
+        logger.exception("Detalhes do erro:")
 
 async def send_notification_to_sector(setor: str, notification_type: str, data: dict):
     """
     Envia notificação para todos os usuários de um setor específico.
+    APENAS usuários do setor especificado recebem a notificação.
     
     Args:
         setor: Nome do setor
@@ -189,14 +215,14 @@ async def send_notification_to_sector(setor: str, notification_type: str, data: 
         data: Dados da notificação
     """
     try:
-        logger.info(f"[WEBSOCKET DEBUG] Iniciando envio para setor {setor}")
+        logger.info(f"[WEBSOCKET SECTOR] Iniciando envio para setor específico '{setor}' - tipo: {notification_type}")
         
         # Buscar usuários do setor no banco de dados
         db = await database.get_db()
         users_in_sector = await db["users"].find({"setor": setor}).to_list(None)
         
-        logger.info(f"[WEBSOCKET DEBUG] Encontrados {len(users_in_sector)} usuários no setor {setor}")
-        logger.info(f"[WEBSOCKET DEBUG] Usuários conectados atualmente: {list(connected_users.keys())}")
+        logger.info(f"[WEBSOCKET SECTOR] Encontrados {len(users_in_sector)} usuários no setor '{setor}'")
+        logger.info(f"[WEBSOCKET SECTOR] Usuários conectados atualmente: {list(connected_users.keys())}")
         
         notification_data = {
             'type': notification_type,
@@ -207,28 +233,42 @@ async def send_notification_to_sector(setor: str, notification_type: str, data: 
         
         # Enviar para cada usuário do setor que estiver conectado
         notifications_sent = 0
+        users_notified = []
+        users_not_connected = []
+        
         for user in users_in_sector:
             user_email = user.get("email")
-            logger.info(f"[WEBSOCKET DEBUG] Verificando usuário {user_email}")
+            user_name = user.get("nome", "Sem nome")
+            user_type = user.get("tipo_usuario", "comum")
+            
+            logger.info(f"[WEBSOCKET SECTOR] Verificando usuário {user_name}({user_email}) - {user_type}")
             
             if user_email and user_email in connected_users:
                 sessions = connected_users[user_email]
-                logger.info(f"[WEBSOCKET DEBUG] Usuário {user_email} está conectado com {len(sessions)} sessões")
+                logger.info(f"[WEBSOCKET SECTOR] ✓ Usuário {user_name}({user_email}) está conectado com {len(sessions)} sessões")
                 
                 for sid in sessions:
                     try:
                         await sio.emit('notification', notification_data, to=sid)
-                        logger.info(f"[WEBSOCKET DEBUG] Notificação enviada para usuário {user_email} do setor {setor} (SID: {sid})")
+                        logger.info(f"[WEBSOCKET SECTOR] ✓ Notificação enviada para {user_name}({user_email}) do setor '{setor}' (SID: {sid})")
                         notifications_sent += 1
                     except Exception as e:
                         logger.error(f"[WEBSOCKET ERROR] Erro ao enviar notificação para {sid}: {e}")
+                
+                users_notified.append(f"{user_name}({user_email})")
             else:
-                logger.info(f"[WEBSOCKET DEBUG] Usuário {user_email} não está conectado")
+                logger.info(f"[WEBSOCKET SECTOR] ⚠ Usuário {user_name}({user_email}) não está conectado")
+                users_not_connected.append(f"{user_name}({user_email})")
         
-        logger.info(f"[WEBSOCKET DEBUG] Notificação enviada para o setor {setor}: {notifications_sent} notificações enviadas de {len(users_in_sector)} usuários")
+        # Log resumo
+        logger.info(f"[WEBSOCKET SECTOR] ✓ RESUMO para setor '{setor}': {notifications_sent} notificações enviadas")
+        logger.info(f"[WEBSOCKET SECTOR] ✓ Usuários notificados ({len(users_notified)}): {users_notified}")
+        
+        if users_not_connected:
+            logger.info(f"[WEBSOCKET SECTOR] ⚠ Usuários não conectados ({len(users_not_connected)}): {users_not_connected}")
         
     except Exception as e:
-        logger.error(f"[WEBSOCKET ERROR] Erro ao enviar notificação para o setor {setor}: {e}")
+        logger.error(f"[WEBSOCKET ERROR] Erro ao enviar notificação para o setor '{setor}': {e}")
         logger.exception("Detalhes do erro:")
 
 async def send_notification_to_admins_gestores(notification_type: str, data: dict):
@@ -283,20 +323,25 @@ async def send_notification_to_admins_gestores(notification_type: str, data: dic
         logger.error(f"[WEBSOCKET ERROR] Erro ao enviar notificação para admins/gestores: {e}")
         logger.exception("Detalhes do erro:")
 
-async def send_smart_notification(setor: str, notification_type: str, data: dict):
+async def send_smart_notification(setor: str, notification_type: str, data: dict, creator_email: str = None):
     """
     Envia notificação de forma inteligente, evitando duplicatas.
     
-    - Usuários comuns: recebem apenas se forem do setor
+    REGRAS CORRETAS:
+    - Usuários comuns: recebem APENAS se forem do MESMO setor do pedido
     - Admins/Gestores: recebem independente do setor, mas apenas UMA vez
+    - O usuário criador do pedido NÃO recebe sua própria notificação
     
     Args:
         setor: Nome do setor do pedido
         notification_type: Tipo da notificação
         data: Dados da notificação
+        creator_email: Email do usuário que criou o pedido (não receberá notificação)
     """
     try:
-        logger.info(f"[WEBSOCKET SMART] Iniciando envio inteligente para setor {setor}")
+        logger.info(f"[WEBSOCKET SMART] Enviando notificação para setor '{setor}' - tipo: {notification_type}")
+        if creator_email:
+            logger.info(f"[WEBSOCKET SMART] Usuário criador '{creator_email}' será excluído das notificações")
         
         # Buscar todos os usuários
         db = await database.get_db()
@@ -313,28 +358,51 @@ async def send_smart_notification(setor: str, notification_type: str, data: dict
         
         notifications_sent = 0
         users_notified = set()  # Para evitar duplicatas
+        users_filtered_out = []  # Para log de usuários filtrados
         
         for user in all_users:
             user_email = user.get("email")
             user_setor = user.get("setor")
             user_type = user.get("tipo_usuario", "comum")
+            user_name = user.get("nome", "Sem nome")
+            
+            # FILTRO 1: Evitar que o usuário criador receba sua própria notificação
+            if creator_email and user_email == creator_email:
+                users_filtered_out.append(f"{user_name}({user_email}) - criador do pedido")
+                logger.info(f"[WEBSOCKET SMART] ❌ Usuário criador {user_name}({user_email}) não receberá sua própria notificação")
+                continue
             
             # Determinar se deve enviar notificação
             should_notify = False
-            reason = ""
             
             if user_type in ['admin', 'gestor']:
-                # Admins e gestores sempre recebem
+                # Admins e gestores sempre recebem (independente do setor)
                 should_notify = True
-                reason = f"admin/gestor ({user_type})"
-            elif user_setor == setor:
-                # Usuários comuns apenas do mesmo setor
-                should_notify = True
-                reason = f"mesmo setor ({user_setor})"
+            elif user_type == "comum":
+                # Usuários comuns APENAS do mesmo setor - comparação EXATA
+                if user_setor and setor:
+                    # Normalizar strings para comparação
+                    user_setor_clean = str(user_setor).strip().replace('\u00a0', ' ')  # Remove non-breaking spaces
+                    setor_clean = str(setor).strip().replace('\u00a0', ' ')
+                    
+                    if user_setor_clean == setor_clean:
+                        should_notify = True
+                    else:
+                        should_notify = False
+                        users_filtered_out.append(f"{user_name}({user_email}) - setor diferente ({user_setor} != {setor})")
+                        # Log apenas para casos suspeitos - verificar se há diferenças sutis
+                        if user_setor_clean.lower() == setor_clean.lower():
+                            logger.warning(f"[WEBSOCKET SMART] ATENÇÃO: Diferença de case detectada - usuário: '{user_setor}' vs pedido: '{setor}'")
+                        elif len(user_setor_clean) != len(setor_clean):
+                            logger.warning(f"[WEBSOCKET SMART] ATENÇÃO: Diferença de tamanho detectada - usuário: '{user_setor}' ({len(user_setor_clean)}) vs pedido: '{setor}' ({len(setor_clean)})")
+                        else:
+                            logger.info(f"[WEBSOCKET SMART] Usuário {user_name}({user_email}) do setor '{user_setor}' NÃO receberá notificação do setor '{setor}'")
+                else:
+                    should_notify = False
+                    users_filtered_out.append(f"{user_name}({user_email}) - setor não definido")
             
             if should_notify and user_email and user_email in connected_users and user_email not in users_notified:
                 sessions = connected_users[user_email]
-                logger.info(f"[WEBSOCKET SMART] Enviando para {user_email} - {reason} - {len(sessions)} sessões")
                 
                 for sid in sessions:
                     try:
@@ -344,11 +412,93 @@ async def send_smart_notification(setor: str, notification_type: str, data: dict
                         logger.error(f"[WEBSOCKET ERROR] Erro ao enviar para {sid}: {e}")
                 
                 users_notified.add(user_email)
-            elif user_email:
-                logger.debug(f"[WEBSOCKET SMART] Pulando {user_email} - não conectado ou já notificado")
+                logger.info(f"[WEBSOCKET SMART] ✓ Notificação enviada para {user_name}({user_email}) - {user_type} - setor: '{user_setor}'")
         
-        logger.info(f"[WEBSOCKET SMART] Notificação enviada: {notifications_sent} notificações para {len(users_notified)} usuários únicos")
+        logger.info(f"[WEBSOCKET SMART] ✓ RESUMO: {notifications_sent} notificações enviadas para {len(users_notified)} usuários únicos")
+        
+        if users_filtered_out:
+            logger.info(f"[WEBSOCKET SMART] ❌ Usuários filtrados ({len(users_filtered_out)}): {users_filtered_out[:5]}{'...' if len(users_filtered_out) > 5 else ''}")
         
     except Exception as e:
         logger.error(f"[WEBSOCKET ERROR] Erro no envio inteligente: {e}")
+        logger.exception("Detalhes do erro:")
+
+async def send_login_notification(user_data: dict):
+    """
+    Envia notificações de login conforme as regras corretas:
+    - Quando usuário comum faz login: apenas gestores e admins são notificados
+    - Quando gestor/admin faz login: apenas usuários comuns são notificados
+    
+    Args:
+        user_data: Dados do usuário que fez login
+    """
+    try:
+        user_type = user_data.get("tipo_usuario", "comum")
+        user_name = user_data.get("nome", "Usuário")
+        user_setor = user_data.get("setor", "Escritório")
+        
+        logger.info(f"[WEBSOCKET LOGIN] Processando notificação de login para {user_name} ({user_type})")
+        
+        # Buscar todos os usuários
+        db = await database.get_db()
+        all_users = await db["users"].find({}).to_list(None)
+        
+        notification_data = {
+            'type': 'user_login',
+            'data': {
+                'title': 'Usuário Conectado',
+                'message': f'{user_name} ({user_setor}) fez login no sistema',
+                'user': {
+                    'nome': user_name,
+                    'setor': user_setor,
+                    'tipo_usuario': user_type
+                }
+            },
+            'timestamp': datetime.now().isoformat()
+        }
+        
+        notifications_sent = 0
+        users_notified = set()
+        
+        # Filtrar usuários que devem ser notificados
+        for user_email, user_data in connected_users.items():
+            if user_email not in users_to_notify:
+                continue
+            
+            target_user_type = user_data.get("tipo_usuario", "comum")
+            
+            # Determinar se deve enviar notificação baseado nas regras CORRETAS
+            should_notify = False
+            reason = ""
+            
+            # Evitar notificar o próprio usuário que fez login
+            if user_email == user_name:
+                continue
+            
+            # REGRA CORRETA: Usuários comuns só devem receber notificações de login de admins/gestores
+            if user_type in ['gestor', 'admin']:
+                # Gestor/admin fez login -> notificar APENAS usuários comuns
+                if target_user_type == "comum":
+                    should_notify = True
+                    reason = f"{user_type} logou, notificando usuário comum"
+            # Se usuário comum fez login, NÃO notificar outros usuários comuns
+            # Apenas admins/gestores devem ser notificados (mas isso não é o requisito)
+            
+            if should_notify and user_email and user_email in connected_users and user_email not in users_notified:
+                sessions = connected_users[user_email]
+                logger.info(f"[WEBSOCKET LOGIN] Enviando para {user_email} - {reason} - {len(sessions)} sessões")
+                
+                for sid in sessions:
+                    try:
+                        await sio.emit('notification', notification_data, to=sid)
+                        notifications_sent += 1
+                    except Exception as e:
+                        logger.error(f"[WEBSOCKET ERROR] Erro ao enviar notificação de login para {sid}: {e}")
+                
+                users_notified.add(user_email)
+        
+        logger.info(f"[WEBSOCKET LOGIN] Notificação de login enviada: {notifications_sent} notificações para {len(users_notified)} usuários únicos")
+        
+    except Exception as e:
+        logger.error(f"[WEBSOCKET ERROR] Erro ao enviar notificação de login: {e}")
         logger.exception("Detalhes do erro:") 

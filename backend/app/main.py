@@ -30,7 +30,7 @@ from .user_routes import router as user_router
 from .reports import report_generator
 
 # Importar WebSocket
-from .websocket import socket_app, send_notification_to_sector, send_notification_to_admins_gestores, send_smart_notification
+from .websocket import socket_app, send_notification_to_sector, send_notification_to_admins_gestores, send_smart_notification, send_login_notification
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -91,7 +91,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
                     "script-src 'self' 'unsafe-inline'; "
                     "style-src 'self' 'unsafe-inline'; "
                     "img-src 'self' data:; "
-                    "connect-src 'self' ws: wss:; "  # Permitir WebSockets
+                    "connect-src 'self' ws: wss:; "
                     "font-src 'self'; "
                     "object-src 'none'; "
                     "media-src 'self'; "
@@ -127,9 +127,6 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             # Atualizar os cabeçalhos da resposta
             for key, value in headers.items():
                 response.headers[key] = value
-                
-            # Log para verificar cabeçalhos aplicados
-            logger.debug(f"Cabeçalhos de segurança aplicados: {dict(response.headers)}")
                 
             return response
         except Exception as e:
@@ -374,6 +371,18 @@ async def login_for_access_token(form_data: schemas.LoginRequest, request: Reque
     
     logger.info(f"Token gerado com sucesso para {user['nome']} com tipo {user.get('tipo_usuario')} - IP: {ip_address}")
     
+    # Enviar notificações de login via WebSocket
+    try:
+        await send_login_notification({
+            "nome": user["nome"],
+            "tipo_usuario": user.get("tipo_usuario", "comum"),
+            "setor": user.get("setor", "Escritório")
+        })
+        logger.info(f"[WEBSOCKET LOGIN] Notificação de login enviada para {user['nome']}")
+    except Exception as e:
+        logger.error(f"[WEBSOCKET ERROR] Erro ao enviar notificação de login: {e}")
+        # Não falhar o login por causa das notificações
+    
     # Retornar o token e os dados do usuário
     return {
         "access_token": access_token,
@@ -440,15 +449,23 @@ async def criar_pedido(pedido: schemas.PedidoCreate, request: Request, db=Depend
         # Verificar se o usuário é admin ou gestor
         is_admin = current_user.get("tipo_usuario") == "admin"
         is_gestor = current_user.get("tipo_usuario") == "gestor"
-            
-        logger.info(f"Usuário autenticado: {usuario_nome}, Setor: {setor_usuario}")
         
         # Sobrescreve o campo usuario_nome, ignorando o enviado pelo cliente
         pedido_dict["usuario_nome"] = usuario_nome
         
+        # Determinar o setor do pedido
+        setor_original = pedido_dict.get("setor")
+        
         # Sobrescreve o campo setor apenas se não for admin ou gestor
         if not (is_admin or is_gestor):
             pedido_dict["setor"] = setor_usuario
+        else:
+            # Admin/gestor pode especificar qualquer setor
+            if not setor_original:
+                pedido_dict["setor"] = setor_usuario  # Se não especificou, usa o próprio setor
+
+        setor_final = pedido_dict.get("setor")
+        logger.info(f"Pedido #{next_id} criado por {usuario_nome} ({current_user.get('tipo_usuario', 'comum')}) para o setor '{setor_final}'")
 
         # Assegura que a data do pedido seja a data e hora atual
         pedido_dict["deliveryDate"] = datetime.now()
@@ -470,14 +487,16 @@ async def criar_pedido(pedido: schemas.PedidoCreate, request: Request, db=Depend
             ip_address=ip_address,
             user_agent=user_agent,
             dados_adicionais={
-                "setor": pedido_dict.get("setor", setor_usuario),
-                "titulo": pedido.descricao
+                "setor": setor_final,
+                "titulo": pedido.descricao,
+                "criado_por_tipo": current_user.get('tipo_usuario', 'comum'),
+                "setor_usuario": setor_usuario
             }
         )
 
         # Enviar notificações WebSocket
         try:
-            setor_pedido = pedido_dict.get("setor", setor_usuario)
+            setor_pedido = setor_final
             
             # Dados da notificação
             notification_data = {
@@ -492,19 +511,15 @@ async def criar_pedido(pedido: schemas.PedidoCreate, request: Request, db=Depend
                 }
             }
             
-            logger.info(f"[WEBSOCKET DEBUG] Preparando notificação para pedido #{next_id}")
-            logger.info(f"[WEBSOCKET DEBUG] Setor do pedido: {setor_pedido}")
-            logger.info(f"[WEBSOCKET DEBUG] Dados da notificação: {notification_data}")
+            # Obter email do usuário criador para evitar que receba sua própria notificação
+            creator_email = current_user.get("email")
             
             # Enviar notificação de forma inteligente para evitar duplicatas
-            logger.info(f"[WEBSOCKET DEBUG] Enviando notificação inteligente para pedido #{next_id}")
-            await send_smart_notification(setor_pedido, 'novo_pedido', notification_data)
-            
-            logger.info(f"[WEBSOCKET DEBUG] Notificações WebSocket enviadas para o pedido #{next_id}")
+            await send_smart_notification(setor_pedido, 'novo_pedido', notification_data, creator_email)
+            logger.info(f"Notificações WebSocket enviadas para o pedido #{next_id} (criador {creator_email} excluído)")
             
         except Exception as e:
-            logger.error(f"[WEBSOCKET ERROR] Erro ao enviar notificações WebSocket para o pedido #{next_id}: {e}")
-            logger.exception("Detalhes do erro WebSocket:")
+            logger.error(f"Erro ao enviar notificações WebSocket para o pedido #{next_id}: {e}")
             # Não falhar a criação do pedido por causa das notificações
 
         logger.info(f"Pedido criado com sucesso: {pedido_dict}")
@@ -945,10 +960,13 @@ async def atualizar_pedido(pedido_id: int, pedido: schemas.PedidoCreate, request
                         }
                     }
                     
-                    # Enviar notificação inteligente
-                    await send_smart_notification(setor_pedido, 'pedido_concluido', notification_data)
+                    # Obter email do usuário que está concluindo para evitar que receba sua própria notificação
+                    concluder_email = current_user.get("email")
                     
-                    logger.info(f"Notificações WebSocket de conclusão enviadas para o pedido #{pedido_id}")
+                    # Enviar notificação inteligente
+                    await send_smart_notification(setor_pedido, 'pedido_concluido', notification_data, concluder_email)
+                    
+                    logger.info(f"Notificações WebSocket de conclusão enviadas para o pedido #{pedido_id} (usuário {concluder_email} excluído)")
                     
                 except Exception as e:
                     logger.error(f"Erro ao enviar notificações WebSocket de conclusão para o pedido #{pedido_id}: {e}")
@@ -1226,10 +1244,13 @@ async def atualizar_pedido_com_historico(
                         }
                     }
                     
-                    # Enviar notificação inteligente
-                    await send_smart_notification(setor_pedido, 'pedido_concluido', notification_data)
+                    # Obter email do usuário que está concluindo para evitar que receba sua própria notificação
+                    concluder_email = current_user.get("email")
                     
-                    logger.info(f"Notificações WebSocket de conclusão enviadas para o pedido #{pedido_id} (com histórico)")
+                    # Enviar notificação inteligente
+                    await send_smart_notification(setor_pedido, 'pedido_concluido', notification_data, concluder_email)
+                    
+                    logger.info(f"Notificações WebSocket de conclusão enviadas para o pedido #{pedido_id} (usuário {concluder_email} excluído)")
                     
                 except Exception as e:
                     logger.error(f"Erro ao enviar notificações WebSocket de conclusão para o pedido #{pedido_id}: {e}")
@@ -2949,17 +2970,21 @@ async def test_websocket_notification(
             }
         }
         
+        # Obter email do usuário que está testando para evitar que receba sua própria notificação
+        tester_email = current_user.get("email")
+        
         # Enviar notificação inteligente
         setor_usuario = current_user.get('setor', 'Escritório')
-        await send_smart_notification(setor_usuario, 'teste', test_data)
+        await send_smart_notification(setor_usuario, 'teste', test_data, tester_email)
         
-        logger.info(f"Notificação de teste enviada para o setor {setor_usuario}")
+        logger.info(f"Notificação de teste enviada para o setor {setor_usuario} (usuário {tester_email} excluído)")
         
         return {
             "status": "success",
             "message": "Notificação de teste enviada",
             "setor": setor_usuario,
-            "user_type": current_user.get('tipo_usuario')
+            "user_type": current_user.get('tipo_usuario'),
+            "excluded_user": tester_email
         }
         
     except Exception as e:
