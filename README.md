@@ -8,7 +8,7 @@ Sistema moderno de gestão de pedidos com interface intuitiva e responsiva.<br/>
 Suporte completo para autenticação JWT, dashboard interativo e hierarquia de usuários.<br/>
 Deploy **GRATUITO** com um clique da sua aplicação privada de gestão de pedidos.
 
-**Português (Brasil)** · [📋 Documentação][docs] · [📝 Changelog][changelog] · [📄 CHANGELOG.MD](CHANGELOG.MD) · [🐛 Issues][github-issues-link] · [💬 Suporte][support-link]
+**Português (Brasil)** · [📋 Documentação][docs] · [📄 CHANGELOG.MD](CHANGELOG.MD) · [🐛 Issues][github-issues-link] · [💬 Suporte][support-link]
 
 <!-- SHIELD GROUP -->
 
@@ -71,7 +71,6 @@ Deploy **GRATUITO** com um clique da sua aplicação privada de gestão de pedid
   <h3>📋 Navegação Principal</h3>
   <p>
     <a href="#readme-content">📖 README</a> • 
-    <a href="#changelog-content">📝 CHANGELOG</a> • 
     <a href="#documentacao-content">📚 Documentação</a> •
     <a href="CHANGELOG.MD">📄 CHANGELOG.MD</a>
   </p>
@@ -99,6 +98,131 @@ O **AraldiTech - Pedidos** está atualmente em desenvolvimento ativo, e feedback
 
 ### 🚨 Aviso Importante sobre Versões Futuras
 > **⚠️ ATENÇÃO:** A partir da versão **0.9.1**, todas as novas versões do AraldiTech - Pedidos serão desenvolvidas em um **repositório privado**. Esta é a **última versão pública** do projeto. Para acesso às versões futuras, entre em contato com o desenvolvedor.
+
+<details>
+<summary><kbd>📝 CHANGELOG - Histórico de Versões</kbd></summary>
+
+## 📝 CHANGELOG
+
+Todas as alterações notáveis deste projeto são documentadas aqui.
+
+### 🚨 Aviso sobre Versões Futuras
+> **A partir da versão 1.0.0, o desenvolvimento continuará em repositório privado. Esta é última versão pública do projeto.**
+
+## [0.9.0] - Em Desenvolvimento 🚧
+### 🎯 Foco da Versão
+Esta versão marca a **transição para desenvolvimento privado** e inclui melhorias significativas em performance, segurança e experiência do usuário.
+
+### 🔄 Em Desenvolvimento
+- **🛡️ Sistema de Auditoria Avançado**: Rastreamento completo de todas as ações do sistema
+- **⚡ Otimizações de Performance**: Melhorias significativas na velocidade de carregamento
+- **🎨 Redesign da Interface**: Nova identidade visual mais moderna
+- **📊 Dashboard Avançado**: Novos gráficos e métricas em tempo real
+- **🔐 Segurança Aprimorada**: Implementação de novos protocolos de segurança
+- **📱 Mobile**: Redesign completo para dispositivos móveis
+- **🌐 API v2**: Nova versão da API com melhor documentação
+- **🔍 Sistema de Busca Avançado**: Filtros e pesquisas mais inteligentes
+
+### 📋 Planejado para esta Versão
+- **🚀 Cache Inteligente**: Sistema de cache para melhor performance
+- **📧 Notificações por Email**: Sistema de notificações automáticas
+- **📊 Relatórios Personalizáveis**: Criação de relatórios customizados
+- **🔄 Sincronização em Tempo Real**: WebSockets para atualizações instantâneas
+- **🌍 Internacionalização**: Suporte para múltiplos idiomas
+- **📦 Sistema de Backup Automático**: Backup automático dos dados
+
+---
+
+## [0.8.9] - 2025-05-25
+### ✅ Adicionado
+- **🔧 Preparação para v0.9.0**: Estrutura base para as próximas funcionalidades
+- **📚 Documentação Aprimorada**: Melhorias na documentação do código
+- **🧪 Testes Automatizados**: Expansão da cobertura de testes
+
+### 🔧 Melhorado
+- **⚡ Performance Geral**: Otimizações em consultas ao banco de dados
+- **🎨 Interface do Usuário**: Pequenos ajustes visuais e de usabilidade
+- **🔐 Segurança**: Fortalecimento das validações de entrada
+
+### 🐛 Corrigido
+- **📱 Responsividade**: Ajustes finais para dispositivos móveis
+- **🔄 Sincronização**: Melhorias na sincronização entre frontend e backend
+
+---
+
+## [0.8.8] - 2025-05-23
+### ✅ Adicionado
+- **📊 Dashboard Reformulado**: Completamente refeito com menus organizados
+- **📈 Sistema de Relatórios**: Backend específico para relatórios (em desenvolvimento)
+
+### 🐛 Corrigido
+- **📱 Responsividade**: Novos ajustes para melhor adaptação em diferentes telas
+
+---
+
+## [0.8.7] - 2025-05-21
+### ✅ Adicionado
+- **🎨 UI Interativa**: Novos componentes para melhor UX
+- **🚪 Confirmação de Logout**: Modal de confirmação para evitar saídas acidentais
+- **🍔 Menu Hamburger**: Implementado para versão mobile
+- **⏳ Splash Screen**: Tela de carregamento para melhor experiência
+
+### 🔧 Melhorado
+- **🔑 AppLogin**: Refatoração das funcionalidades pós-login
+- **📝 Modal de Cadastro**: Otimização de validações e feedback
+
+### 🐛 Corrigido
+- **📱 Responsividade**: Centralização em arquivo separado
+- **👤 Cadastro de Usuário**: Correção de espaços em branco no nome
+- **🔐 Verificação de Token**: Nova camada de segurança
+
+---
+
+## [0.8.6] - 2025-05-19
+### 🔧 Melhorado
+- **📱 Responsividade Geral**: Melhorias para telas pequenas e mobile
+- **🔘 Botões e Menus**: Redesign para melhor consistência mobile
+
+### 🐛 Corrigido
+- **📋 Visualizador de Logs**: Correção nas informações do modal
+- **🖨️ Modal de Impressão**: Adaptação para impressão correta
+
+---
+
+## [0.8.5] - 2025-05-18
+### ✅ Adicionado
+- **🛡️ Segurança Aprimorada**: Proteção CSRF e validações avançadas
+- **⚡ Sistema de Cache**: Redução do tempo de resposta
+- **📋 Visualizador de Logs**: Modal para administradores
+- **🧪 Testes Unitários**: Framework Jest integrado
+- **✅ Validação Centralizada**: Regras padronizadas
+- **🎨 Componentes Reutilizáveis**: Indicadores e tooltips
+- **⚠️ Tratamento de Erros**: Sistema centralizado
+
+### 🔧 Melhorado
+- **⚡ Performance**: Otimização de requisições HTTP
+- **💬 Feedback ao Usuário**: Notificações mais claras
+- **📱 Responsividade**: Ajustes em modais e cards
+- **🔐 Segurança de Dados**: Validação rigorosa
+- **📁 Organização**: Refatoração para modularidade
+- **🎨 Consistência Visual**: Padronização de componentes
+
+### 🐛 Corrigido
+- **📝 Formulários**: Uniformização de validações
+- **📱 Layout Mobile**: Correções específicas
+- **📅 Formato de Datas**: Consistência entre formulários
+- **🔄 Requisições**: Melhor gerenciamento simultâneo
+- **🌐 Rede Instável**: Recuperação robusta de falhas
+- **✅ Conclusão de Pedidos**: Formato de data e permissões
+
+### ❌ Removido
+- **📚 Tutorial Interativo**: Movido para documentação
+
+---
+
+> **📝 Nota**: Para ver o histórico completo, consulte o arquivo [CHANGELOG.MD](CHANGELOG.MD)
+
+</details>
 
 <div align="right">
 
@@ -410,222 +534,6 @@ Este projeto está licenciado sob a Licença MIT - veja o arquivo [LICENSE](LICE
 
 </div>
 
-<div id="changelog-content">
-
-## 📝 CHANGELOG
-
-Todas as alterações notáveis deste projeto são documentadas neste arquivo.
-
-### 🚨 Aviso sobre Versões Futuras
-> **A partir da versão 1.0.0, o desenvolvimento continuará em repositório privado. Esta é última versão pública do projeto.**
-
-## [0.9.0] - Em Desenvolvimento 🚧
-### 🎯 Foco da Versão
-Esta versão marca a **transição para desenvolvimento privado** e inclui melhorias significativas em performance, segurança e experiência do usuário.
-
-### 🔄 Em Desenvolvimento
-- **🛡️ Sistema de Auditoria Avançado**: Rastreamento completo de todas as ações do sistema
-- **⚡ Otimizações de Performance**: Melhorias significativas na velocidade de carregamento
-- **🎨 Redesign da Interface**: Nova identidade visual mais moderna
-- **📊 Dashboard Avançado**: Novos gráficos e métricas em tempo real
-- **🔐 Segurança Aprimorada**: Implementação de novos protocolos de segurança
-- **📱 Mobile**: Redesign completo para dispositivos móveis
-- **🌐 API v2**: Nova versão da API com melhor documentação
-- **🔍 Sistema de Busca Avançado**: Filtros e pesquisas mais inteligentes
-
-### 📋 Planejado para esta Versão
-- **🚀 Cache Inteligente**: Sistema de cache para melhor performance
-- **📧 Notificações por Email**: Sistema de notificações automáticas
-- **📊 Relatórios Personalizáveis**: Criação de relatórios customizados
-- **🔄 Sincronização em Tempo Real**: WebSockets para atualizações instantâneas
-- **🌍 Internacionalização**: Suporte para múltiplos idiomas
-- **📦 Sistema de Backup Automático**: Backup automático dos dados
-
----
-
-## [0.8.9] - 2025-05-25
-### ✅ Adicionado
-- **🔧 Preparação para v0.9.0**: Estrutura base para as próximas funcionalidades
-- **📚 Documentação Aprimorada**: Melhorias na documentação do código
-- **🧪 Testes Automatizados**: Expansão da cobertura de testes
-
-### 🔧 Melhorado
-- **⚡ Performance Geral**: Otimizações em consultas ao banco de dados
-- **🎨 Interface do Usuário**: Pequenos ajustes visuais e de usabilidade
-- **🔐 Segurança**: Fortalecimento das validações de entrada
-
-### 🐛 Corrigido
-- **📱 Responsividade**: Ajustes finais para dispositivos móveis
-- **🔄 Sincronização**: Melhorias na sincronização entre frontend e backend
-
----
-
-## [0.8.8] - 2025-05-23
-### ✅ Adicionado
-- **📊 Dashboard Reformulado**: Completamente refeito com menus organizados
-- **📈 Sistema de Relatórios**: Backend específico para relatórios (em desenvolvimento)
-
-### 🐛 Corrigido
-- **📱 Responsividade**: Novos ajustes para melhor adaptação em diferentes telas
-
----
-
-## [0.8.7] - 2025-05-21
-### ✅ Adicionado
-- **🎨 UI Interativa**: Novos componentes para melhor UX
-- **🚪 Confirmação de Logout**: Modal de confirmação para evitar saídas acidentais
-- **🍔 Menu Hamburger**: Implementado para versão mobile
-- **⏳ Splash Screen**: Tela de carregamento para melhor experiência
-
-### 🔧 Melhorado
-- **🔑 AppLogin**: Refatoração das funcionalidades pós-login
-- **📝 Modal de Cadastro**: Otimização de validações e feedback
-
-### 🐛 Corrigido
-- **📱 Responsividade**: Centralização em arquivo separado
-- **👤 Cadastro de Usuário**: Correção de espaços em branco no nome
-- **🔐 Verificação de Token**: Nova camada de segurança
-
----
-
-## [0.8.6] - 2025-05-19
-### 🔧 Melhorado
-- **📱 Responsividade Geral**: Melhorias para telas pequenas e mobile
-- **🔘 Botões e Menus**: Redesign para melhor consistência mobile
-
-### 🐛 Corrigido
-- **📋 Visualizador de Logs**: Correção nas informações do modal
-- **🖨️ Modal de Impressão**: Adaptação para impressão correta
-
----
-
-## [0.8.5] - 2025-05-18
-### ✅ Adicionado
-- **🛡️ Segurança Aprimorada**: Proteção CSRF e validações avançadas
-- **⚡ Sistema de Cache**: Redução do tempo de resposta
-- **📋 Visualizador de Logs**: Modal para administradores
-- **🧪 Testes Unitários**: Framework Jest integrado
-- **✅ Validação Centralizada**: Regras padronizadas
-- **🎨 Componentes Reutilizáveis**: Indicadores e tooltips
-- **⚠️ Tratamento de Erros**: Sistema centralizado
-
-### 🔧 Melhorado
-- **⚡ Performance**: Otimização de requisições HTTP
-- **💬 Feedback ao Usuário**: Notificações mais claras
-- **📱 Responsividade**: Ajustes em modais e cards
-- **🔐 Segurança de Dados**: Validação rigorosa
-- **📁 Organização**: Refatoração para modularidade
-- **🎨 Consistência Visual**: Padronização de componentes
-
-### 🐛 Corrigido
-- **📝 Formulários**: Uniformização de validações
-- **📱 Layout Mobile**: Correções específicas
-- **📅 Formato de Datas**: Consistência entre formulários
-- **🔄 Requisições**: Melhor gerenciamento simultâneo
-- **🌐 Rede Instável**: Recuperação robusta de falhas
-- **✅ Conclusão de Pedidos**: Formato de data e permissões
-
-### ❌ Removido
-- **📚 Tutorial Interativo**: Movido para documentação
-
----
-
-## [0.8.4] - 2025-05-15
-### ✅ Adicionado
-- **🔍 Filtro por Setor**: Modal de consulta com filtros
-- **🚨 Indicadores de Prioridade**: Destaque visual para urgência
-- **📊 Ordenação Inteligente**: Por prioridade (Crítico > Urgente > Padrão)
-- **🏢 Visualização de Setor**: Campo nos cards de pedido
-- **🗺️ Roadmap**: Planejamento até versão 1.0
-
-### 🔧 Melhorado
-- **📱 Design Responsivo**: Layout otimizado para mobile
-- **🎨 Experiência Visual**: Cards reformulados
-- **🔍 Eficiência**: Consultas otimizadas por setor
-- **🔐 Controle de Acesso**: Refinamento de permissões
-
----
-
-## [0.8.3] - 2025-05-12
-### ✅ Adicionado
-- **📚 Tutorial Interativo**: Sistema passo a passo para novos usuários
-- **❓ Botão de Ajuda**: Acesso rápido ao suporte
-
-### 🔧 Melhorado
-- **👋 Primeiro Uso**: Fluxo aprimorado para novos usuários
-- **♿ Acessibilidade**: Interface de ajuda redesenhada
-- **📖 Documentação**: FAQ atualizada na Central de Ajuda
-
----
-
-## [0.8.2] - 2025-05-11
-### 🔄 Alterado
-- **📅 Terminologia**: "Data de Entrega" → "Data do Pedido"
-- **🔐 Controle de Acesso**: Apenas admins alteram datas
-- **💬 Mensagens**: Indicações de permissões
-- **⚡ Fluxo de Login**: Eliminação da tela de carregamento
-- **⚠️ Tratamento de Erros**: Mensagens específicas no cadastro
-
-### ✅ Adicionado
-- **🎨 Design Modernizado**: AppHome reformulada
-- **📞 Página de Contato**: AppContato com novo layout
-- **❓ Central de Ajuda**: AppAjuda com FAQ interativa
-- **📋 Políticas**: Privacidade e Termos de Uso
-- **✅ Sistema de Aceite**: Modal obrigatório de termos
-- **📊 Conformidade Legal**: Controle de aceites
-
----
-
-## [0.8.1] - 2025-05-10
-### 🐛 Corrigido
-- **👤 Cadastro**: Erro sem conexão com banco
-- **📅 Edição de Datas**: Permissões de administrador
-- **🏢 Campo de Setor**: Preenchimento automático
-
----
-
-## [0.8.0] - 2025-05-06
-### ✅ Adicionado
-- **💰 Relatório Financeiro**: Baseado em dados de conclusão
-
-### 🔧 Melhorado
-- **🔑 Fluxo de Login**: Refeito e otimizado
-- **📝 Fluxo de Cadastro**: Melhor usabilidade
-- **📊 Dashboard**: Refeito para melhor visualização
-
-### 🐛 Corrigido
-- **📱 Responsividade**: Adaptação para variados tipos de tela
-- **🔐 Segurança**: Login, cadastro e logs
-- **📊 Modais**: Dashboard corrigido
-- **💾 Formato de Dados**: Padronização de pedidos concluídos
-
----
-
-## [0.7.0] - 2025-05-05
-### ✅ Adicionado
-- **🏢 Expansão de Setores**: 8 setores disponíveis
-- **🔐 Segurança por Setor**: Visualização restrita
-- **👑 Acesso Admin**: Todos os setores
-- **📊 Dashboard para Gestores**: Métricas e gráficos
-- **📋 Sistema de Logs**: Registro detalhado
-- **📝 Histórico**: Alterações por pedido
-
-### 🔧 Melhorado
-- **🛡️ Segurança**: Controle de acesso aprimorado
-- **📊 Interface**: Dashboard para dados e métricas
-- **👤 UX**: Feedback visual para ações
-
-### 🐛 Corrigido
-- **👁️ Visualização**: Problemas entre setores
-- **🔐 Permissões**: Acesso fora do setor
-- **⚡ Performance**: Consultas otimizadas
-
----
-
-> **📝 Nota**: Histórico completo disponível no arquivo CHANGELOG.MD
-
-</div>
-
 <div id="documentacao-content">
 
 ## 📚 Documentação Final
@@ -697,7 +605,7 @@ Agradecemos a todos que contribuíram, testaram e forneceram feedback durante o 
     <a href="https://github.com/LucasAraldi-Dev/AraldiTech-Pedidos">🏠 Repositório</a> • 
     <a href="mailto:lucasaraldi.dev@gmail.com">📧 Contato</a> • 
     <a href="#documentacao-content">📚 Documentação</a> •
-    <a href="#changelog-content">📝 Changelog</a>
+    <a href="CHANGELOG.MD">📄 CHANGELOG.MD</a>
   </p>
   
   <p><strong>⚠️ Última versão pública - Futuras versões serão privadas</strong></p>
@@ -707,7 +615,6 @@ Agradecemos a todos que contribuíram, testaram e forneceram feedback durante o 
 
 [back-to-top]: https://img.shields.io/badge/-VOLTAR_AO_TOPO-151515?style=flat-square
 [docs]: #documentacao-content
-[changelog]: #changelog-content
 [github-issues-link]: https://github.com/LucasAraldi-Dev/AraldiTech-Pedidos/issues
 [support-link]: mailto:lucasaraldi.dev@gmail.com
 
