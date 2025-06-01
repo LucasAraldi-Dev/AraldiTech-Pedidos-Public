@@ -79,10 +79,10 @@ Deploy **GRATUITO** com um clique da sua aplicação privada de gestão de pedid
 
 <div id="readme-content">
 
-## 🏠 Início & Comunidade
+## 🏠 Início
 
-Somos uma equipe de desenvolvedores focados em criar soluções modernas e eficientes para gestão empresarial.
-Através de uma abordagem inovadora, oferecemos aos desenvolvedores e usuários um ecossistema mais aberto, transparente e amigável.
+Sou um desenvolvedor focado em criar soluções modernas e eficientes e práticas , sem enrolação para qualquer tipo de empresa e qualquer problema.
+
 
 O **AraldiTech - Pedidos** está atualmente em desenvolvimento ativo, e feedback é bem-vindo para qualquer [problema encontrado][github-issues-link].
 
