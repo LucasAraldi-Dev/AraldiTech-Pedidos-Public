@@ -8,8 +8,6 @@ Sistema moderno de gestão de pedidos com interface intuitiva e responsiva.<br/>
 Suporte completo para autenticação JWT, dashboard interativo e hierarquia de usuários.<br/>
 Deploy **GRATUITO** com um clique da sua aplicação privada de gestão de pedidos.
 
-**Português (Brasil)** · [📋 Documentação][docs] · [📄 CHANGELOG.MD](CHANGELOG.MD) · [🐛 Issues][github-issues-link] · [💬 Suporte][support-link]
-
 <!-- SHIELD GROUP -->
 
 [![][github-release-shield]][github-release-link]
