@@ -8,15 +8,6 @@ Sistema moderno de gestão de pedidos com interface intuitiva e responsiva.<br/>
 Suporte completo para autenticação JWT, dashboard interativo e hierarquia de usuários.<br/>
 Deploy **GRATUITO** com um clique da sua aplicação privada de gestão de pedidos.
 
-<!-- SHIELD GROUP -->
-
-[![][github-release-shield]][github-release-link]
-[![][github-stars-shield]][github-stars-link]
-[![][github-forks-shield]][github-forks-link]
-[![][github-issues-shield]][github-issues-link]<br/>
-[![][license-shield]][license-link]
-[![][status-shield]][status-link]
-[![][version-shield]][version-link]
 
 **Compartilhe o AraldiTech - Pedidos**
 
